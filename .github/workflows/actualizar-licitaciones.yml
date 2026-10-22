@@ -1,0 +1,27 @@
+
+name: Actualizar licitaciones DEEP
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar archivos del repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Comprobar configuracion
+        run: |
+          python -c "print('Agente DEEP: automatizacion preparada')"
+          python -c "print('Pendiente: conectar fuentes oficiales')"
