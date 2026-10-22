@@ -10,10 +10,11 @@ permissions:
   contents: read
 
 jobs:
-  verificar:
+  actualizar:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Descargar archivos del repositorio
+      - name: Descargar repositorio
         uses: actions/checkout@v4
 
       - name: Preparar Python
@@ -21,7 +22,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Comprobar configuracion
-        run: |
-          python -c "print('Agente DEEP: automatizacion preparada')"
-          python -c "print('Pendiente: conectar fuentes oficiales')"
+      - name: Ejecutar programa
+        run: python buscar_licitaciones.py
+
+      - name: Guardar archivo de resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-licitaciones
+          path: licitaciones.json
+          if-no-files-found: error
