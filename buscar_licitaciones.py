@@ -34,6 +34,19 @@ PALABRAS_CLAVE = [
     "petroquimica",
 ]
 
+# Terminos que indican equipamiento informatico o domestico
+PALABRAS_EXCLUIDAS = [
+    "notebook",
+    "laptop",
+    "celular",
+    "tablet",
+    "ups para pc",
+    "ups domestica",
+    "bateria para computadora",
+    "bateria para notebook",
+    "pila alcalina",
+]
+
 
 # Fuentes oficiales pendientes de integracion
 FUENTES = [
