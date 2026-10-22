@@ -4,18 +4,36 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Productos y servicios de interes comercial
+
 PALABRAS_CLAVE = [
-    "UPS",
+    "UPS industrial",
+    "UPS trifasica",
     "sistema de alimentacion ininterrumpida",
-    "rectificador",
+    "rectificador industrial",
     "cargador de baterias",
     "banco de baterias",
     "baterias estacionarias",
+    "baterias industriales",
+    "baterias ni-cd",
     "energia critica",
     "corriente continua",
+    "48 VCC",
     "110 VCC",
+    "125 VCC",
     "220 VCC",
+    "subestacion electrica",
+    "estacion transformadora",
+    "central electrica",
+    "parque solar",
+    "planta fotovoltaica",
+    "parque eolico",
+    "almacenamiento energetico",
+    "BESS",
+    "mineria",
+    "oil and gas",
+    "petroquimica",
 ]
+
 
 # Fuentes oficiales pendientes de integracion
 FUENTES = [
