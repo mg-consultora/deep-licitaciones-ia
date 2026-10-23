@@ -58,6 +58,12 @@ PALABRAS_EXCLUIDAS = [
 # Fuentes oficiales pendientes de integracion
 FUENTES = [
     {
+        "nombre": "COMPR.AR - Convocatorias CSV",
+        "url": "https://infra.datos.gob.ar/catalog/jgm/dataset/4/distribution/4.21/download/Convocatorias.csv",
+        "estado": "pendiente",
+    },
+
+    {
         "nombre": "COMPR.AR",
         "url": "https://comprar.gob.ar/",
         "estado": "pendiente",
