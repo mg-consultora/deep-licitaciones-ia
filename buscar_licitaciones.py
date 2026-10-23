@@ -112,7 +112,7 @@ def main():
         print("Total de registros leídos:", len(convocatorias))
     except Exception as error:
         print("Error al consultar COMPR.AR:", error)
-
+        raise
     resultado = {
         "actualizado": datetime.now(timezone.utc).isoformat(),
         "estado": "sin_fuentes_conectadas",
