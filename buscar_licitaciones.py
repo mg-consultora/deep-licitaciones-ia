@@ -36,6 +36,13 @@ PALABRAS_CLAVE = [
 
 # Terminos que indican equipamiento informatico o domestico
 PALABRAS_EXCLUIDAS = [
+    "bateria automotor",
+    "bateria para auto",
+    "bateria para moto",
+    "bateria para camion",
+    "bateria de arranque",
+    "bateria para vehiculo",
+    "bateria para maquinaria vial",
     "notebook",
     "laptop",
     "celular",
@@ -61,6 +68,18 @@ FUENTES = [
         "estado": "pendiente",
     },
 ]
+
+def es_licitacion_industrial(descripcion):
+    texto = descripcion.lower()
+
+    # Excluir baterias informaticas y de vehiculos
+    if any(palabra in texto for palabra in PALABRAS_EXCLUIDAS):
+        return False
+
+    # Buscar equipos y sectores industriales
+    return any(palabra.lower() in texto for palabra in PALABRAS_CLAVE)
+
+
 
 def main():
     resultado = {
