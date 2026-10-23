@@ -90,17 +90,17 @@ def es_licitacion_industrial(descripcion):
 
 
 def descargar_convocatorias():
-    url = FUENTES[0]["url"]
+    url = "https://comprar.gob.ar/"
 
     with urlopen(url, timeout=60) as respuesta:
         contenido = respuesta.read()
+        print("Estado HTTP:", respuesta.status)
 
-    texto = contenido.decode("utf-8-sig")
-    lector = csv.DictReader(io.StringIO(texto))
+    texto = contenido.decode("utf-8-sig", errors="replace")
+    print("Página descargada. Caracteres:", len(texto))
 
-    print("Columnas disponibles:", lector.fieldnames)
-
-    return list(lector)
+    return []
+    
 
 
 
