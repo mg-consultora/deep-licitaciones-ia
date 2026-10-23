@@ -106,6 +106,13 @@ def descargar_convocatorias():
 
 
 def main():
+    
+    try:
+        convocatorias = descargar_convocatorias()
+        print("Total de registros leídos:", len(convocatorias))
+    except Exception as error:
+        print("Error al consultar COMPR.AR:", error)
+
     resultado = {
         "actualizado": datetime.now(timezone.utc).isoformat(),
         "estado": "sin_fuentes_conectadas",
