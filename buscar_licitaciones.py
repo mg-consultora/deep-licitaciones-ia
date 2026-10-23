@@ -89,6 +89,21 @@ def es_licitacion_industrial(descripcion):
     return any(palabra.lower() in texto for palabra in PALABRAS_CLAVE)
 
 
+def descargar_convocatorias():
+    url = FUENTES[0]["url"]
+
+    with urlopen(url, timeout=60) as respuesta:
+        contenido = respuesta.read()
+
+    texto = contenido.decode("utf-8-sig")
+    lector = csv.DictReader(io.StringIO(texto))
+
+    print("Columnas disponibles:", lector.fieldnames)
+
+    return list(lector)
+
+
+
 
 def main():
     resultado = {
