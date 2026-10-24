@@ -21,6 +21,7 @@ URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
 
 TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
 PUBLICAR_CAMMESA = False
+VERSION_AGENTE = "DEEP-CONTRATAR-20261024-VERIFICABLE"
 
 
 
@@ -93,4 +94,3 @@ def buscar_cammesa():
     for titulo, href in lector.enlaces:
         nombre = normalizar(titulo)
         if not any(t in nombre for t in TERMINOS):
-            continue
