@@ -1,0 +1,145 @@
+
+name: Prueba aislada CONTRAT.AR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probar-contratar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Playwright
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Probar acceso a CONTRAT.AR
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          urls = [
+              "https://contratar.gob.ar/",
+              "https://contratar.gob.ar/BuscarAvanzado.aspx"
+          ]
+
+          resultados = []
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+
+              page = browser.new_page(
+                  locale="es-AR",
+                  viewport={"width": 1366, "height": 900}
+              )
+
+              for i, url in enumerate(urls):
+                  resultado = {"url_solicitada": url}
+
+                  try:
+                      respuesta = page.goto(
+                          url,
+                          wait_until="domcontentloaded",
+                          timeout=30000
+                      )
+
+                      page.wait_for_timeout(2500)
+
+                      resultado["url_final"] = page.url
+                      resultado["http"] = (
+                          respuesta.status if respuesta else None
+                      )
+                      resultado["titulo"] = page.title()
+
+                      texto = page.locator("body").inner_text(
+                          timeout=10000
+                      )
+
+                      resultado["texto_visible"] = texto[:1500]
+                      resultado["formularios"] = (
+                          page.locator("form").count()
+                      )
+                      resultado["campos"] = (
+                          page.locator("input").count()
+                      )
+
+                      enlaces = page.locator("a").all()
+
+                      resultado["enlaces_relevantes"] = []
+
+                      for enlace in enlaces[:150]:
+                          nombre = enlace.inner_text().strip()
+                          href = enlace.get_attribute("href")
+
+                          if any(
+                              palabra in nombre.lower()
+                              for palabra in [
+                                  "proceso",
+                                  "licitacion",
+                                  "licitación",
+                                  "búsqueda",
+                                  "buscar",
+                                  "apertura"
+                              ]
+                          ):
+                              resultado[
+                                  "enlaces_relevantes"
+                              ].append({
+                                  "texto": nombre[:120],
+                                  "href": href
+                              })
+
+                      page.screenshot(
+                          path=f"contratar-{i}.png",
+                          full_page=True
+                      )
+
+                  except Exception as error:
+                      resultado["error"] = str(error)[:600]
+
+                  resultados.append(resultado)
+
+              browser.close()
+
+          Path("diagnostico-contratar.json").write_text(
+              json.dumps(
+                  resultados,
+                  ensure_ascii=False,
+                  indent=2
+              ),
+              encoding="utf-8"
+          )
+
+          for resultado in resultados:
+              print("\nRESULTADO CONTRAT.AR")
+              print(json.dumps(
+                  resultado,
+                  ensure_ascii=False,
+                  indent=2
+              ))
+
+          print("\nPrueba finalizada.")
+          print("No se modificó el tablero DEEP.")
+          PY
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-contratar
+          path: |
+            diagnostico-contratar.json
+            contratar-*.png
+          if-no-files-found: warn
