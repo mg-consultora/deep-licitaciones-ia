@@ -1,133 +1,196 @@
 
 import json
-import csv
-import io
-from urllib.request import urlopen
+import re
+import unicodedata
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.parse import urljoin, urlparse
 
-# Productos y servicios de interes comercial
+URL_CAMMESA = "https://cammesaweb.cammesa.com/inicio-licitaciones/"
 
-PALABRAS_CLAVE = [
-    "UPS industrial",
-    "UPS trifasica",
-    "sistema de alimentacion ininterrumpida",
-    "rectificador industrial",
-    "cargador de baterias",
-    "banco de baterias",
-    "baterias estacionarias",
-    "baterias industriales",
-    "baterias ni-cd",
-    "energia critica",
-    "corriente continua",
-    "48 VCC",
-    "110 VCC",
-    "125 VCC",
-    "220 VCC",
-    "subestacion electrica",
-    "estacion transformadora",
-    "central electrica",
-    "parque solar",
-    "planta fotovoltaica",
-    "parque eolico",
-    "almacenamiento energetico",
-    "BESS",
-    "mineria",
-    "oil and gas",
-    "petroquimica",
+# Se buscan proyectos relevantes para DEEP.
+TERMINOS = [
+    "amba", "almasadi", "almacenamiento",
+    "bess", "transporte", "hidroelectric",
+    "subestacion", "transformadora",
+    "energia", "potencia", "electrica",
+    "grandes demandas"
 ]
 
-# Terminos que indican equipamiento informatico o domestico
-PALABRAS_EXCLUIDAS = [
-    "bateria automotor",
-    "bateria para auto",
-    "bateria para moto",
-    "bateria para camion",
-    "bateria de arranque",
-    "bateria para vehiculo",
-    "bateria para maquinaria vial",
-    "notebook",
-    "laptop",
-    "celular",
-    "tablet",
-    "ups para pc",
-    "ups domestica",
-    "bateria para computadora",
-    "bateria para notebook",
-    "pila alcalina",
-]
+# No confundir proyectos con procesos de compra de equipos.
+# No se asignan números de licitación inexistentes.
 
+class LectorEnlaces(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.enlaces = []
+        self.url_actual = None
+        self.texto_actual = []
 
-# Fuentes oficiales pendientes de integracion
-FUENTES = [
-    {
-        "nombre": "COMPR.AR - Convocatorias CSV",
-        "url": "https://infra.datos.gob.ar/catalog/jgm/dataset/4/distribution/4.21/download/Convocatorias.csv",
-        "estado": "pendiente",
-    },
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.url_actual = dict(attrs).get("href", "")
+            self.texto_actual = []
 
-    {
-        "nombre": "COMPR.AR",
-        "url": "https://comprar.gob.ar/",
-        "estado": "pendiente",
-    },
-    {
-        "nombre": "CONTRAT.AR",
-        "url": "https://contratar.gob.ar/",
-        "estado": "pendiente",
-    },
-]
+    def handle_data(self, data):
+        if self.url_actual is not None:
+            self.texto_actual.append(data)
 
-def es_licitacion_industrial(descripcion):
-    texto = descripcion.lower()
+    def handle_endtag(self, tag):
+        if tag == "a" and self.url_actual is not None:
+            texto = " ".join(" ".join(self.texto_actual).split())
+            if texto and self.url_actual:
+                self.enlaces.append((texto, self.url_actual))
+            self.url_actual = None
+            self.texto_actual = []
 
-    # Excluir baterias informaticas y de vehiculos
-    if any(palabra in texto for palabra in PALABRAS_EXCLUIDAS):
-        return False
+def normalizar(texto):
+    texto = unicodedata.normalize("NFKD", texto.lower())
+    return "".join(
+        caracter for caracter in texto
+        if not unicodedata.combining(caracter)
+    )
 
-    # Buscar equipos y sectores industriales
-    return any(palabra.lower() in texto for palabra in PALABRAS_CLAVE)
+def obtener_html(url):
+    solicitud = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 DEEP-Licitaciones/1.0",
+            "Accept": "text/html"
+        }
+    )
+    with urlopen(solicitud, timeout=35) as respuesta:
+        if respuesta.status != 200:
+            raise RuntimeError(
+                f"Respuesta HTTP {respuesta.status}"
+            )
+        return respuesta.read().decode(
+            "utf-8", errors="replace"
+        )
 
+def buscar_cammesa():
+    html = obtener_html(URL_CAMMESA)
 
-def descargar_convocatorias():
-    url = "https://comprar.gob.ar/"
+    lector = LectorEnlaces()
+    lector.feed(html)
 
-    with urlopen(url, timeout=60) as respuesta:
-        contenido = respuesta.read()
-        print("Estado HTTP:", respuesta.status)
+    resultados = []
+    vistos = set()
 
-    texto = contenido.decode("utf-8-sig", errors="replace")
-    print("Página descargada. Caracteres:", len(texto))
+    for titulo, href in lector.enlaces:
+        nombre = normalizar(titulo)
 
-    return []
-    
+        if not any(termino in nombre for termino in TERMINOS):
+            continue
 
+        enlace = urljoin(URL_CAMMESA, href)
+        dominio = urlparse(enlace).hostname or ""
 
+        # Solo páginas oficiales de CAMMESA.
+        if dominio != "cammesaweb.cammesa.com":
+            continue
 
+        # No guardar enlaces a archivos descargables.
+        ruta = urlparse(enlace).path.lower()
+        if re.search(
+            r"\.(pdf|docx?|xlsx?|csv|zip|rar)$", ruta
+        ):
+            continue
+
+        if "/download/" in ruta:
+            continue
+
+        if enlace in vistos:
+            continue
+
+        vistos.add(enlace)
+
+        # Identificador interno, NO número oficial.
+        identificador = "CAMMESA-" + re.sub(
+            r"[^A-Z0-9]+",
+            "-",
+            normalizar(titulo).upper()
+        ).strip("-")[:65]
+
+        resultados.append({
+            "numero": identificador,
+            "nombre": titulo,
+            "organismo": "CAMMESA",
+            "sector": "Energía",
+            "fuente": "CAMMESA",
+            "estadoOficial": "Pendiente de verificar",
+            "publicacion": None,
+            "consultas": None,
+            "cierreOfertas": None,
+            "documentacionFisica": None,
+            "apertura": None,
+            "plazoVerificado": False,
+            "enlace": enlace,
+            "observaciones": (
+                "Referencia detectada en el portal oficial. "
+                "Verificar vigencia, alcance y plazos "
+                "en el enlace del proyecto."
+            )
+        })
+
+    return resultados
 
 def main():
-    
+    fuentes = []
+    licitaciones = []
+
     try:
-        convocatorias = descargar_convocatorias()
-        print("Total de registros leídos:", len(convocatorias))
+        licitaciones = buscar_cammesa()
+        fuentes.append({
+            "nombre": "CAMMESA - Convocatorias",
+            "url": URL_CAMMESA,
+            "estado": "consultada",
+            "registros": len(licitaciones)
+        })
+        print(
+            "CAMMESA: referencias detectadas:",
+            len(licitaciones)
+        )
+
     except Exception as error:
-        print("Error al consultar COMPR.AR:", error)
-        raise
+        fuentes.append({
+            "nombre": "CAMMESA - Convocatorias",
+            "url": URL_CAMMESA,
+            "estado": "error",
+            "detalle": str(error)
+        })
+        print("CAMMESA: error:", error)
+
     resultado = {
-        "actualizado": datetime.now(timezone.utc).isoformat(),
-        "estado": "sin_fuentes_conectadas",
-        "fuentes": FUENTES,
-        "licitaciones": [],
+        "actualizado": datetime.now(
+            timezone.utc
+        ).isoformat(),
+        "estado": (
+            "referencias_detectadas"
+            if licitaciones
+            else "sin_registros_verificados"
+        ),
+        "fuentes": fuentes,
+        "licitaciones": licitaciones
     }
 
     Path("licitaciones.json").write_text(
-        json.dumps(resultado, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+        json.dumps(
+            resultado,
+            ensure_ascii=False,
+            indent=2
+        ),
+        encoding="utf-8"
     )
 
-    print("Archivo de datos generado.")
-    print("Licitaciones verificadas: 0")
-    print("Pendiente: integrar consultas a fuentes oficiales.")
+    print("Archivo licitaciones.json generado.")
+    print("Referencias detectadas:", len(licitaciones))
+    print(
+        "Nota: referencias detectadas no equivalen "
+        "a licitaciones abiertas verificadas."
+    )
 
 if __name__ == "__main__":
     main()
