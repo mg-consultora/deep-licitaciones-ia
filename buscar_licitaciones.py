@@ -8,7 +8,6 @@ import unicodedata
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from html import unescape
-from urllib.parse import urlencode
 from pathlib import Path
 from urllib.request import (
     HTTPCookieProcessor, Request, build_opener, urlopen
@@ -20,12 +19,9 @@ URL_CAMMESA = "https://cammesaweb.cammesa.com/inicio-licitaciones/"
 URL_CONTRATAR_INICIO = "https://contratar.gob.ar/"
 URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
 
-TERMINOS = [
-    "amba", "almasadi", "almacenamiento", "bess",
-    "transporte", "hidroelectric", "subestacion",
-    "transformadora", "energia", "potencia",
-    "electrica", "grandes demandas"
-]
+TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
+PUBLICAR_CAMMESA = False
+
 
 
 # ---------------------------------------------------------------
@@ -93,3 +89,8 @@ def buscar_cammesa():
 
     resultados = []
     vistos = set()
+
+    for titulo, href in lector.enlaces:
+        nombre = normalizar(titulo)
+        if not any(t in nombre for t in TERMINOS):
+            continue
