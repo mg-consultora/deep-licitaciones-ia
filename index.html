@@ -3,589 +3,283 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agente de Licitaciones | DEEP S.A.</title>
 <style>
-:root {
-  font-family: Arial, sans-serif;
-  color: #192b43;
-  background: #f3f6fa;
-}
-* { box-sizing: border-box; }
-body { margin: 0; }
-header {
-  background: #142c4c;
-  color: white;
-  padding: 28px 24px;
-}
-header .inner, main {
-  max-width: 1200px;
-  margin: auto;
-}
-header h1 { margin: 0 0 8px; }
-header p { margin: 0; color: #d7e4f3; }
-main { padding: 24px 16px 50px; }
-.panel, .stat {
-  background: white;
-  border: 1px solid #dce5ee;
-  border-radius: 12px;
-  padding: 22px;
-  margin-bottom: 20px;
-}
-h2 { margin-top: 0; }
-.note {
-  color: #58687a;
-  line-height: 1.6;
-  font-size: 14px;
-}
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-.stat { margin: 0 0 20px; }
-.stat strong {
-  display: block;
-  font-size: 30px;
-  margin-top: 10px;
-}
-.green { color: #167846; }
-.yellow { color: #9c6900; }
-.red { color: #bc3535; }
-.gray { color: #536579; }
-.filters, .search-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 15px 0;
-}
-input, select {
-  padding: 11px;
-  border: 1px solid #cbd6e2;
-  border-radius: 7px;
-  background: white;
-  flex: 1;
-  min-width: 170px;
-}
-button {
-  background: #142c4c;
-  color: white;
-  padding: 11px 18px;
-  border: 0;
-  border-radius: 7px;
-  cursor: pointer;
-}
-button:hover { background: #284e79; }
-.table-wrap { overflow-x: auto; }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 850px;
-}
-th, td {
-  padding: 13px;
-  text-align: left;
-  border-bottom: 1px solid #e4eaf1;
-  vertical-align: top;
-  font-size: 13px;
-}
-th { background: #f2f6fa; }
-td strong { font-size: 14px; }
-td small {
-  display: block;
-  color: #5a697a;
-  margin-top: 5px;
-  line-height: 1.5;
-}
-a { color: #165795; }
-.pill {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: bold;
-}
-.pill.green { background: #e3f5e9; }
-.pill.yellow { background: #fff2cc; }
-.pill.red { background: #fce6e6; }
-.pill.gray { background: #edf1f5; }
-.empty {
-  padding: 30px;
-  text-align: center;
-  color: #687789;
-}
-footer {
-  color: #687789;
-  font-size: 12px;
-  line-height: 1.6;
-}
-@media(max-width: 700px) {
-  .stats { grid-template-columns: repeat(2,1fr); }
-  header h1 { font-size: 23px; }
-}
+:root{font-family:Arial,sans-serif;color:#192b43;background:#f3f6fa}
+*{box-sizing:border-box}
+body{margin:0}
+header{background:#142c4c;color:white;padding:25px}
+main,header>div{max-width:1250px;margin:auto}
+main{padding:22px 15px}
+.panel,.stat{background:white;border:1px solid #dce5ee;border-radius:12px;padding:20px;margin-bottom:18px}
+h1,h2{margin-top:0}
+.note,small{color:#58687a;line-height:1.5}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat strong{display:block;font-size:30px;margin-top:12px}
+.green{color:#167846}.yellow{color:#a36a00}
+.red{color:#bc3535}.gray{color:#536579}
+.filters{display:flex;gap:12px;flex-wrap:wrap;margin:15px 0}
+input,select{padding:12px;border:1px solid #cbd6e2;border-radius:7px;flex:1;min-width:170px}
+button{padding:12px;background:#142c4c;color:white;border:0;border-radius:7px;cursor:pointer}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:13px;border-bottom:1px solid #e4eaf1;text-align:left;vertical-align:top;font-size:13px}
+th{background:#f2f6fa}
+td strong,td small{display:block;margin-bottom:5px}
+a{color:#165795}
+.pill{display:inline-block;padding:6px 9px;border-radius:15px;background:#edf1f5;font-weight:bold;font-size:12px}
+.pill.green{background:#e3f5e9}
+.pill.yellow{background:#fff2cc}
+.pill.red{background:#fce6e6}
+.alerta{padding:12px;border-bottom:1px solid #e4eaf1}
+.alerta strong{display:block;margin-bottom:6px}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="inner">
-    <h1>Agente IA de Licitaciones | DEEP S.A.</h1>
-    <p>Oportunidades comerciales en Energía, Minería, Oil & Gas e Industria</p>
-  </div>
+<div>
+<h1>Agente IA de Licitaciones | DEEP S.A.</h1>
+<p>Energía, Minería, Oil & Gas e Industria</p>
+</div>
 </header>
-
 <main>
+<section class="panel">
+<h2>Panel de oportunidades</h2>
+<p>Seguimiento de licitaciones, obras, cronogramas y circulares oficiales.</p>
+<p id="actualizacion" class="note">Consultando información...</p>
+<p id="conexion" class="note"></p>
+</section>
 
 <section class="panel">
-  <h2>Panel de oportunidades</h2>
-  <p class="note">
-    Seguimiento de licitaciones públicas y privadas relacionadas con
-    UPS industriales, rectificadores, cargadores, bancos de baterías,
-    subestaciones, BESS y sistemas de energía crítica.
-  </p>
-  <p id="actualizacion" class="note">
-    Consultando información disponible...
-  </p>
-  <p id="conexion" class="note"></p>
+<h2>🔔 Alertas de fechas y circulares</h2>
+<div id="alertas">Consultando novedades...</div>
 </section>
 
 <section class="stats">
-  <div class="stat">
-    <span class="green">🟢 EN PLAZO</span>
-    <strong id="total-plazo">0</strong>
-  </div>
-  <div class="stat">
-    <span class="yellow">🟡 POR VENCER</span>
-    <strong id="total-vencer">0</strong>
-  </div>
-  <div class="stat">
-    <span class="red">🔴 VENCIDA</span>
-    <strong id="total-vencida">0</strong>
-  </div>
-  <div class="stat">
-    <span class="gray">⚪ SIN VERIFICAR</span>
-    <strong id="total-pendiente">0</strong>
-  </div>
+<div class="stat"><span class="green">🟢 EN PLAZO</span><strong id="en-plazo">0</strong></div>
+<div class="stat"><span class="yellow">🟡 POR VENCER</span><strong id="por-vencer">0</strong></div>
+<div class="stat"><span class="red">🔴 FECHAS VENCIDAS</span><strong id="vencidas">0</strong></div>
+<div class="stat"><span class="gray">⚪ SIN VERIFICAR</span><strong id="sin-verificar">0</strong></div>
 </section>
 
 <section class="panel">
-  <h2>🔎 Consultar un proceso oficial</h2>
-  <p class="note">
-    Ingresá el número que te envió el cliente (por ejemplo, 34-0003-LPU26).
-    Si ya está registrado en DEEP, se mostrará en la tabla y se abrirá
-    directamente el expediente. Para números nuevos, se abrirá el buscador público de CONTRAT.AR.
-  </p>
-  <form id="consulta-form" class="search-row">
-    <input id="numero" required
-      placeholder="Ej.: 34-0003-LPU26">
-    <button type="submit">Buscar número de proceso ↗</button>
-  </form>
-  <p id="mensaje-consulta" class="note"></p>
+<h2>🔎 Consultar proceso oficial</h2>
+<form id="form-proceso" class="filters">
+<input id="numero" placeholder="Ej.: 34-0003-LPU26" required>
+<button type="submit">Buscar proceso ↗</button>
+</form>
+<p id="mensaje" class="note"></p>
 </section>
 
 <section class="panel">
-  <h2>Licitaciones y obras</h2>
-  <p class="note">
-    Los registros de CAMMESA pueden ser proyectos en seguimiento, no necesariamente licitaciones abiertas.
-    Las fechas se muestran únicamente cuando están documentadas.
-    Si no se conoce un plazo, se indica "No informada" y se
-    conserva el enlace directo a la fuente oficial.
-  </p>
-
-  <div class="filters">
-    <input id="buscar"
-      placeholder="Buscar obra, número u organismo...">
-    <select id="filtrar-estado">
-      <option value="">Todos los estados</option>
-      <option value="EN PLAZO">En plazo</option>
-      <option value="POR VENCER">Por vencer</option>
-      <option value="VENCIDA">Vencida</option>
-      <option value="SIN VERIFICAR">Sin verificar</option>
-    </select>
-    <select id="filtrar-sector">
-      <option value="">Todos los sectores</option>
-      <option value="Energía">Energía</option>
-      <option value="Minería">Minería</option>
-      <option value="Oil & Gas">Oil & Gas</option>
-      <option value="Industria">Industria</option>
-    </select>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Proceso / Obra</th>
-          <th>Organismo / Sector</th>
-          <th>Fechas oficiales</th>
-          <th>Estado del plazo</th>
-          <th>Fuente</th>
-        </tr>
-      </thead>
-      <tbody id="tabla-licitaciones"></tbody>
-    </table>
-  </div>
-  <p id="sin-resultados" class="empty" hidden>
-    No se encontraron licitaciones con esos filtros.
-  </p>
+<h2>Licitaciones y obras</h2>
+<p class="note">Los estados indican la próxima fecha conocida del cronograma, no necesariamente el cierre de ofertas. Las fechas de CAMMESA pueden no estar disponibles.</p>
+<div class="filters">
+<input id="buscar" placeholder="Buscar proceso, obra u organismo...">
+<select id="estado">
+<option value="">Todos los estados</option>
+<option>EN PLAZO</option>
+<option>POR VENCER</option>
+<option>VENCIDA</option>
+<option>SIN VERIFICAR</option>
+</select>
+<select id="sector">
+<option value="">Todos los sectores</option>
+<option>Energía</option>
+<option>Minería</option>
+<option>Oil & Gas</option>
+<option>Industria</option>
+</select>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Número / Obra</th>
+<th>Organismo</th>
+<th>Cronograma oficial</th>
+<th>Estado</th>
+<th>Fuente / Circulares</th>
+</tr></thead>
+<tbody id="tabla"></tbody>
+</table>
+</div>
+<p id="vacio" hidden>No se encontraron resultados.</p>
 </section>
-
-<footer>
-  Herramienta comercial de DEEP S.A.
-  Los datos deben verificarse en las fuentes oficiales.
-  Las circulares y prórrogas pueden modificar los plazos.
-  No se descargan pliegos ni anexos desde este tablero.
-</footer>
-
+<p class="note">DEEP S.A. — Verificar siempre las fechas y circulares en la fuente oficial. No se descargan pliegos ni anexos.</p>
 </main>
-
 <script>
 "use strict";
+const $=id=>document.getElementById(id);
+let registros=[];
+const DIAS=7*24*60*60*1000;
 
-// Registro inicial, documentado mediante capturas
-// oficiales de CONTRAT.AR.
-// No se actualiza automáticamente.
-
-const licitacionesManuales = [
-  {
-    numero: "34-0003-LPU26",
-    nombre: "Ampliación del Sistema de Transporte de Energía Eléctrica bajo Concesión de Obra Pública AMBA I",
-    organismo: "Dirección General de Administración - MHA",
-    sector: "Energía / Alta tensión",
-    fuente: "CONTRAT.AR",
-    estadoOficial: "Publicado",
-    publicacion: "2026-08-12T00:00:00",
-    consultas: "2026-11-13T17:00:00",
-    documentacionFisica: "2026-12-14T11:00:00",
-    apertura: "2026-12-14T12:00:00",
-    cierreOfertas: null,
-    plazoVerificado: false,
-    enlace: "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42/eS0aiuALKYAdQz06KinBOvULkr/Dpt5kPBe0=",
-    observaciones: "Cronograma tomado de capturas oficiales. No se verificaron modificaciones posteriores. La recepción de documentación física no equivale necesariamente al cierre de ofertas."
-  }
-];
-
-let licitaciones = [...licitacionesManuales];
-
-function fechaArgentina(valor) {
-  if (!valor) return "No informada";
-  const fecha = new Date(valor);
-  if (Number.isNaN(fecha.getTime())) return "No informada";
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(fecha);
+function fecha(v){
+ if(!v)return null;
+ const d=new Date(v);
+ return Number.isNaN(d.getTime())?null:d;
 }
-
-// El estado solo se calcula con un cierre de ofertas
-// expresamente identificado y verificado.
-// No se usa la apertura como sustituto.
-
-function calcularEstado(item) {
-  if (!item.plazoVerificado || !item.cierreOfertas) {
-    return "SIN VERIFICAR";
-  }
-
-  const limite = new Date(item.cierreOfertas);
-  if (Number.isNaN(limite.getTime())) {
-    return "SIN VERIFICAR";
-  }
-
-  const diferencia = limite.getTime() - Date.now();
-
-  if (diferencia < 0) return "VENCIDA";
-  if (diferencia <= 7 * 24 * 60 * 60 * 1000) {
-    return "POR VENCER";
-  }
-  return "EN PLAZO";
+function mostrarFecha(v){
+ const d=fecha(v);
+ return d?new Intl.DateTimeFormat("es-AR",{
+ day:"2-digit",month:"2-digit",year:"numeric",
+ hour:"2-digit",minute:"2-digit",hour12:false
+ }).format(d):"No informada";
 }
-
-function crearTexto(tag, contenido) {
-  const elemento = document.createElement(tag);
-  elemento.textContent = contenido || "";
-  return elemento;
+function estadoFecha(v){
+ const d=fecha(v);
+ if(!d)return "SIN VERIFICAR";
+ const ms=d.getTime()-Date.now();
+ if(ms<0)return "VENCIDA";
+ return ms<=DIAS?"POR VENCER":"EN PLAZO";
 }
-
-function agregarLinea(celda, etiqueta, valor) {
-  const linea = document.createElement("div");
-  const negrita = crearTexto("strong", etiqueta + ": ");
-  const texto = document.createTextNode(
-    valor ? fechaArgentina(valor) : "No informada"
-  );
-  linea.append(negrita, texto);
-  celda.appendChild(linea);
+function estadoProceso(r){
+ if(r.fuente!=="CONTRAT.AR"||r.detalleVerificado!==true)
+   return "SIN VERIFICAR";
+ const fechas=[r.consultas,r.documentacionFisica,r.apertura]
+   .map(fecha).filter(Boolean).sort((a,b)=>a-b);
+ if(!fechas.length)return "SIN VERIFICAR";
+ const siguiente=fechas.find(d=>d.getTime()>=Date.now());
+ return siguiente?estadoFecha(siguiente.toISOString()):"VENCIDA";
 }
-
-function dibujar() {
-  const texto = document.getElementById("buscar")
-    .value.toLowerCase().trim();
-  const estadoFiltro =
-    document.getElementById("filtrar-estado").value;
-  const sectorFiltro =
-    document.getElementById("filtrar-sector").value;
-
-  const conteos = {
-    "EN PLAZO": 0,
-    "POR VENCER": 0,
-    "VENCIDA": 0,
-    "SIN VERIFICAR": 0
-  };
-
-  licitaciones.forEach(item => {
-    conteos[calcularEstado(item)]++;
-  });
-
-  document.getElementById("total-plazo").textContent =
-    conteos["EN PLAZO"];
-  document.getElementById("total-vencer").textContent =
-    conteos["POR VENCER"];
-  document.getElementById("total-vencida").textContent =
-    conteos["VENCIDA"];
-  document.getElementById("total-pendiente").textContent =
-    conteos["SIN VERIFICAR"];
-
-  const filtradas = licitaciones.filter(item => {
-    const estado = calcularEstado(item);
-    const conjunto = [
-      item.numero, item.nombre, item.organismo, item.sector
-    ].join(" ").toLowerCase();
-
-    return conjunto.includes(texto)
-      && (!estadoFiltro || estado === estadoFiltro)
-      && (!sectorFiltro ||
-          (item.sector || "").includes(sectorFiltro));
-  });
-
-  const cuerpo = document.getElementById("tabla-licitaciones");
-  cuerpo.replaceChildren();
-
-  filtradas.forEach(item => {
-    const fila = document.createElement("tr");
-
-    const oportunidad = document.createElement("td");
-    oportunidad.appendChild(
-      crearTexto("strong", item.numero || "Sin número")
-    );
-    oportunidad.appendChild(
-      crearTexto("small", item.nombre || "Sin nombre")
-    );
-    if (item.observaciones) {
-      oportunidad.appendChild(
-        crearTexto("small", item.observaciones)
-      );
-    }
-
-    const organismo = document.createElement("td");
-    organismo.appendChild(
-      crearTexto("strong", item.organismo || "No informado")
-    );
-    organismo.appendChild(
-      crearTexto("small", item.sector || "Sin clasificar")
-    );
-
-    const fechas = document.createElement("td");
-    agregarLinea(fechas, "Publicación", item.publicacion);
-    agregarLinea(fechas, "Fin de consultas", item.consultas);
-    agregarLinea(fechas, "Cierre de ofertas", item.cierreOfertas);
-    agregarLinea(
-      fechas, "Documentación física", item.documentacionFisica
-    );
-    agregarLinea(fechas, "Apertura", item.apertura);
-
-    const estado = calcularEstado(item);
-    const estadoCelda = document.createElement("td");
-    const etiqueta = crearTexto("span", estado);
-    const clase = {
-      "EN PLAZO": "green",
-      "POR VENCER": "yellow",
-      "VENCIDA": "red",
-      "SIN VERIFICAR": "gray"
-    };
-    etiqueta.className = "pill " + clase[estado];
-    estadoCelda.appendChild(etiqueta);
-
-    if (item.estadoOficial) {
-      estadoCelda.appendChild(
-        crearTexto("small", "Portal: " + item.estadoOficial)
-      );
-    }
-
-    const fuente = document.createElement("td");
-    if (item.enlace &&
-        /^https:\/\/[^ ]+$/i.test(item.enlace)) {
-      const enlace = document.createElement("a");
-      enlace.href = item.enlace;
-      enlace.target = "_blank";
-      enlace.rel = "noopener noreferrer";
-      enlace.textContent =
-        "Ver en " + (item.fuente || "fuente oficial") + " ↗";
-      fuente.appendChild(enlace);
-    } else {
-      fuente.textContent = "Enlace no informado";
-    }
-
-    fila.append(
-      oportunidad, organismo, fechas, estadoCelda, fuente
-    );
-    cuerpo.appendChild(fila);
-  });
-
-  document.getElementById("sin-resultados").hidden =
-    filtradas.length > 0;
+function texto(tag,valor){
+ const e=document.createElement(tag);
+ e.textContent=valor==null?"":String(valor);
+ return e;
 }
-
-function normalizarRegistro(item) {
-  if (!item || typeof item !== "object") return null;
-  if (!item.numero || !item.nombre) return null;
-
-  return {
-    numero: String(item.numero),
-    nombre: String(item.nombre),
-    organismo: String(item.organismo || "No informado"),
-    sector: String(item.sector || "Sin clasificar"),
-    fuente: String(item.fuente || "Fuente oficial"),
-    estadoOficial: String(item.estadoOficial || ""),
-    publicacion: item.publicacion || null,
-    consultas: item.consultas || null,
-    cierreOfertas: item.cierreOfertas || null,
-    documentacionFisica: item.documentacionFisica || null,
-    apertura: item.apertura || null,
-    plazoVerificado: item.plazoVerificado === true,
-    enlace: String(item.enlace || ""),
-    observaciones: String(item.observaciones || "")
-  };
+function enlace(url,etiqueta){
+ if(!/^https:\/\/\S+$/i.test(url||""))
+   return texto("span","Enlace no disponible");
+ const a=texto("a",etiqueta);
+ a.href=url;a.target="_blank";a.rel="noopener noreferrer";
+ return a;
 }
-
-// Lee un archivo JSON publicado junto a index.html.
-// Esto NO extrae datos directamente de los portales.
-// Requiere un proceso externo que genere registros verificados.
-
-async function cargarDatos() {
-  const conexion = document.getElementById("conexion");
-  let datos;
-  try {
-    const respuesta = await fetch(
-      "./licitaciones.json?nocache=" + Date.now(),
-      { cache: "no-store" }
-    );
-    if (!respuesta.ok) {
-      throw new Error("Archivo no publicado");
-    }
-
-    datos = await respuesta.json();
-    const registros = Array.isArray(datos)
-      ? datos
-      : Array.isArray(datos.licitaciones)
-        ? datos.licitaciones
-        : [];
-
-    const validos = registros
-      .map(normalizarRegistro)
-      .filter(Boolean);
-
-    const mapa = new Map();
-    licitacionesManuales.forEach(item =>
-      mapa.set(item.numero, item)
-    );
-    validos.forEach(item => {
-      const url = String(item.enlace || "");
-      if (url === "https://cammesaweb.cammesa.com/inicio-licitaciones/" ||
-          url.includes("/complejoshidrolectricos/")) return;
-      const clave = item.fuente === "CAMMESA"
-        ? "CAMMESA:" + item.nombre.toLowerCase().trim()
-        : item.numero;
-      if (!mapa.has(clave)) mapa.set(clave, item);
+function linea(celda,titulo,valor){
+ const d=document.createElement("div");
+ d.append(texto("strong",titulo+": "),document.createTextNode(mostrarFecha(valor)));
+ celda.append(d);
+}
+function pintarAlertas(){
+ const caja=$("alertas");
+ caja.replaceChildren();
+ let n=0;
+ registros.filter(r=>r.fuente==="CONTRAT.AR").forEach(r=>{
+   const avisos=Array.isArray(r.alertas)?r.alertas:[];
+   if(!avisos.length&&r.revisionCirculares==="verificada")return;
+   n++;
+   const d=document.createElement("div");d.className="alerta";
+   d.append(texto("strong",(r.numero||"")+" — "+(r.nombre||"")));
+   d.append(texto("p",avisos.length?avisos.join(" | "):
+      "Revisión automática de circulares pendiente"));
+   d.append(enlace(r.enlaceCirculares||r.enlace,
+      "Abrir expediente oficial ↗"));
+   caja.append(d);
+ });
+ if(!n)caja.textContent="Sin novedades detectadas en la última consulta automática.";
+}
+function pintar(){
+ const busqueda=$("buscar").value.toLowerCase().trim();
+ const filtroEstado=$("estado").value;
+ const filtroSector=$("sector").value;
+ const tot={"EN PLAZO":0,"POR VENCER":0,"VENCIDA":0,"SIN VERIFICAR":0};
+ registros.forEach(r=>tot[estadoProceso(r)]++);
+ $("en-plazo").textContent=tot["EN PLAZO"];
+ $("por-vencer").textContent=tot["POR VENCER"];
+ $("vencidas").textContent=tot["VENCIDA"];
+ $("sin-verificar").textContent=tot["SIN VERIFICAR"];
+ const tabla=$("tabla");tabla.replaceChildren();
+ let cantidad=0;
+ registros.forEach(r=>{
+  const estado=estadoProceso(r);
+  const bus=[r.numero,r.nombre,r.organismo,r.sector].join(" ").toLowerCase();
+  if(!bus.includes(busqueda))return;
+  if(filtroEstado&&estado!==filtroEstado)return;
+  if(filtroSector&&!(r.sector||"").includes(filtroSector))return;
+  cantidad++;
+  const fila=document.createElement("tr");
+  const c1=document.createElement("td");
+  c1.append(texto("strong",r.numero||"Sin número"),
+            texto("small",r.nombre||"Sin nombre"));
+  const c2=document.createElement("td");
+  c2.append(texto("strong",r.organismo||"No informado"),
+            texto("small",r.sector||""));
+  const c3=document.createElement("td");
+  linea(c3,"Fin de consultas",r.consultas);
+  linea(c3,"Fin recepción física",r.documentacionFisica);
+  linea(c3,"Primer acto de apertura",r.apertura);
+  if(r.fuente==="CONTRAT.AR"){
+   const circulares=Array.isArray(r.circulares)?r.circulares:[];
+   c3.append(texto("small","Circulares registradas: "+circulares.length));
+   [["Consultas",r.consultas],["Recepción física",r.documentacionFisica],
+    ["Apertura",r.apertura]].forEach(([nombre,valor])=>{
+      if(valor)c3.append(texto("small",nombre+": "+estadoFecha(valor)));
     });
-
-    licitaciones = Array.from(mapa.values());
-
-    conexion.textContent = validos.length
-      ? "Registros adicionales cargados desde licitaciones.json. La actualización depende de la fuente que genere ese archivo."
-      : "No hay nuevas licitaciones verificadas en el archivo automático.";
-
-  } catch (error) {
-    conexion.textContent =
-      "Sin conexión de datos automáticos. Se muestran los registros manuales disponibles.";
   }
-
-  document.getElementById("actualizacion").textContent =
-    "Última consulta del tablero: " +
-    new Date().toLocaleString("es-AR") +
-    (typeof datos !== "undefined" && datos.actualizado
-      ? " | Archivo automático: " + new Date(datos.actualizado).toLocaleString("es-AR")
-      : "");
-
-  dibujar();
+  const c4=document.createElement("td");
+  const p=texto("span",estado);
+  p.className="pill "+({"EN PLAZO":"green","POR VENCER":"yellow",
+    "VENCIDA":"red","SIN VERIFICAR":"gray"}[estado]);
+  c4.append(p,texto("small","Portal: "+(r.estadoOficial||"No informado")));
+  const c5=document.createElement("td");
+  c5.append(enlace(r.enlace,"Ver en "+(r.fuente||"fuente")+" ↗"));
+  if(r.enlaceCirculares){
+   c5.append(document.createElement("div"));
+   c5.append(enlace(r.enlaceCirculares,"Ver circulares ↗"));
+  }
+  fila.append(c1,c2,c3,c4,c5);tabla.append(fila);
+ });
+ $("vacio").hidden=cantidad>0;
+ pintarAlertas();
 }
-
-document.getElementById("buscar")
-  .addEventListener("input", dibujar);
-document.getElementById("filtrar-estado")
-  .addEventListener("change", dibujar);
-document.getElementById("filtrar-sector")
-  .addEventListener("change", dibujar);
-
-document.getElementById("consulta-form")
-  .addEventListener("submit", async function(event) {
-    event.preventDefault();
-    const numero = document.getElementById("numero").value.trim().toUpperCase();
-    const mensaje = document.getElementById("mensaje-consulta");
-    if (!numero) return;
-
-    const registro = licitaciones.find(item =>
-      String(item.numero || "").trim().toUpperCase() === numero
-    );
-    document.getElementById("buscar").value = numero;
-    document.getElementById("filtrar-estado").value = "";
-    document.getElementById("filtrar-sector").value = "";
-    dibujar();
-
-    if (registro && registro.enlace &&
-        /^https:\/\/[^ ]+$/i.test(registro.enlace)) {
-      mensaje.textContent = "Expediente encontrado en DEEP: " + numero +
-        ". Abriendo el enlace registrado. Verificá allí las novedades oficiales.";
-      const ventana = window.open(registro.enlace, "_blank", "noopener,noreferrer");
-      if (!ventana) {
-        const enlace = document.createElement("a");
-        enlace.href = registro.enlace;
-        enlace.target = "_blank";
-        enlace.rel = "noopener noreferrer";
-        enlace.textContent = " Abrir expediente ↗";
-        mensaje.appendChild(enlace);
-      }
-      return;
-    }
-
-    // CONTRAT.AR no permite deducir el enlace del expediente desde el número.
-    // Se abre la búsqueda oficial sin fingir una extracción automática.
-    const ventana = window.open(
-      "https://contratar.gob.ar/BuscarAvanzado.aspx",
-      "_blank", "noopener,noreferrer"
-    );
-    try {
-      await navigator.clipboard.writeText(numero);
-      mensaje.textContent = "El proceso no está en la base DEEP. " +
-        "Número copiado: " + numero + ". Pegalo en el buscador oficial de CONTRAT.AR.";
-    } catch (_) {
-      mensaje.textContent = "El proceso no está en la base DEEP. " +
-        "Buscá " + numero + " en CONTRAT.AR.";
-    }
-    if (!ventana) {
-      const enlace = document.createElement("a");
-      enlace.href = "https://contratar.gob.ar/BuscarAvanzado.aspx";
-      enlace.target = "_blank";
-      enlace.rel = "noopener noreferrer";
-      enlace.textContent = " Abrir buscador oficial ↗";
-      mensaje.appendChild(enlace);
-    }
+async function cargar(){
+ try{
+  const res=await fetch("./licitaciones.json?t="+Date.now(),{cache:"no-store"});
+  if(!res.ok)throw new Error("No se pudo leer licitaciones.json");
+  const datos=await res.json();
+  const lista=Array.isArray(datos)?datos:
+      Array.isArray(datos.licitaciones)?datos.licitaciones:[];
+  const mapa=new Map();
+  lista.forEach(r=>{
+   if(!r||!r.numero||!r.nombre)return;
+   const url=String(r.enlace||"");
+   if(url==="https://cammesaweb.cammesa.com/inicio-licitaciones/"||
+      url.includes("/complejoshidrolectricos/"))return;
+   const clave=r.fuente==="CAMMESA"?
+      "CAMMESA:"+r.nombre.toLowerCase().trim():r.numero;
+   mapa.set(clave,r);
   });
-
-dibujar();
-cargarDatos();
+  registros=[...mapa.values()];
+  $("conexion").textContent="Registros automáticos cargados: "+registros.length;
+  $("actualizacion").textContent="Última consulta del tablero: "+
+    new Date().toLocaleString("es-AR")+
+    (datos.actualizado?" | Datos automáticos: "+
+      new Date(datos.actualizado).toLocaleString("es-AR"):"");
+ }catch(e){
+  $("conexion").textContent="Error al cargar datos: "+e.message;
+  $("actualizacion").textContent="No se pudo comprobar la actualización.";
+ }
+ pintar();
+}
+$("buscar").addEventListener("input",pintar);
+$("estado").addEventListener("change",pintar);
+$("sector").addEventListener("change",pintar);
+$("form-proceso").addEventListener("submit",e=>{
+ e.preventDefault();
+ const numero=$("numero").value.trim().toUpperCase();
+ const r=registros.find(x=>(x.numero||"").toUpperCase()===numero);
+ $("buscar").value=numero;$("estado").value="";$("sector").value="";
+ pintar();
+ if(r&&r.enlace){
+  $("mensaje").textContent="Proceso encontrado. Abriendo fuente oficial.";
+  window.open(r.enlace,"_blank","noopener,noreferrer");
+ }else{
+  $("mensaje").textContent="Proceso no registrado. Buscalo por número en CONTRAT.AR.";
+  window.open("https://contratar.gob.ar/BuscarAvanzado.aspx",
+    "_blank","noopener,noreferrer");
+ }
+});
+cargar();
 </script>
 </body>
 </html>
