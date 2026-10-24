@@ -4,9 +4,14 @@ name: Actualizar licitaciones DEEP
 on:
   workflow_dispatch:
   schedule:
-  - cron: "0 6 * * *"
+    - cron: "0 6 * * *"
+
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: actualizar-licitaciones
+  cancel-in-progress: false
 
 jobs:
   actualizar:
@@ -15,6 +20,8 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Preparar Python
         uses: actions/setup-python@v5
@@ -24,9 +31,19 @@ jobs:
       - name: Ejecutar programa
         run: python buscar_licitaciones.py
 
-      - name: Guardar archivo de resultados
-        uses: actions/upload-artifact@v4
-        with:
-          name: resultados-licitaciones
-          path: licitaciones.json
-          if-no-files-found: error
+      - name: Validar archivo generado
+        run: python -m json.tool licitaciones.json > /dev/null
+
+      - name: Publicar resultados en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add licitaciones.json
+
+          if git diff --cached --quiet; then
+            echo "Sin cambios en los resultados."
+          else
+            git commit -m "Actualizar datos de licitaciones DEEP"
+            git push
+          fi
