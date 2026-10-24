@@ -9,18 +9,15 @@ from urllib.request import Request, urlopen
 from urllib.parse import urljoin, urlparse
 
 URL_CAMMESA = "https://cammesaweb.cammesa.com/inicio-licitaciones/"
+URL_CONTRATAR = "https://contratar.gob.ar/BuscarAvanzado.aspx"
 
-# Se buscan proyectos relevantes para DEEP.
 TERMINOS = [
-    "amba", "almasadi", "almacenamiento",
-    "bess", "transporte", "hidroelectric",
-    "subestacion", "transformadora",
-    "energia", "potencia", "electrica",
-    "grandes demandas"
+    "amba", "almasadi", "almacenamiento", "bess",
+    "transporte", "hidroelectric", "subestacion",
+    "transformadora", "energia", "potencia",
+    "electrica", "grandes demandas"
 ]
 
-# No confundir proyectos con procesos de compra de equipos.
-# No se asignan números de licitación inexistentes.
 
 class LectorEnlaces(HTMLParser):
     def __init__(self):
@@ -46,18 +43,19 @@ class LectorEnlaces(HTMLParser):
             self.url_actual = None
             self.texto_actual = []
 
+
 def normalizar(texto):
     texto = unicodedata.normalize("NFKD", texto.lower())
     return "".join(
-        caracter for caracter in texto
-        if not unicodedata.combining(caracter)
+        c for c in texto if not unicodedata.combining(c)
     )
+
 
 def obtener_html(url):
     solicitud = Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 DEEP-Licitaciones/1.0",
+            "User-Agent": "Mozilla/5.0",
             "Accept": "text/html"
         }
     )
@@ -70,9 +68,9 @@ def obtener_html(url):
             "utf-8", errors="replace"
         )
 
+
 def buscar_cammesa():
     html = obtener_html(URL_CAMMESA)
-
     lector = LectorEnlaces()
     lector.feed(html)
 
@@ -82,31 +80,22 @@ def buscar_cammesa():
     for titulo, href in lector.enlaces:
         nombre = normalizar(titulo)
 
-        if not any(termino in nombre for termino in TERMINOS):
+        if not any(t in nombre for t in TERMINOS):
             continue
 
         enlace = urljoin(URL_CAMMESA, href)
         dominio = urlparse(enlace).hostname or ""
+        ruta = urlparse(enlace).path.lower()
 
-        # Solo páginas oficiales de CAMMESA.
         if dominio != "cammesaweb.cammesa.com":
             continue
-
-        # No guardar enlaces a archivos descargables.
-        ruta = urlparse(enlace).path.lower()
-        if re.search(
-            r"\.(pdf|docx?|xlsx?|csv|zip|rar)$", ruta
-        ):
+        if re.search(r"\.(pdf|docx?|xlsx?|csv|zip|rar)$", ruta):
             continue
-
         if "/download/" in ruta:
             continue
-
-               # Excluir enlaces generales y duplicados
-        if enlace == URL_CAMMESA:
+        if enlace.rstrip("/") == URL_CAMMESA.rstrip("/"):
             continue
-
-        if "/complejoshidrolectricos/" in enlace:
+        if "/complejoshidrolectricos/" in ruta:
             continue
 
         clave = normalizar(titulo)
@@ -115,10 +104,8 @@ def buscar_cammesa():
 
         vistos.add(clave)
 
-        # Identificador interno, NO número oficial.
         identificador = "CAMMESA-" + re.sub(
-            r"[^A-Z0-9]+",
-            "-",
+            r"[^A-Z0-9]+", "-",
             normalizar(titulo).upper()
         ).strip("-")[:65]
 
@@ -138,12 +125,12 @@ def buscar_cammesa():
             "enlace": enlace,
             "observaciones": (
                 "Referencia detectada en el portal oficial. "
-                "Verificar vigencia, alcance y plazos "
-                "en el enlace del proyecto."
+                "Verificar vigencia, alcance y plazos."
             )
         })
 
     return resultados
+
 
 def main():
     fuentes = []
@@ -157,19 +144,46 @@ def main():
             "estado": "consultada",
             "registros": len(licitaciones)
         })
-        print(
-            "CAMMESA: referencias detectadas:",
-            len(licitaciones)
-        )
+        print("CAMMESA: referencias:", len(licitaciones))
 
     except Exception as error:
+        print("CAMMESA: error:", error)
+
+        # Evitar borrar resultados anteriores si falla la web.
+        archivo = Path("licitaciones.json")
+        if archivo.exists():
+            try:
+                anterior = json.loads(
+                    archivo.read_text(encoding="utf-8")
+                )
+                licitaciones = [
+                    item for item in anterior.get("licitaciones", [])
+                    if item.get("fuente") == "CAMMESA"
+                ]
+            except (ValueError, OSError):
+                licitaciones = []
+
         fuentes.append({
             "nombre": "CAMMESA - Convocatorias",
             "url": URL_CAMMESA,
             "estado": "error",
-            "detalle": str(error)
+            "detalle": str(error),
+            "registros": len(licitaciones)
         })
-        print("CAMMESA: error:", error)
+
+    # CONTRAT.AR tiene búsqueda pública por número,
+    # pero su extracción automática aún no está validada.
+    # No generar expedientes ni fechas sin verificarlos.
+    fuentes.append({
+        "nombre": "CONTRAT.AR - Obra pública",
+        "url": URL_CONTRATAR,
+        "estado": "consulta_manual_disponible",
+        "registros": 0,
+        "detalle": (
+            "Búsqueda pública por número disponible. "
+            "Extracción automática pendiente de validación."
+        )
+    })
 
     resultado = {
         "actualizado": datetime.now(
@@ -186,19 +200,16 @@ def main():
 
     Path("licitaciones.json").write_text(
         json.dumps(
-            resultado,
-            ensure_ascii=False,
-            indent=2
+            resultado, ensure_ascii=False, indent=2
         ),
         encoding="utf-8"
     )
 
-    print("Archivo licitaciones.json generado.")
-    print("Referencias detectadas:", len(licitaciones))
-    print(
-        "Nota: referencias detectadas no equivalen "
-        "a licitaciones abiertas verificadas."
-    )
+    print("licitaciones.json generado.")
+    print("Referencias CAMMESA:", len(licitaciones))
+    print("CONTRAT.AR: búsqueda manual disponible.")
+    print("Extracción automática CONTRAT.AR: pendiente.")
+
 
 if __name__ == "__main__":
     main()
