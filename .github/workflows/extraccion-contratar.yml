@@ -1,0 +1,111 @@
+name: Prueba extracción CONTRAT.AR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extraer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Instalar analizador HTML
+        run: python -m pip install beautifulsoup4
+
+      - name: Inspeccionar listados públicos
+        run: |
+          python -u - <<'PY'
+          import json, re, time, pathlib, html
+          import urllib.request, urllib.error, http.cookiejar
+          from urllib.parse import urljoin, urlparse
+          from bs4 import BeautifulSoup
+
+          BASE = 'https://contratar.gob.ar/'
+          PAGINAS = [
+              ('inicio', BASE),
+              ('proximas', urljoin(BASE, 'ListarAperturaProxima.aspx')),
+              ('ultimos', urljoin(BASE, 'ListarAperturaUltimos30Dias.aspx')),
+              ('busqueda', urljoin(BASE, 'BuscarAvanzado.aspx')),
+          ]
+          SALIDA = pathlib.Path('diagnostico-extraccion')
+          SALIDA.mkdir(exist_ok=True)
+          jar = http.cookiejar.CookieJar()
+          op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+          op.addheaders = [
+              ('User-Agent', 'Mozilla/5.0 (compatible; DEEP-diagnostico/1.0)'),
+              ('Accept', 'text/html,application/xhtml+xml'),
+              ('Accept-Language', 'es-AR,es;q=0.9'),
+          ]
+          resultados = []
+          patrones = re.compile(r'\b(?:\d{1,5}-\d{1,6}-(?:LPU|LPR|CDI|CPR|LPI|LPN|LPC|CO|LP)\d{2,4})\b', re.I)
+          palabras = re.compile(r'UPS|rectificad|cargador|bater[ií]a|acumulador|energ[ií]a|subestaci[oó]n|convertidor|BESS', re.I)
+          for idx, (nombre, url) in enumerate(PAGINAS):
+              if idx:
+                  time.sleep(2)
+              r = {'pagina': nombre, 'url_solicitada': url, 'ok_http': False, 'tablas': [], 'candidatos': [], 'coincidencias_deep': []}
+              try:
+                  req = urllib.request.Request(url)
+                  with op.open(req, timeout=30) as respuesta:
+                      raw = respuesta.read(2_000_000)
+                      r['http'] = respuesta.status
+                      r['url_final'] = respuesta.geturl()
+                      r['tipo_contenido'] = respuesta.headers.get('Content-Type', '')
+                      r['bytes_leidos'] = len(raw)
+                  soup = BeautifulSoup(raw, 'html.parser')
+                  r['titulo'] = soup.title.get_text(' ', strip=True) if soup.title else ''
+                  r['ok_http'] = r['http'] == 200
+                  # Guardar HTML para inspección; sin cookies ni credenciales.
+                  (SALIDA / f'{nombre}.html').write_bytes(raw)
+                  for tabla in soup.find_all('table')[:20]:
+                      encabezados = [x.get_text(' ', strip=True)[:100] for x in tabla.select('th')[:20]]
+                      filas = tabla.select('tr')
+                      r['tablas'].append({'id': tabla.get('id'), 'encabezados': encabezados, 'filas': len(filas)})
+                  # Candidatos: filas con números de proceso o enlaces a detalles; NO se presumen licitaciones vigentes.
+                  for tr in soup.select('tr')[:600]:
+                      texto = tr.get_text(' ', strip=True)
+                      numeros = patrones.findall(texto)
+                      links = []
+                      for a in tr.select('a[href]')[:8]:
+                          href = urljoin(r['url_final'], a['href'])
+                          if urlparse(href).netloc.lower().endswith('contratar.gob.ar'):
+                              links.append({'texto': a.get_text(' ', strip=True)[:120], 'url': href})
+                      if numeros or (links and re.search(r'licitaci[oó]n|proceso|apertura', texto, re.I)):
+                          item = {'texto': texto[:600], 'numeros_detectados': list(dict.fromkeys(numeros)), 'enlaces': links}
+                          r['candidatos'].append(item)
+                          if palabras.search(texto):
+                              r['coincidencias_deep'].append(item)
+                      if len(r['candidatos']) >= 80:
+                          break
+                  r['formularios'] = len(soup.select('form'))
+                  r['viewstate'] = bool(soup.select('input[name="__VIEWSTATE"]'))
+                  r['muestra_texto'] = soup.get_text(' ', strip=True)[:900]
+              except Exception as e:
+                  r['error'] = f'{type(e).__name__}: {e}'[:500]
+              resultados.append(r)
+              print(f"\n{nombre.upper()}: HTTP={r.get('http')} final={r.get('url_final')} tablas={len(r['tablas'])} candidatos={len(r['candidatos'])} coincidencias_DEEP={len(r['coincidencias_deep'])}")
+              if r.get('error'):
+                  print('ERROR:', r['error'])
+              for t in r['tablas'][:8]:
+                  print('TABLA:', json.dumps(t, ensure_ascii=False))
+              for c in r['candidatos'][:5]:
+                  print('CANDIDATO (NO VERIFICADO):', json.dumps(c, ensure_ascii=False)[:900])
+          (SALIDA / 'resultados.json').write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding='utf-8')
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+              f.write('## Inspección de extracción CONTRAT.AR\n\n')
+              f.write('**Los candidatos no se consideran licitaciones vigentes ni verificadas.**\n\n')
+              f.write('| Página | HTTP | Tablas | Candidatos | Coincidencias DEEP |\n|---|---:|---:|---:|---:|\n')
+              for r in resultados:
+                  f.write(f"| {r['pagina']} | {r.get('http', 'error')} | {len(r['tablas'])} | {len(r['candidatos'])} | {len(r['coincidencias_deep'])} |\n")
+              f.write('\nDescargar el artefacto **diagnostico-extraccion-contratar** para inspeccionar HTML y JSON.\n')
+          print('\nPRUEBA AISLADA FINALIZADA. No se modificaron archivos del proyecto.')
+          PY
+
+      - name: Guardar evidencia de extracción
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-extraccion-contratar
+          path: diagnostico-extraccion/
+          if-no-files-found: warn
