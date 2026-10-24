@@ -1,6 +1,6 @@
 {
-  "actualizado": "2026-10-24T19:49:19.323282+00:00",
-  "versionAgente": "DEEP-CONTRATAR-20261024-VERIFICABLE",
+  "actualizado": "2026-10-24T19:55:55.975372+00:00",
+  "versionAgente": "DEEP-CONTRATAR-FECHAS-20261024",
   "estado": "oportunidades_pendientes_de_verificacion",
   "fuentes": [
     {
@@ -25,19 +25,33 @@
       "sector": "Obra pública / posible energía",
       "fuente": "CONTRAT.AR",
       "estadoOficial": "Publicado",
-      "publicacion": null,
-      "consultas": null,
+      "publicacion": "2026-08-12T00:00:00",
+      "consultas": "2026-11-13T17:00:00",
       "cierreOfertas": null,
-      "documentacionFisica": null,
+      "documentacionFisica": "2026-12-14T11:00:00",
       "apertura": "2026-12-14T12:00:00",
-      "detalleVerificado": false,
-      "circulares": [],
-      "enlaceCirculares": null,
-      "revisionCirculares": "pendiente",
+      "detalleVerificado": true,
+      "circulares": [
+        {
+          "numero": "1",
+          "publicacion": "11/09/2026",
+          "tipo": "Con consulta"
+        },
+        {
+          "numero": "2",
+          "publicacion": "22/09/2026",
+          "tipo": "Sin consulta"
+        }
+      ],
+      "enlaceCirculares": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
+      "revisionCirculares": "verificada",
       "plazoVerificado": false,
-      "enlace": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
+      "enlace": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
       "observaciones": "Referencia detectada en listado oficial de próximas aperturas. Fechas y circulares tomadas del detalle cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública",
-      "alertas": []
+      "alertas": [
+        "Circular nueva N° 1 (11/09/2026)",
+        "Circular nueva N° 2 (22/09/2026)"
+      ]
     }
   ]
 }
