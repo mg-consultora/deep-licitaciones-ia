@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-10-24T03:29:32.228837+00:00",
+  "actualizado": "2026-10-24T03:39:35.109858+00:00",
   "estado": "referencias_detectadas",
   "fuentes": [
     {
@@ -10,38 +10,6 @@
     }
   ],
   "licitaciones": [
-    {
-      "numero": "CAMMESA-COMPLEJOS-HIDROELECTRICOS",
-      "nombre": "Complejos Hidroeléctricos",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/inicio-licitaciones/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
-    },
-    {
-      "numero": "CAMMESA-COMPLEJOS-HIDROELECTRICOS",
-      "nombre": "Complejos Hidroeléctricos",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/complejoshidrolectricos/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
-    },
     {
       "numero": "CAMMESA-7-FASES-AMBA-RESOL-218-26",
       "nombre": "7 Fases AMBA – Resol. 218/26",
@@ -104,6 +72,38 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/resol-se-264-2026-xdem/",
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+    },
+    {
+      "numero": "CAMMESA-7-FASES-AMBA-RESOL-SE-218-2026",
+      "nombre": "7 Fases AMBA - Resol. SE 218/2026",
+      "organismo": "CAMMESA",
+      "sector": "Energía",
+      "fuente": "CAMMESA",
+      "estadoOficial": "Pendiente de verificar",
+      "publicacion": null,
+      "consultas": null,
+      "cierreOfertas": null,
+      "documentacionFisica": null,
+      "apertura": null,
+      "plazoVerificado": false,
+      "enlace": "https://cammesaweb.cammesa.com/7-fases-amba/",
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+    },
+    {
+      "numero": "CAMMESA-AMBA-I-RESOL-SE-202-2026",
+      "nombre": "AMBA I - Resol. SE 202/2026",
+      "organismo": "CAMMESA",
+      "sector": "Energía",
+      "fuente": "CAMMESA",
+      "estadoOficial": "Pendiente de verificar",
+      "publicacion": null,
+      "consultas": null,
+      "cierreOfertas": null,
+      "documentacionFisica": null,
+      "apertura": null,
+      "plazoVerificado": false,
+      "enlace": "https://cammesaweb.cammesa.com/ambai/",
       "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
     }
   ]
