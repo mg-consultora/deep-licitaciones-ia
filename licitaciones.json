@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-10-24T06:20:19.619901+00:00",
+  "actualizado": "2026-10-24T17:11:44.790520+00:00",
   "estado": "referencias_detectadas",
   "fuentes": [
     {
@@ -7,6 +7,13 @@
       "url": "https://cammesaweb.cammesa.com/inicio-licitaciones/",
       "estado": "consultada",
       "registros": 6
+    },
+    {
+      "nombre": "CONTRAT.AR - Obra pública",
+      "url": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
+      "estado": "consultada",
+      "registros": 1,
+      "detalle": "Filas leídas: 4; sin número de proceso válido: 0; sin términos de interés: 3; registrados: 1."
     }
   ],
   "licitaciones": [
@@ -24,7 +31,7 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/7-fases-amba/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
     },
     {
       "numero": "CAMMESA-AMBA-I-RESOL-202-26",
@@ -40,7 +47,7 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/ambai/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
     },
     {
       "numero": "CAMMESA-ALMASADI",
@@ -56,7 +63,7 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/almasadi-3/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
     },
     {
       "numero": "CAMMESA-GRANDES-DEMANDAS",
@@ -72,7 +79,7 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/resol-se-264-2026-xdem/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
     },
     {
       "numero": "CAMMESA-7-FASES-AMBA-RESOL-SE-218-2026",
@@ -88,7 +95,7 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/7-fases-amba/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
     },
     {
       "numero": "CAMMESA-AMBA-I-RESOL-SE-202-2026",
@@ -104,7 +111,23 @@
       "apertura": null,
       "plazoVerificado": false,
       "enlace": "https://cammesaweb.cammesa.com/ambai/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos en el enlace del proyecto."
+      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
+    },
+    {
+      "numero": "34-0003-LPU26",
+      "nombre": "AMPLIACIÓN DEL SISTEMA DE TRANSPORTE DE ENERGÍA ELÉCTRICA BAJO CONCESIÓN DE OBRA PÚBLICA “AMBA I”",
+      "organismo": "34/000 - Dirección General de Administración - MHA",
+      "sector": "Obra pública / posible energía",
+      "fuente": "CONTRAT.AR",
+      "estadoOficial": "Publicado",
+      "publicacion": null,
+      "consultas": null,
+      "cierreOfertas": null,
+      "documentacionFisica": null,
+      "apertura": "2026-12-14T12:00:00",
+      "plazoVerificado": false,
+      "enlace": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
+      "observaciones": "Referencia detectada en listado oficial de próximas aperturas. El enlace lleva al listado, no al expediente. Fecha de apertura distinta del cierre de ofertas; vigencia, alcance y documentación pendientes de verificar. Tipo: Licitación Pública"
     }
   ]
 }
