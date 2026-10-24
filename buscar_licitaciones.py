@@ -102,10 +102,18 @@ def buscar_cammesa():
         if "/download/" in ruta:
             continue
 
-        if enlace in vistos:
+               # Excluir enlaces generales y duplicados
+        if enlace == URL_CAMMESA:
             continue
 
-        vistos.add(enlace)
+        if "/complejoshidrolectricos/" in enlace:
+            continue
+
+        clave = normalizar(titulo)
+        if clave in vistos:
+            continue
+
+        vistos.add(clave)
 
         # Identificador interno, NO número oficial.
         identificador = "CAMMESA-" + re.sub(
