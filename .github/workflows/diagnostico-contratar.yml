@@ -1,0 +1,247 @@
+name: Diagnóstico CONTRAT.AR
+
+# Prueba AISLADA: no modifica CAMMESA, ni licitaciones.json, ni el tablero.
+# Solo lee 5 páginas públicas de contratar.gob.ar y muestra el resultado en el log.
+# Si el acceso falla, la corrida termina en ROJO a propósito (verde = el portal respondió).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Diagnóstico de acceso a contratar.gob.ar
+        run: |
+          python3 -u - <<'PY'
+          import socket, ssl, time, os, sys, json, re
+          import http.cookiejar
+          import urllib.request, urllib.error
+
+          HOST = "contratar.gob.ar"
+          BASE = "https://" + HOST
+          UA_NAVEGADOR = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+          R = {}        # resultados de cada prueba (True / False)
+          FILAS = []    # filas para el resumen final
+
+          def titulo(t):
+              print("\n" + "=" * 72)
+              print(t)
+              print("=" * 72, flush=True)
+
+          def ok(m):
+              print("[OK]    " + m, flush=True)
+
+          def falla(m):
+              print("[FALLA] " + m, flush=True)
+
+          def info(m):
+              print("[INFO]  " + m, flush=True)
+
+          # ------------------------------------------------------------
+          titulo("0. DESDE DÓNDE SE EJECUTA (servidor de GitHub)")
+          try:
+              with urllib.request.urlopen("https://ipinfo.io/json", timeout=15) as r:
+                  d = json.loads(r.read().decode("utf-8", errors="replace"))
+              info("IP pública: %s | País: %s | Región: %s | Proveedor: %s" % (
+                  d.get("ip"), d.get("country"), d.get("region"), d.get("org")))
+          except Exception as e:
+              info("No se pudo consultar la ubicación del servidor: %s: %s" % (type(e).__name__, e))
+
+          # ------------------------------------------------------------
+          titulo("1. DNS: ¿se resuelve el nombre contratar.gob.ar?")
+          direcciones = []
+          try:
+              t0 = time.time()
+              infos = socket.getaddrinfo(HOST, 443, proto=socket.IPPROTO_TCP)
+              direcciones = sorted({i[4][0] for i in infos})
+              ok("Resuelto en %.2f s -> %s" % (time.time() - t0, ", ".join(direcciones)))
+              R["dns"] = True
+          except Exception as e:
+              falla("DNS: %s: %s" % (type(e).__name__, e))
+              R["dns"] = False
+          FILAS.append(("DNS", "OK" if R["dns"] else "FALLA"))
+
+          # ------------------------------------------------------------
+          titulo("2. CONEXIÓN TCP al puerto 443")
+          tcp_ok = 0
+          if not direcciones:
+              falla("No hay direcciones para probar (falló el DNS).")
+          for ip in direcciones[:4]:
+              t0 = time.time()
+              try:
+                  s = socket.create_connection((ip, 443), timeout=10)
+                  s.close()
+                  ok("%s conectó en %.2f s" % (ip, time.time() - t0))
+                  tcp_ok += 1
+              except Exception as e:
+                  falla("%s no conectó (%.1f s): %s: %s" % (ip, time.time() - t0, type(e).__name__, e))
+          R["tcp"] = tcp_ok > 0
+          FILAS.append(("TCP 443", "OK (%d direcciones)" % tcp_ok if R["tcp"] else "FALLA"))
+
+          # ------------------------------------------------------------
+          titulo("3. TLS / certificado HTTPS")
+          def nombre_cert(t):
+              return ", ".join("=".join(x) for rdn in t for x in rdn)
+          R["tls"] = False
+          try:
+              ctx = ssl.create_default_context()
+              t0 = time.time()
+              with socket.create_connection((HOST, 443), timeout=10) as s:
+                  with ctx.wrap_socket(s, server_hostname=HOST) as ss:
+                      c = ss.getpeercert()
+                      ok("Handshake TLS en %.2f s | versión %s | cifrado %s" % (
+                          time.time() - t0, ss.version(), ss.cipher()[0]))
+                      info("Certificado a nombre de: " + nombre_cert(c.get("subject", ())))
+                      info("Emitido por: " + nombre_cert(c.get("issuer", ())))
+                      info("Vence: " + str(c.get("notAfter")))
+              R["tls"] = True
+          except ssl.SSLCertVerificationError as e:
+              falla("El certificado no se pudo validar: %s" % e)
+              try:
+                  ctx2 = ssl.create_default_context()
+                  ctx2.check_hostname = False
+                  ctx2.verify_mode = ssl.CERT_NONE
+                  with socket.create_connection((HOST, 443), timeout=10) as s:
+                      with ctx2.wrap_socket(s, server_hostname=HOST) as ss:
+                          info("Solo diagnóstico: sin validar certificado, la conexión TLS SÍ se establece (%s)." % ss.version())
+              except Exception as e2:
+                  falla("Tampoco conecta sin validar certificado: %s: %s" % (type(e2).__name__, e2))
+          except Exception as e:
+              falla("TLS: %s: %s" % (type(e).__name__, e))
+          FILAS.append(("TLS", "OK" if R["tls"] else "FALLA"))
+
+          # ------------------------------------------------------------
+          class Registro(urllib.request.HTTPRedirectHandler):
+              saltos = []
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  self.saltos.append((code, req.full_url, newurl))
+                  return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+          def nueva_sesion(ua):
+              jar = http.cookiejar.CookieJar()
+              reg = Registro()
+              reg.saltos = []
+              op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), reg)
+              if ua:
+                  op.addheaders = [
+                      ("User-Agent", ua),
+                      ("Accept", "text/html,application/xhtml+xml"),
+                      ("Accept-Language", "es-AR,es;q=0.9"),
+                  ]
+              return op, jar, reg
+
+          def pedir(etiqueta, op, jar, reg, url):
+              reg.saltos = []
+              t0 = time.time()
+              res = {"ok": False, "status": None, "url_final": None, "cuerpo": ""}
+              try:
+                  with op.open(url, timeout=25) as r:
+                      cuerpo = r.read(2000000).decode("utf-8", errors="replace")
+                      res.update(ok=(r.status == 200), status=r.status,
+                                 url_final=r.geturl(), cuerpo=cuerpo)
+              except urllib.error.HTTPError as e:
+                  res.update(status=e.code, error="HTTP %s %s" % (e.code, e.reason))
+              except Exception as e:
+                  res.update(error="%s: %s" % (type(e).__name__, e))
+              seg = time.time() - t0
+              print("\n--- %s" % etiqueta)
+              print("    Pedido:      " + url)
+              if res["ok"]:
+                  ok("HTTP %s en %.2f s | %d caracteres" % (res["status"], seg, len(res["cuerpo"])))
+              else:
+                  falla("%s (a los %.1f s)" % (res.get("error", "respuesta inesperada"), seg))
+              for (code, desde, hacia) in reg.saltos:
+                  info("Redirección %s: %s -> %s" % (code, desde, hacia))
+              if res["url_final"]:
+                  info("URL final: " + res["url_final"])
+              info("Cookies recibidas (solo nombres): " + (", ".join(sorted(c.name for c in jar)) or "ninguna"))
+              if res["cuerpo"]:
+                  m = re.search(r"<title>(.*?)</title>", res["cuerpo"], re.S | re.I)
+                  info("Título de la página: " + (" ".join(m.group(1).split())[:120] if m else "sin título"))
+                  info("Contiene formulario ASP.NET (__VIEWSTATE): " + ("sí" if "__VIEWSTATE" in res["cuerpo"] else "no"))
+              sys.stdout.flush()
+              return res
+
+          def vuelve_al_inicio(res):
+              u = (res.get("url_final") or "").lower().split("?")[0].rstrip("/")
+              return u.endswith("default.aspx") or u == BASE.lower()
+
+          # ------------------------------------------------------------
+          titulo("4. HTTPS: pedidos reales (5 páginas públicas en total, con pausa de 2 s)")
+
+          op, jar, reg = nueva_sesion(None)
+          a = pedir("4a. Inicio con cliente Python simple (sin identificarse como navegador)", op, jar, reg, BASE + "/")
+          R["home_simple"] = a["ok"]
+          time.sleep(2)
+
+          op, jar, reg = nueva_sesion(UA_NAVEGADOR)
+          b = pedir("4b. Inicio con identificación de navegador (abre la sesión)", op, jar, reg, BASE + "/")
+          R["home_navegador"] = b["ok"]
+          time.sleep(2)
+
+          c = pedir("4c. Próximas aperturas (misma sesión)", op, jar, reg, BASE + "/ListarAperturaProxima.aspx")
+          R["proximas"] = c["ok"] and not vuelve_al_inicio(c)
+          if c["ok"] and vuelve_al_inicio(c):
+              info("La página te devolvió al inicio: no se obtuvo el listado.")
+          time.sleep(2)
+
+          d4 = pedir("4d. Aperturas de los últimos 90 días (misma sesión)", op, jar, reg, BASE + "/ListarAperturaUltimos30Dias.aspx")
+          R["ultimos90"] = d4["ok"] and not vuelve_al_inicio(d4)
+          if d4["ok"] and vuelve_al_inicio(d4):
+              info("La página te devolvió al inicio: no se obtuvo el listado.")
+          time.sleep(2)
+
+          e4 = pedir("4e. Búsqueda avanzada (misma sesión)", op, jar, reg, BASE + "/BuscarAvanzado.aspx")
+          R["avanzada"] = e4["ok"] and not vuelve_al_inicio(e4)
+          if e4["ok"] and vuelve_al_inicio(e4):
+              info("La página te devolvió al inicio: no se obtuvo el formulario.")
+
+          home_http = R["home_simple"] or R["home_navegador"]
+          FILAS.append(("HTTPS inicio (cliente simple)", "OK" if R["home_simple"] else "FALLA"))
+          FILAS.append(("HTTPS inicio (identificado como navegador)", "OK" if R["home_navegador"] else "FALLA"))
+          FILAS.append(("Listado próximas aperturas", "OK" if R["proximas"] else "NO OBTENIDO"))
+          FILAS.append(("Listado últimos 90 días", "OK" if R["ultimos90"] else "NO OBTENIDO"))
+          FILAS.append(("Búsqueda avanzada", "OK" if R["avanzada"] else "NO OBTENIDO"))
+
+          # ------------------------------------------------------------
+          titulo("VEREDICTO FINAL")
+          if not R["dns"]:
+              veredicto = "El nombre contratar.gob.ar NO se resuelve desde el servidor de GitHub."
+          elif not R["tcp"]:
+              veredicto = ("NO hay conexión TCP al puerto 443 desde GitHub. El portal no llega a responder. "
+                           "Esto muestra que el corte ocurre antes del navegador (red), pero no prueba por sí solo la causa.")
+          elif not R["tls"]:
+              veredicto = "Hay conexión TCP pero falla la negociación HTTPS/TLS."
+          elif not home_http:
+              veredicto = "Hay conexión y TLS, pero el portal no devuelve la página de inicio (ver errores arriba)."
+          elif R["proximas"] or R["ultimos90"]:
+              veredicto = ("El portal RESPONDE por HTTPS simple y entregó al menos un listado público. "
+                           "Playwright probablemente no haga falta.")
+          else:
+              veredicto = ("El portal responde por HTTPS (inicio OK), pero los listados no se obtuvieron con esta sesión. "
+                           "Falta analizar cómo abre el listado.")
+          print(veredicto, flush=True)
+          for k, v in FILAS:
+              print("  %-45s %s" % (k, v))
+
+          resumen = os.environ.get("GITHUB_STEP_SUMMARY")
+          if resumen:
+              with open(resumen, "a", encoding="utf-8") as f:
+                  f.write("## Diagnóstico CONTRAT.AR\n\n")
+                  f.write("**%s**\n\n" % veredicto)
+                  f.write("| Prueba | Resultado |\n|---|---|\n")
+                  for k, v in FILAS:
+                      f.write("| %s | %s |\n" % (k, v))
+
+          if home_http:
+              print("::notice title=CONTRAT.AR::El portal respondió desde GitHub. %s" % veredicto)
+              sys.exit(0)
+          print("::error title=CONTRAT.AR sin acceso::%s" % veredicto)
+          sys.exit(1)
+          PY
