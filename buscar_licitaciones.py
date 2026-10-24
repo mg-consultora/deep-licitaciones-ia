@@ -1,67 +1,3 @@
-
-import json
-import re
-import unicodedata
-from datetime import datetime, timezone
-from html.parser import HTMLParser
-from pathlib import Path
-from urllib.request import Request, urlopen
-from urllib.parse import urljoin, urlparse
-
-URL_CAMMESA = "https://cammesaweb.cammesa.com/inicio-licitaciones/"
-URL_CONTRATAR = "https://contratar.gob.ar/BuscarAvanzado.aspx"
-
-TERMINOS = [
-    "amba", "almasadi", "almacenamiento", "bess",
-    "transporte", "hidroelectric", "subestacion",
-    "transformadora", "energia", "potencia",
-    "electrica", "grandes demandas"
-]
-
-
-class LectorEnlaces(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.enlaces = []
-        self.url_actual = None
-        self.texto_actual = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag == "a":
-            self.url_actual = dict(attrs).get("href", "")
-            self.texto_actual = []
-
-    def handle_data(self, data):
-        if self.url_actual is not None:
-            self.texto_actual.append(data)
-
-    def handle_endtag(self, tag):
-        if tag == "a" and self.url_actual is not None:
-            texto = " ".join(" ".join(self.texto_actual).split())
-            if texto and self.url_actual:
-                self.enlaces.append((texto, self.url_actual))
-            self.url_actual = None
-            self.texto_actual = []
-
-
-def normalizar(texto):
-    texto = unicodedata.normalize("NFKD", texto.lower())
-    return "".join(
-        c for c in texto if not unicodedata.combining(c)
-    )
-
-
-def obtener_html(url):
-    solicitud = Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "text/html"
-        }
-    )
-    with urlopen(solicitud, timeout=35) as respuesta:
-        if respuesta.status != 200:
-            raise RuntimeError(
                 f"Respuesta HTTP {respuesta.status}"
             )
         return respuesta.read().decode(
@@ -132,84 +68,93 @@ def buscar_cammesa():
     return resultados
 
 
+
+class LectorTablaContratar(HTMLParser):
+    """Lee exclusivamente las seis columnas del listado oficial de próximas aperturas."""
+    def __init__(self):
+        super().__init__()
+        self.en_tabla = False
+        self.en_fila = False
+        self.en_celda = False
+        self.celda = []
+        self.fila = []
+        self.filas = []
+
+    def handle_starttag(self, tag, attrs):
+        atributos = dict(attrs)
+        if tag == "table" and atributos.get("id") == "ctl00_CPH1_GridListaPliegos":
+            self.en_tabla = True
+        elif self.en_tabla and tag == "tr":
+            self.en_fila, self.fila = True, []
+        elif self.en_fila and tag == "td":
+            self.en_celda, self.celda = True, []
+
+    def handle_data(self, data):
+        if self.en_celda:
+            self.celda.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "td" and self.en_celda:
+            self.fila.append(" ".join(" ".join(self.celda).split()))
+            self.en_celda = False
+        elif tag == "tr" and self.en_fila:
+            if len(self.fila) == 6:
+                self.filas.append(self.fila)
+            self.en_fila = False
+        elif tag == "table" and self.en_tabla:
+            self.en_tabla = False
+
+
+def buscar_contratar():
+    html = obtener_html(URL_CONTRATAR)
+    lector = LectorTablaContratar()
+    lector.feed(html)
+    if not lector.filas:
+        raise RuntimeError("No se encontraron filas en la tabla oficial; revisar estructura del portal")
+
+    resultados = []
+    vistos = set()
+    for numero, nombre, tipo, apertura_texto, estado, organismo in lector.filas:
+        if not re.fullmatch(r"[0-9]+(?:/[0-9]+)?-[0-9]+-[A-Z]+[0-9]+", numero):
+            continue
+        if not any(termino in normalizar(nombre) for termino in TERMINOS):
+            continue
+        if numero in vistos:
+            continue
+        vistos.add(numero)
+        apertura = None
+        coincidencia = re.search(r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})", apertura_texto)
+        if coincidencia:
+            try:
+                apertura = datetime.strptime(
+                    " ".join(coincidencia.groups()), "%d/%m/%Y %H:%M"
+                ).strftime("%Y-%m-%dT%H:%M:00")
+            except ValueError:
+                pass
+        resultados.append({
+            "numero": numero,
+            "nombre": nombre,
+            "organismo": organismo,
+            "sector": "Obra pública / posible energía",
+            "fuente": "CONTRAT.AR",
+            "estadoOficial": estado,
+            "publicacion": None,
+            "consultas": None,
+            "cierreOfertas": None,
+            "documentacionFisica": None,
+            "apertura": apertura,
+            "plazoVerificado": False,
+            "enlace": URL_CONTRATAR,
+            "observaciones": (
+                "Referencia detectada en listado oficial de próximas aperturas. "
+                "El enlace lleva al listado, no al expediente. "
+                "Fecha de apertura distinta del cierre de ofertas; "
+                "vigencia, alcance y documentación pendientes de verificar. "
+                "Tipo: " + tipo
+            )
+        })
+    return resultados
+
 def main():
     fuentes = []
     licitaciones = []
-
-    try:
-        licitaciones = buscar_cammesa()
-        fuentes.append({
-            "nombre": "CAMMESA - Convocatorias",
-            "url": URL_CAMMESA,
-            "estado": "consultada",
-            "registros": len(licitaciones)
-        })
-        print("CAMMESA: referencias:", len(licitaciones))
-
-    except Exception as error:
-        print("CAMMESA: error:", error)
-
-        # Evitar borrar resultados anteriores si falla la web.
-        archivo = Path("licitaciones.json")
-        if archivo.exists():
-            try:
-                anterior = json.loads(
-                    archivo.read_text(encoding="utf-8")
-                )
-                licitaciones = [
-                    item for item in anterior.get("licitaciones", [])
-                    if item.get("fuente") == "CAMMESA"
-                ]
-            except (ValueError, OSError):
-                licitaciones = []
-
-        fuentes.append({
-            "nombre": "CAMMESA - Convocatorias",
-            "url": URL_CAMMESA,
-            "estado": "error",
-            "detalle": str(error),
-            "registros": len(licitaciones)
-        })
-
-    # CONTRAT.AR tiene búsqueda pública por número,
-    # pero su extracción automática aún no está validada.
-    # No generar expedientes ni fechas sin verificarlos.
-    fuentes.append({
-        "nombre": "CONTRAT.AR - Obra pública",
-        "url": URL_CONTRATAR,
-        "estado": "consulta_manual_disponible",
-        "registros": 0,
-        "detalle": (
-            "Búsqueda pública por número disponible. "
-            "Extracción automática pendiente de validación."
-        )
-    })
-
-    resultado = {
-        "actualizado": datetime.now(
-            timezone.utc
-        ).isoformat(),
-        "estado": (
-            "referencias_detectadas"
-            if licitaciones
-            else "sin_registros_verificados"
-        ),
-        "fuentes": fuentes,
-        "licitaciones": licitaciones
-    }
-
-    Path("licitaciones.json").write_text(
-        json.dumps(
-            resultado, ensure_ascii=False, indent=2
-        ),
-        encoding="utf-8"
-    )
-
-    print("licitaciones.json generado.")
-    print("Referencias CAMMESA:", len(licitaciones))
-    print("CONTRAT.AR: búsqueda manual disponible.")
-    print("Extracción automática CONTRAT.AR: pendiente.")
-
-
-if __name__ == "__main__":
-    main()
