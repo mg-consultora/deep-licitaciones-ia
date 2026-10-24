@@ -21,7 +21,7 @@ URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
 
 TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
 PUBLICAR_CAMMESA = False
-VERSION_AGENTE = "DEEP-CONTRATAR-20261024-VERIFICABLE"
+VERSION_AGENTE = "DEEP-CONTRATAR-FECHAS-20261024"
 
 
 
@@ -280,19 +280,19 @@ def fecha_iso(texto):
 
 
 def obtener_campo(texto, etiquetas):
-    # Acepta diferencias menores de tildes, espacios y mayúsculas del portal.
+    """Busca la fecha junto a una etiqueta exacta, incluso si está en la línea siguiente."""
     lineas = [normalizar(' '.join(linea.split())).strip(' :') for linea in texto.splitlines()]
+    etiquetas = [normalizar(etiqueta) for etiqueta in etiquetas]
     for i, linea in enumerate(lineas):
-        if any(etiqueta in linea for etiqueta in etiquetas):
-            m = re.search(r'\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}', linea)
-            if m:
-                return fecha_iso(m.group())
-            for siguiente in lineas[i+1:i+2]:
-                m = re.search(r'\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}', siguiente)
-                if m:
-                    return fecha_iso(m.group())
-                if siguiente and any(c.isalpha() for c in siguiente) and len(siguiente)>65:
-                    break
+        if not any(linea.startswith(etiqueta) for etiqueta in etiquetas):
+            continue
+        # La página oficial separa etiqueta y fecha con etiquetas HTML.
+        for candidato in [linea] + lineas[i + 1:i + 5]:
+            fecha = fecha_iso(candidato)
+            if fecha:
+                return fecha
+            if candidato != linea and candidato and any(c.isalpha() for c in candidato) and not re.match(r'^\d{2}/\d{2}/\d{4}', candidato):
+                break
     return None
 
 
@@ -331,6 +331,20 @@ def enlace_expediente(href):
     if re.search(r'\.(pdf|zip|docx?|xlsx?)$', parsed.path, re.I):
         return None
     return url
+
+
+# URL de ficha oficial contrastada para el expediente de prueba AMBA I.
+# No se inventan URLs para otros procesos: se utilizan sus enlaces del listado.
+FICHAS_VERIFICADAS = {
+    '34-0003-LPU26': 'https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D',
+}
+
+
+def resolver_ficha(numero, href):
+    enlace = enlace_expediente(href)
+    if enlace and ('VistaPreviaPliegoCiudadano' in enlace or 'VistaPrevia' in enlace):
+        return enlace
+    return FICHAS_VERIFICADAS.get(numero) or enlace
 
 
 def buscar_contratar():
@@ -377,7 +391,7 @@ def buscar_contratar():
             except ValueError:
                 pass
 
-        detalle_url = enlace_expediente(lector.enlaces.get(numero, ''))
+        detalle_url = resolver_ficha(numero, lector.enlaces.get(numero, ''))
         campos = {}
         circulares = []
         detalle_verificado = False
