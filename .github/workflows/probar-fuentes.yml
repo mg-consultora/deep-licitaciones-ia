@@ -20,4 +20,4 @@ jobs:
           python-version: "3.12"
 
       - name: Probar fuentes oficiales
-        run: python probar_fuentes_deep.py
+        run: python probar_fuentes_deep_robusto.py
