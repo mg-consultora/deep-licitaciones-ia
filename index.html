@@ -172,8 +172,8 @@ footer {
   <h2>🔎 Consultar un proceso oficial</h2>
   <p class="note">
     Ingresá el número que te envió el cliente (por ejemplo, 34-0003-LPU26).
-    Si ya está registrado en DEEP, se mostrará en la tabla. También se abrirá
-    el buscador público de CONTRAT.AR para consultar el expediente oficial.
+    Si ya está registrado en DEEP, se mostrará en la tabla y se abrirá
+    directamente el expediente. Para números nuevos, se abrirá el buscador público de CONTRAT.AR.
   </p>
   <form id="consulta-form" class="search-row">
     <input id="numero" required
@@ -466,6 +466,7 @@ function normalizarRegistro(item) {
 
 async function cargarDatos() {
   const conexion = document.getElementById("conexion");
+  let datos;
   try {
     const respuesta = await fetch(
       "./licitaciones.json?nocache=" + Date.now(),
@@ -475,7 +476,7 @@ async function cargarDatos() {
       throw new Error("Archivo no publicado");
     }
 
-    const datos = await respuesta.json();
+    datos = await respuesta.json();
     const registros = Array.isArray(datos)
       ? datos
       : Array.isArray(datos.licitaciones)
@@ -490,9 +491,15 @@ async function cargarDatos() {
     licitacionesManuales.forEach(item =>
       mapa.set(item.numero, item)
     );
-    validos.forEach(item =>
-      mapa.set(item.numero, item)
-    );
+    validos.forEach(item => {
+      const url = String(item.enlace || "");
+      if (url === "https://cammesaweb.cammesa.com/inicio-licitaciones/" ||
+          url.includes("/complejoshidrolectricos/")) return;
+      const clave = item.fuente === "CAMMESA"
+        ? "CAMMESA:" + item.nombre.toLowerCase().trim()
+        : item.numero;
+      if (!mapa.has(clave)) mapa.set(clave, item);
+    });
 
     licitaciones = Array.from(mapa.values());
 
@@ -507,7 +514,10 @@ async function cargarDatos() {
 
   document.getElementById("actualizacion").textContent =
     "Última consulta del tablero: " +
-    new Date().toLocaleString("es-AR");
+    new Date().toLocaleString("es-AR") +
+    (typeof datos !== "undefined" && datos.actualizado
+      ? " | Archivo automático: " + new Date(datos.actualizado).toLocaleString("es-AR")
+      : "");
 
   dibujar();
 }
@@ -526,42 +536,51 @@ document.getElementById("consulta-form")
     const mensaje = document.getElementById("mensaje-consulta");
     if (!numero) return;
 
-    // Buscar primero entre los procesos ya registrados en el tablero.
-    const coincidencias = licitaciones.filter(item =>
-      String(item.numero || "").toUpperCase().includes(numero)
+    const registro = licitaciones.find(item =>
+      String(item.numero || "").trim().toUpperCase() === numero
     );
     document.getElementById("buscar").value = numero;
     document.getElementById("filtrar-estado").value = "";
     document.getElementById("filtrar-sector").value = "";
     dibujar();
 
-    // Abrir el portal público. No se afirma que el sitio acepte
-    // búsqueda directa mediante un parámetro de URL.
+    if (registro && registro.enlace &&
+        /^https:\/\/[^ ]+$/i.test(registro.enlace)) {
+      mensaje.textContent = "Expediente encontrado en DEEP: " + numero +
+        ". Abriendo el enlace registrado. Verificá allí las novedades oficiales.";
+      const ventana = window.open(registro.enlace, "_blank", "noopener,noreferrer");
+      if (!ventana) {
+        const enlace = document.createElement("a");
+        enlace.href = registro.enlace;
+        enlace.target = "_blank";
+        enlace.rel = "noopener noreferrer";
+        enlace.textContent = " Abrir expediente ↗";
+        mensaje.appendChild(enlace);
+      }
+      return;
+    }
+
+    // CONTRAT.AR no permite deducir el enlace del expediente desde el número.
+    // Se abre la búsqueda oficial sin fingir una extracción automática.
     const ventana = window.open(
       "https://contratar.gob.ar/BuscarAvanzado.aspx",
       "_blank", "noopener,noreferrer"
     );
-    let copiado = false;
     try {
       await navigator.clipboard.writeText(numero);
-      copiado = true;
+      mensaje.textContent = "El proceso no está en la base DEEP. " +
+        "Número copiado: " + numero + ". Pegalo en el buscador oficial de CONTRAT.AR.";
     } catch (_) {
-      // Algunos navegadores impiden copiar automáticamente.
-    }
-
-    if (coincidencias.length) {
-      mensaje.textContent = "Encontrado en el tablero DEEP: " +
-        coincidencias.length + " registro(s). " +
-        (copiado ? "Número copiado; pegalo en CONTRAT.AR para verificar novedades." :
-        "Ingresá el número en CONTRAT.AR para verificar novedades.");
-    } else {
-      mensaje.textContent = "El proceso " + numero +
-        " todavía no figura en la base DEEP. " +
-        (copiado ? "Número copiado; pegalo en el buscador oficial." :
-        "Ingresalo en el buscador oficial.");
+      mensaje.textContent = "El proceso no está en la base DEEP. " +
+        "Buscá " + numero + " en CONTRAT.AR.";
     }
     if (!ventana) {
-      mensaje.textContent += " Si no se abrió otra pestaña, permití ventanas emergentes para este sitio.";
+      const enlace = document.createElement("a");
+      enlace.href = "https://contratar.gob.ar/BuscarAvanzado.aspx";
+      enlace.target = "_blank";
+      enlace.rel = "noopener noreferrer";
+      enlace.textContent = " Abrir buscador oficial ↗";
+      mensaje.appendChild(enlace);
     }
   });
 
