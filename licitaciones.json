@@ -1,12 +1,13 @@
 {
-  "actualizado": "2026-10-24T18:16:58.023492+00:00",
-  "estado": "referencias_detectadas",
+  "actualizado": "2026-10-24T19:49:19.323282+00:00",
+  "versionAgente": "DEEP-CONTRATAR-20261024-VERIFICABLE",
+  "estado": "oportunidades_pendientes_de_verificacion",
   "fuentes": [
     {
       "nombre": "CAMMESA - Convocatorias",
       "url": "https://cammesaweb.cammesa.com/inicio-licitaciones/",
-      "estado": "consultada",
-      "registros": 6
+      "estado": "en pausa",
+      "registros": 0
     },
     {
       "nombre": "CONTRAT.AR - Obra pública",
@@ -17,102 +18,6 @@
     }
   ],
   "licitaciones": [
-    {
-      "numero": "CAMMESA-7-FASES-AMBA-RESOL-218-26",
-      "nombre": "7 Fases AMBA – Resol. 218/26",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/7-fases-amba/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
-    {
-      "numero": "CAMMESA-AMBA-I-RESOL-202-26",
-      "nombre": "AMBA I – Resol. 202/26",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/ambai/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
-    {
-      "numero": "CAMMESA-ALMASADI",
-      "nombre": "AlmaSADI",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/almasadi-3/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
-    {
-      "numero": "CAMMESA-GRANDES-DEMANDAS",
-      "nombre": "Grandes Demandas",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/resol-se-264-2026-xdem/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
-    {
-      "numero": "CAMMESA-7-FASES-AMBA-RESOL-SE-218-2026",
-      "nombre": "7 Fases AMBA - Resol. SE 218/2026",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/7-fases-amba/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
-    {
-      "numero": "CAMMESA-AMBA-I-RESOL-SE-202-2026",
-      "nombre": "AMBA I - Resol. SE 202/2026",
-      "organismo": "CAMMESA",
-      "sector": "Energía",
-      "fuente": "CAMMESA",
-      "estadoOficial": "Pendiente de verificar",
-      "publicacion": null,
-      "consultas": null,
-      "cierreOfertas": null,
-      "documentacionFisica": null,
-      "apertura": null,
-      "plazoVerificado": false,
-      "enlace": "https://cammesaweb.cammesa.com/ambai/",
-      "observaciones": "Referencia detectada en el portal oficial. Verificar vigencia, alcance y plazos."
-    },
     {
       "numero": "34-0003-LPU26",
       "nombre": "AMPLIACIÓN DEL SISTEMA DE TRANSPORTE DE ENERGÍA ELÉCTRICA BAJO CONCESIÓN DE OBRA PÚBLICA “AMBA I”",
@@ -125,9 +30,14 @@
       "cierreOfertas": null,
       "documentacionFisica": null,
       "apertura": "2026-12-14T12:00:00",
+      "detalleVerificado": false,
+      "circulares": [],
+      "enlaceCirculares": null,
+      "revisionCirculares": "pendiente",
       "plazoVerificado": false,
       "enlace": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
-      "observaciones": "Referencia detectada en listado oficial de próximas aperturas. El enlace lleva al listado, no al expediente. Fecha de apertura distinta del cierre de ofertas; vigencia, alcance y documentación pendientes de verificar. Tipo: Licitación Pública"
+      "observaciones": "Referencia detectada en listado oficial de próximas aperturas. Fechas y circulares tomadas del detalle cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública",
+      "alertas": []
     }
   ]
 }
