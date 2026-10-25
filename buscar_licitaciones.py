@@ -21,7 +21,7 @@ URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
 
 TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
 PUBLICAR_CAMMESA = False
-VERSION_AGENTE = "DEEP-CONTRATAR-FECHAS-20261024"
+VERSION_AGENTE = "DEEP-CONTRATAR-ESTABLE-V2-20261025"
 
 
 
@@ -133,7 +133,7 @@ def buscar_cammesa():
             "cierreOfertas": None,
             "documentacionFisica": None,
             "apertura": None,
-            "plazoVerificado": bool(campos.get("cierreOfertas")),
+            "plazoVerificado": False,
             "enlace": enlace,
             "observaciones": (
                 "Referencia detectada en el portal oficial. "
@@ -165,7 +165,7 @@ class LectorTablaContratar(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         atributos = dict(attrs)
-        if tag == "table" and atributos.get("id") == "ctl00_CPH1_GridListaPliegos":
+        if tag == "table" and "gridlistapliegos" in atributos.get("id", "").lower():
             self.en_tabla = True
         elif self.en_tabla and tag == "tr":
             self.en_fila, self.fila = True, []
@@ -186,8 +186,8 @@ class LectorTablaContratar(HTMLParser):
             self.fila.append(" ".join(" ".join(self.celda).split()))
             self.en_celda = False
         elif tag == "tr" and self.en_fila:
-            if len(self.fila) == 6:
-                self.filas.append(self.fila)
+            if len(self.fila) >= 6:
+                self.filas.append(self.fila[:6])
                 if self.href_fila:
                     self.enlaces[self.fila[0]] = self.href_fila
             self.en_fila = False
@@ -349,19 +349,10 @@ def resolver_ficha(numero, href):
 
 def buscar_contratar():
     html, opener, cabeceras = obtener_html_contratar(URL_CONTRATAR)
-    if "ctl00_CPH1_GridListaPliegos" not in html:
-        raise RuntimeError(
-            "El portal no devolvió el listado de próximas aperturas "
-            "(posible redirección al inicio o cambio de estructura)"
-        )
-
     lector = LectorTablaContratar()
     lector.feed(html)
     if not lector.filas:
-        raise RuntimeError(
-            "No se encontraron filas de seis columnas en la tabla oficial; "
-            "revisar estructura del portal"
-        )
+        raise RuntimeError(f"No se pudo leer la tabla de CONTRAT.AR (HTML: {len(html)} caracteres, tabla esperada: {'ctl00_CPH1_GridListaPliegos' in html}). Revisar sesión, estructura y enlaces.")
 
     resultados = []
     vistos = set()
@@ -404,6 +395,7 @@ def buscar_contratar():
                 print(f"CONTRAT.AR {numero}: detalle pendiente: {error}")
 
         resultados.append({
+            "clasificacionDEEP": ("Coincidencia directa" if any(t in normalizar(nombre) for t in ["ups", "rectificador", "cargador", "bateria", "corriente continua", "bess", "energia critica"]) else "Obra contextual: revisar pliego"),
             "numero": numero,
             "nombre": nombre,
             "organismo": organismo,
@@ -435,7 +427,8 @@ def buscar_contratar():
             return bool(valor) and datetime.fromisoformat(valor) < ahora
         except ValueError:
             return False
-    resultados = [r for r in resultados if not vencida(r.get("cierreOfertas")) and not vencida(r.get("apertura"))]
+    # No excluir por fecha de apertura: NO es el cierre de ofertas.
+    resultados = [r for r in resultados if not vencida(r.get("cierreOfertas"))]
     detalle = (
         f"Filas leídas: {len(lector.filas)}; "
         f"sin número de proceso válido: {sin_numero_valido}; "
@@ -455,7 +448,7 @@ FUENTES = [
     ("CAMMESA", "CAMMESA - Convocatorias", URL_CAMMESA,
      lambda: (buscar_cammesa(), None), True),
     ("CONTRAT.AR", "CONTRAT.AR - Obra pública", URL_CONTRATAR,
-     buscar_contratar, False),
+     buscar_contratar, True),
 ]
 
 
@@ -499,11 +492,15 @@ def main():
                 for registro in registros:
                     previo = por_numero.get(registro['numero'], {})
                     if not registro.get('detalleVerificado'):
-                        for campo in ('publicacion', 'consultas', 'cierreOfertas', 'documentacionFisica'):
-                            registro[campo] = None
+                        # No borrar fechas oficiales verificadas en una ejecución previa.
+                        for campo in ('publicacion', 'consultas', 'cierreOfertas', 'documentacionFisica', 'apertura'):
+                            if not registro.get(campo) and previo.get('detalleVerificado'):
+                                registro[campo] = previo.get(campo)
                         registro['circulares'] = previo.get('circulares', [])
                         registro['revisionCirculares'] = 'pendiente'
                         registro['alertas'] = previo.get('alertas', [])
+                        registro['detalleVerificado'] = bool(previo.get('detalleVerificado'))
+                        registro['plazoVerificado'] = bool(registro.get('cierreOfertas'))
                     else:
                         alertas = []
                         for campo, etiqueta in (
@@ -542,11 +539,11 @@ def main():
                 "nombre": nombre,
                 "url": url,
                 "estado": "error",
-                "detalle": (
-                    f"{mensaje}. No se publican datos anteriores."
-                ),
-                "registros": 0
+                "detalle": f"{mensaje}. Se conservan registros previos no vencidos cuando existan.",
+                "registros": len(previos)
             })
+            if clave == "CONTRAT.AR":
+                licitaciones.extend(previos)
             print(f"{clave}: ERROR: {mensaje}")
             print(f"::warning title={clave} no se pudo actualizar::{mensaje}")
 
@@ -554,14 +551,12 @@ def main():
     licitaciones = [r for r in licitaciones if r.get("fuente") == "CONTRAT.AR"]
     ahora = datetime.now()
     def vigente(r):
-        for campo in ("cierreOfertas", "apertura"):
-            fecha = r.get(campo)
-            if fecha:
-                try:
-                    if datetime.fromisoformat(fecha) < ahora:
-                        return False
-                except ValueError:
-                    pass
+        fecha = r.get("cierreOfertas")
+        if fecha:
+            try:
+                return datetime.fromisoformat(fecha) >= ahora
+            except ValueError:
+                pass
         return True
     licitaciones = [r for r in licitaciones if vigente(r)]
 
