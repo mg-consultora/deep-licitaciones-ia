@@ -6,6 +6,7 @@ import sys
 import time
 import unicodedata
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from html.parser import HTMLParser
 from html import unescape
 from pathlib import Path
@@ -21,7 +22,8 @@ URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
 
 TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
 PUBLICAR_CAMMESA = False
-VERSION_AGENTE = "DEEP-CONTRATAR-FECHAS-20261024"
+VERSION_AGENTE = "DEEP-CONTRATAR-VALIDACION-20261024"
+ZONA_AR = ZoneInfo("America/Argentina/Buenos_Aires")
 
 
 
@@ -165,7 +167,7 @@ class LectorTablaContratar(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         atributos = dict(attrs)
-        if tag == "table" and atributos.get("id") == "ctl00_CPH1_GridListaPliegos":
+        if tag == "table" and "gridlistapliegos" in atributos.get("id", "").lower():
             self.en_tabla = True
         elif self.en_tabla and tag == "tr":
             self.en_fila, self.fila = True, []
@@ -186,8 +188,8 @@ class LectorTablaContratar(HTMLParser):
             self.fila.append(" ".join(" ".join(self.celda).split()))
             self.en_celda = False
         elif tag == "tr" and self.en_fila:
-            if len(self.fila) == 6:
-                self.filas.append(self.fila)
+            if len(self.fila) >= 6:
+                self.filas.append(self.fila[:6])
                 if self.href_fila:
                     self.enlaces[self.fila[0]] = self.href_fila
             self.en_fila = False
@@ -300,7 +302,7 @@ def extraer_detalle(html, numero):
     lector = LectorDetalle()
     lector.feed(html)
     texto = unescape(''.join(lector.actual))
-    if numero.lower() not in texto.lower():
+    if normalizar(numero) not in normalizar(texto):
         raise RuntimeError('El detalle no contiene el número de proceso solicitado')
     campos = {
         'consultas': obtener_campo(texto, ['fecha y hora final de consultas']),
@@ -349,7 +351,7 @@ def resolver_ficha(numero, href):
 
 def buscar_contratar():
     html, opener, cabeceras = obtener_html_contratar(URL_CONTRATAR)
-    if "ctl00_CPH1_GridListaPliegos" not in html:
+    if "gridlistapliegos" not in html.lower():
         raise RuntimeError(
             "El portal no devolvió el listado de próximas aperturas "
             "(posible redirección al inicio o cambio de estructura)"
@@ -403,7 +405,10 @@ def buscar_contratar():
             except Exception as error:
                 print(f"CONTRAT.AR {numero}: detalle pendiente: {error}")
 
+        terminos_directos = ("ups", "rectificador", "cargador", "bateria", "baterias", "corriente continua", "energia critica", "bess")
+        categoria = "Compra directa / equipos DEEP" if any(t in normalizar(nombre) for t in terminos_directos) else "Obra eléctrica / revisar pliego"
         resultados.append({
+            "categoriaComercial": categoria,
             "numero": numero,
             "nombre": nombre,
             "organismo": organismo,
@@ -429,7 +434,7 @@ def buscar_contratar():
             )
         })
 
-    ahora = datetime.now()
+    ahora = datetime.now(ZONA_AR).replace(tzinfo=None)
     def vencida(valor):
         try:
             return bool(valor) and datetime.fromisoformat(valor) < ahora
@@ -508,6 +513,7 @@ def main():
                         alertas = []
                         for campo, etiqueta in (
                             ('consultas', 'Fin de consultas'),
+                            ('cierreOfertas', 'Cierre de ofertas'),
                             ('documentacionFisica', 'Fin de documentación física'),
                             ('apertura', 'Primer acto de apertura'),
                         ):
@@ -552,7 +558,7 @@ def main():
 
     # Nunca incluir CAMMESA sin verificación de convocatorias vigentes.
     licitaciones = [r for r in licitaciones if r.get("fuente") == "CONTRAT.AR"]
-    ahora = datetime.now()
+    ahora = datetime.now(ZONA_AR).replace(tzinfo=None)
     def vigente(r):
         for campo in ("cierreOfertas", "apertura"):
             fecha = r.get(campo)
@@ -564,6 +570,7 @@ def main():
                     pass
         return True
     licitaciones = [r for r in licitaciones if vigente(r)]
+    licitaciones.sort(key=lambda r: (r.get("apertura") or "9999", r.get("numero") or ""))
 
 
     resultado = {

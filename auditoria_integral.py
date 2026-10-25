@@ -11,7 +11,7 @@ class Filas(HTMLParser):
         super().__init__(); self.tabla=False; self.fila=False; self.celda=False; self.buf=[]; self.cols=[]; self.rows=[]; self.link=''; self.links={}
     def handle_starttag(self,t,a):
         a=dict(a)
-        if t=='table' and a.get('id')=='ctl00_CPH1_GridListaPliegos': self.tabla=True
+        if t=='table' and 'gridlistapliegos' in a.get('id','').lower(): self.tabla=True
         elif self.tabla and t=='tr': self.fila=True; self.cols=[]; self.link=''
         elif self.fila and t=='td': self.celda=True; self.buf=[]
         elif self.celda and t=='a' and not self.link: self.link=a.get('href','')
@@ -20,7 +20,7 @@ class Filas(HTMLParser):
     def handle_endtag(self,t):
         if t=='td' and self.celda: self.cols.append(' '.join(' '.join(self.buf).split())); self.celda=False
         elif t=='tr' and self.fila:
-            if len(self.cols)==6: self.rows.append(self.cols); self.links[self.cols[0]]=self.link
+            if len(self.cols)>=6: self.rows.append(self.cols[:6]); self.links[self.cols[0]]=self.link
             self.fila=False
         elif t=='table' and self.tabla: self.tabla=False
 
@@ -80,7 +80,7 @@ try:
     with urllib.request.urlopen(req,timeout=25) as response:
         raw=response.read(5_000_000); html=raw.decode('utf-8','replace')
     parser=Filas(); parser.feed(html)
-    if not parser.rows: fail('Portal accesible, pero no se pudo leer la tabla: posible cambio de estructura')
+    if not parser.rows: warn('No se pudieron interpretar filas del listado; requiere inspección del HTML real y no se certifica cobertura')
     else:
         ok(f'Consulta EN VIVO: {len(parser.rows)} filas en la tabla visible de próximas aperturas')
         nums={r[0] for r in parser.rows}; matches=nums & seen

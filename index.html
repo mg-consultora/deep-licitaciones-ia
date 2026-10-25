@@ -194,7 +194,7 @@ footer {
     Los estados corresponden a la próxima fecha oficial conocida (consultas, documentación física o apertura), no al cierre de ofertas.
     Los registros de CAMMESA pueden ser proyectos en seguimiento, no necesariamente licitaciones abiertas.
     Las fechas se muestran únicamente cuando están documentadas.
-    Si no se conoce un plazo, se indica "No informada" y se
+    Si no se conoce un plazo, se indica "No publicada" y se
     conserva el enlace directo a la fuente oficial.
   </p>
 
@@ -257,9 +257,9 @@ const licitacionesManuales = []; // Solo registros actuales del JSON automático
 let licitaciones = [...licitacionesManuales];
 
 function fechaArgentina(valor) {
-  if (!valor) return "No informada";
+  if (!valor) return "No publicada";
   const fecha = new Date(valor);
-  if (Number.isNaN(fecha.getTime())) return "No informada";
+  if (Number.isNaN(fecha.getTime())) return "No publicada";
   return new Intl.DateTimeFormat("es-AR", {
     day: "2-digit",
     month: "2-digit",
@@ -290,11 +290,8 @@ function estadoFecha(valor) {
 
 function calcularEstado(item) {
   if (item.fuente !== "CONTRAT.AR" || !item.detalleVerificado) return "SIN VERIFICAR";
-  const fechas = [item.consultas, item.documentacionFisica, item.apertura]
-    .map(fechaValida).filter(Boolean).sort((a, b) => a - b);
-  if (!fechas.length) return "SIN VERIFICAR";
-  const proxima = fechas.find(fecha => fecha.getTime() >= Date.now());
-  return proxima ? estadoFecha(proxima.toISOString()) : "VENCIDA";
+  if (!item.cierreOfertas) return "SIN VERIFICAR";
+  return estadoFecha(item.cierreOfertas);
 }
 
 function dibujarAlertas() {
@@ -334,7 +331,7 @@ function agregarLinea(celda, etiqueta, valor) {
   const linea = document.createElement("div");
   const negrita = crearTexto("strong", etiqueta + ": ");
   const texto = document.createTextNode(
-    valor ? fechaArgentina(valor) : "No informada"
+    valor ? fechaArgentina(valor) : "No publicada"
   );
   linea.append(negrita, texto);
   celda.appendChild(linea);
@@ -550,8 +547,11 @@ async function cargarDatos() {
 
     licitaciones = Array.from(mapa.values()).filter(item => {
       if (item.fuente !== "CONTRAT.AR") return false;
-      const fin = fechaValida(item.cierreOfertas || item.apertura);
-      return fin && fin.getTime() >= Date.now();
+      const cierre = fechaValida(item.cierreOfertas);
+      const apertura = fechaValida(item.apertura);
+      if (cierre && cierre.getTime() < Date.now()) return false;
+      if (apertura && apertura.getTime() < Date.now()) return false;
+      return Boolean(cierre || apertura);
     });
 
     conexion.textContent = licitaciones.length
