@@ -1,0 +1,47 @@
+name: Diagnóstico paginación CONTRAT.AR
+
+# Prueba AISLADA y MANUAL. No modifica licitaciones.json, el tablero ni CAMMESA.
+# Hace pocos pedidos (tope 14) con pausas de 2 s, sin usuario ni clave.
+# El informe dice qué se verificó (OK/FALLA) y qué NO se ejecutó. Una corrida verde NO prueba que la
+# paginación funcione: hay que leer el informe.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pausa:
+        description: "Segundos entre pedidos"
+        required: false
+        default: "2"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar BeautifulSoup (solo para el diagnóstico)
+        run: python -m pip install beautifulsoup4
+
+      - name: Ejecutar diagnóstico
+        env:
+          DIAG_PAUSA: ${{ github.event.inputs.pausa }}
+          DIAG_MAX_PEDIDOS: "14"
+        run: python diagnostico_contratar.py
+
+      - name: Guardar informe y HTML (sin cookies ni datos sensibles)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-contratar
+          path: diagnostico-contratar/
+          if-no-files-found: warn
