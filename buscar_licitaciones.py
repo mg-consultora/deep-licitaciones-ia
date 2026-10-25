@@ -1,3 +1,33 @@
+#!/usr/bin/env python3
+"""Agente de licitaciones DEEP S.A. - CONTRAT.AR (versión con sesión ASP.NET y paginación).
+
+Qué hace
+--------
+* Abre una sesión pública (cookies) en contratar.gob.ar. No usa usuario ni clave.
+* Recorre los listados oficiales con límites de seguridad, avanzando de página con
+  postbacks ASP.NET (POST normal; si no funciona, POST asíncrono de UpdatePanel).
+* Descubre TODAS las filas y recién después clasifica la relevancia para DEEP.
+* Abre la ficha de las filas relevantes (enlace directo o postback) y lee fechas y circulares.
+* Conserva los registros verificados si la consulta falla o queda incompleta.
+* Escribe licitaciones.json con el mismo formato que usa el tablero (index.html).
+* Termina con código distinto de 0 si la extracción fue incompleta o falló.
+
+Solo se leen metadatos públicos y fechas. No se descargan ni analizan pliegos.
+Solo se usa la biblioteca estándar de Python (no requiere instalar paquetes).
+
+Variables de entorno opcionales (todas tienen valor por defecto)
+-----------------------------------------------------------------
+CONTRATAR_BASE_URL      https://contratar.gob.ar
+CONTRATAR_LISTADOS      proximas,ultimos90  (opciones: proximas, ultimos90; separadas por coma)
+CONTRATAR_MAX_PAGINAS   10                  páginas máximas por listado
+CONTRATAR_MAX_DETALLES  25                  fichas máximas por ejecución
+CONTRATAR_MAX_PEDIDOS   80                  pedidos HTTP máximos por ejecución
+CONTRATAR_PAUSA         2.0                 segundos entre pedidos
+CONTRATAR_TIMEOUT       35                  segundos de espera por pedido
+CONTRATAR_EXCLUIR_APERTURA_VENCIDA 0        1 = sin cierre publicado, se excluye si la apertura ya pasó
+DEEP_ARCHIVO_SALIDA     licitaciones.json
+"""
+import argparse
 import http.cookiejar
 import json
 import os
@@ -5,24 +35,73 @@ import re
 import sys
 import time
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from html import unescape
 from pathlib import Path
-from urllib.request import (
-    HTTPCookieProcessor, Request, build_opener, urlopen
-)
-from urllib.parse import urljoin, urlparse
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urljoin, urlparse
+from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 URL_CAMMESA = "https://cammesaweb.cammesa.com/inicio-licitaciones/"
-URL_CONTRATAR_INICIO = "https://contratar.gob.ar/"
-URL_CONTRATAR = "https://contratar.gob.ar/ListarAperturaProxima.aspx"
-
+PUBLICAR_CAMMESA = False  # CAMMESA queda desactivada hasta una segunda etapa.
+# Términos que usa el bloque de CAMMESA (sin cambios respecto de la versión estable).
 TERMINOS = ["ups", "rectificador", "cargador de bateria", "banco de bateria", "baterias estacionarias", "corriente continua", "energia critica", "subestacion", "estacion transformadora", "transporte de energia electrica", "sistema de transporte de energia", "bess", "almacenamiento de energia"]
-PUBLICAR_CAMMESA = False
-VERSION_AGENTE = "DEEP-CONTRATAR-ESTABLE-V2-20261025"
+VERSION_AGENTE = "DEEP-CONTRATAR-V3-BUSQUEDA-NUMERO-20261025"
 
+LISTADOS_CONTRATAR = {
+    "proximas": ("Próximas aperturas", "/ListarAperturaProxima.aspx"),
+    "ultimos90": ("Aperturas de los últimos 90 días", "/ListarAperturaUltimos30Dias.aspx"),
+}
+USER_AGENT = ("Mozilla/5.0 (compatible; DEEP-licitaciones/3.0; "
+              "+https://github.com/mg-consultora/deep-licitaciones-ia)")
+NUMERO_RE = re.compile(r"^[0-9]+(?:/[0-9]+)?-[0-9]+-[A-Za-z]+[0-9]+$")
+POSTBACK_RE = re.compile(r"__doPostBack\(\s*['\"]([^'\"]*)['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)")
+POSTBACK_OPCIONES_RE = re.compile(r"WebForm_PostBackOptions\(\s*[\"']([^\"']+)[\"']\s*,\s*[\"']([^\"']*)[\"']")
+
+# Semilla: ficha oficial de AMBA I tomada del licitaciones.json verificado (ejecución #48).
+# No es una URL inventada. Solo se usa si el portal no entrega otra mejor.
+FICHAS_CONOCIDAS = {
+    "34-0003-LPU26": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
+}
+
+
+def _entero(nombre, defecto):
+    try:
+        return int(os.environ.get(nombre, defecto))
+    except ValueError:
+        return int(defecto)
+
+
+def _decimal(nombre, defecto):
+    try:
+        return float(os.environ.get(nombre, defecto))
+    except ValueError:
+        return float(defecto)
+
+
+def configuracion():
+    return {
+        "base": os.environ.get("CONTRATAR_BASE_URL", "https://contratar.gob.ar").rstrip("/"),
+        "listados": [x.strip() for x in os.environ.get("CONTRATAR_LISTADOS", "proximas,ultimos90").split(",")
+                     if x.strip() in LISTADOS_CONTRATAR] or ["proximas"],
+        "max_paginas": max(1, _entero("CONTRATAR_MAX_PAGINAS", 10)),
+        "max_detalles": max(0, _entero("CONTRATAR_MAX_DETALLES", 25)),
+        "max_pedidos": max(2, _entero("CONTRATAR_MAX_PEDIDOS", 80)),
+        "pausa": max(0.0, _decimal("CONTRATAR_PAUSA", 2.0)),
+        "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 35)),
+        "excluir_apertura_vencida": os.environ.get("CONTRATAR_EXCLUIR_APERTURA_VENCIDA", "0") != "0",
+        "salida": os.environ.get("DEEP_ARCHIVO_SALIDA", "licitaciones.json"),
+    }
+
+
+def ahora_argentina():
+    """Hora local de Argentina (naive). Las fechas del portal están en hora argentina."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).replace(tzinfo=None)
+    except Exception:
+        return (datetime.now(timezone.utc) - timedelta(hours=3)).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------
@@ -145,87 +224,389 @@ def buscar_cammesa():
 
 
 # ---------------------------------------------------------------
-# CONTRAT.AR: listado oficial de próximas aperturas
+# CONTRAT.AR: lectura del HTML (árbol mínimo, solo biblioteca estándar)
 # ---------------------------------------------------------------
 
-class LectorTablaContratar(HTMLParser):
-    """Lee exclusivamente las seis columnas del listado oficial de próximas aperturas."""
+VACIOS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 
+
+class Nodo:
+    __slots__ = ("tag", "attrs", "hijos", "padre")
+
+    def __init__(self, tag, attrs=None, padre=None):
+        self.tag, self.attrs, self.hijos, self.padre = tag, attrs or {}, [], padre
+
+    def descendientes(self):
+        pila = list(reversed(self.hijos))
+        while pila:
+            nodo = pila.pop()
+            if isinstance(nodo, Nodo):
+                yield nodo
+                pila.extend(reversed(nodo.hijos))
+
+    def texto(self):
+        partes, pila = [], [iter(self.hijos)]
+        while pila:
+            for hijo in pila[-1]:
+                if isinstance(hijo, str):
+                    partes.append(hijo)
+                elif hijo.tag in ("script", "style"):
+                    continue
+                else:
+                    if hijo.tag in ("br", "p", "div", "li"):
+                        partes.append(" ")
+                    pila.append(iter(hijo.hijos))
+                    break
+            else:
+                pila.pop()
+        return " ".join("".join(partes).split())
+
+
+class ConstructorArbol(HTMLParser):
     def __init__(self):
-        super().__init__()
-        self.en_tabla = False
-        self.en_fila = False
-        self.en_celda = False
-        self.celda = []
-        self.fila = []
-        self.filas = []
-        self.href_celda = None
-        self.href_fila = None
-        self.enlaces = {}
+        super().__init__(convert_charrefs=True)
+        self.raiz = Nodo("#raiz")
+        self.actual = self.raiz
+
+    def _cerrar_abiertos(self, cierran, limites):
+        nodo = self.actual
+        while nodo is not None and nodo.tag not in limites:
+            if nodo.tag in cierran:
+                self.actual = nodo.padre
+                return
+            nodo = nodo.padre
 
     def handle_starttag(self, tag, attrs):
-        atributos = dict(attrs)
-        if tag == "table" and "gridlistapliegos" in atributos.get("id", "").lower():
-            self.en_tabla = True
-        elif self.en_tabla and tag == "tr":
-            self.en_fila, self.fila = True, []
-            self.href_fila = None
-        elif self.en_fila and tag == "td":
-            self.en_celda, self.celda = True, []
-        elif self.en_celda and tag == "a":
-            href = atributos.get("href", "")
-            if href and not self.href_fila:
-                self.href_fila = href
+        if tag in ("td", "th"):
+            self._cerrar_abiertos(("td", "th"), ("tr", "table"))
+        elif tag == "tr":
+            self._cerrar_abiertos(("td", "th", "tr"), ("table",))
+        elif tag == "option":
+            self._cerrar_abiertos(("option",), ("select",))
+        nodo = Nodo(tag, {k: (v if v is not None else "") for k, v in attrs}, self.actual)
+        self.actual.hijos.append(nodo)
+        if tag not in VACIOS:
+            self.actual = nodo
 
-    def handle_data(self, data):
-        if self.en_celda:
-            self.celda.append(data)
+    def handle_startendtag(self, tag, attrs):
+        self.actual.hijos.append(Nodo(tag, {k: (v if v is not None else "") for k, v in attrs}, self.actual))
 
     def handle_endtag(self, tag):
-        if tag == "td" and self.en_celda:
-            self.fila.append(" ".join(" ".join(self.celda).split()))
-            self.en_celda = False
-        elif tag == "tr" and self.en_fila:
-            if len(self.fila) >= 6:
-                self.filas.append(self.fila[:6])
-                if self.href_fila:
-                    self.enlaces[self.fila[0]] = self.href_fila
-            self.en_fila = False
-        elif tag == "table" and self.en_tabla:
-            self.en_tabla = False
+        nodo = self.actual
+        while nodo is not None and nodo.tag != tag:
+            nodo = nodo.padre
+        if nodo is not None and nodo.padre is not None:
+            self.actual = nodo.padre
+
+    def handle_data(self, data):
+        self.actual.hijos.append(data)
 
 
-def sesion_contratar():
-    cabeceras = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "text/html",
-        "Accept-Language": "es-AR,es;q=0.9",
-    }
-    opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
-    with opener.open(Request(URL_CONTRATAR_INICIO, headers=cabeceras), timeout=30) as resp:
-        resp.read(200000)
-    return opener, cabeceras
+def parsear(html):
+    constructor = ConstructorArbol()
+    constructor.feed(html)
+    constructor.close()
+    return constructor.raiz
 
 
-def descargar_contratar(opener, cabeceras, url, referer=URL_CONTRATAR):
-    headers = dict(cabeceras, Referer=referer)
-    with opener.open(Request(url, headers=headers), timeout=35) as respuesta:
-        if respuesta.status != 200:
-            raise RuntimeError(f"HTTP {respuesta.status}")
-        return respuesta.read().decode("utf-8-sig", errors="replace")
+def campos_de(nodo):
+    """Campos de formulario (input/select/textarea) dentro de un nodo."""
+    campos = {}
+    for n in nodo.descendientes():
+        nombre = n.attrs.get("name")
+        if not nombre:
+            continue
+        if n.tag == "input":
+            tipo = n.attrs.get("type", "text").lower()
+            if tipo in ("submit", "button", "image", "reset", "file"):
+                continue
+            if tipo in ("checkbox", "radio"):
+                if "checked" in n.attrs:
+                    campos[nombre] = n.attrs.get("value", "on")
+            else:
+                campos[nombre] = n.attrs.get("value", "")
+        elif n.tag == "select":
+            opciones = [o for o in n.descendientes() if o.tag == "option"]
+            elegida = next((o for o in opciones if "selected" in o.attrs), opciones[0] if opciones else None)
+            if elegida is not None:
+                campos[nombre] = elegida.attrs.get("value", elegida.texto())
+        elif n.tag == "textarea":
+            campos[nombre] = n.texto()
+    return campos
 
 
-def obtener_html_contratar(url):
-    ultimo_error = None
-    for intento in (1, 2):
-        try:
-            opener, cabeceras = sesion_contratar()
-            return descargar_contratar(opener, cabeceras, url), opener, cabeceras
-        except Exception as error:
-            ultimo_error = error
+def formulario(raiz):
+    formularios = [n for n in raiz.descendientes() if n.tag == "form"]
+    if not formularios:
+        return None
+    for f in formularios:
+        if f.attrs.get("id", "").lower() in ("aspnetform", "form1"):
+            return f
+    return formularios[0]
+
+
+def filas_propias(tabla):
+    """Filas <tr> cuya tabla más cercana es `tabla` (excluye tablas anidadas, p. ej. el paginador)."""
+    for tr in tabla.descendientes():
+        if tr.tag != "tr":
+            continue
+        padre = tr.padre
+        while padre is not None and padre.tag != "table":
+            padre = padre.padre
+        if padre is tabla:
+            yield tr
+
+
+def celdas_de(tr):
+    return [c for c in tr.hijos if isinstance(c, Nodo) and c.tag in ("td", "th")]
+
+
+def encontrar_grilla(raiz):
+    tablas = [n for n in raiz.descendientes() if n.tag == "table"]
+    for t in tablas:
+        if "gridlistapliegos" in t.attrs.get("id", "").lower():
+            return t
+    mejor, cuenta = None, 0
+    for t in tablas:
+        c = sum(1 for tr in filas_propias(t) if celdas_de(tr) and NUMERO_RE.match(celdas_de(tr)[0].texto()))
+        if c > cuenta:
+            mejor, cuenta = t, c
+    return mejor
+
+
+def clasificar_href(href):
+    """Devuelve ('postback', destino, argumento), ('directo', href) o None."""
+    href = (href or "").strip()
+    if not href or href.startswith("#"):
+        return None
+    if href.lower().startswith("javascript:"):
+        m = POSTBACK_RE.search(href) or POSTBACK_OPCIONES_RE.search(href)
+        return ("postback", m.group(1), m.group(2)) if m else None
+    return ("directo", href)
+
+
+def leer_filas(grilla):
+    """Filas del listado oficial. Columnas (comprobadas en producción): número, nombre,
+    tipo, apertura, estado, organismo. Cada fila conserva todos sus enlaces."""
+    filas, sin_numero, encabezados = [], 0, []
+    for tr in filas_propias(grilla):
+        celdas = celdas_de(tr)
+        if not celdas:
+            continue
+        textos = [c.texto() for c in celdas]
+        if all(c.tag == "th" for c in celdas):
+            encabezados = textos
+            continue
+        if len(celdas) < 6:
+            continue
+        if not NUMERO_RE.match(textos[0]):
+            sin_numero += 1
+            continue
+        enlaces = []
+        for c in celdas:
+            for a in c.descendientes():
+                if a.tag == "a":
+                    accion = clasificar_href(a.attrs.get("href", ""))
+                    if accion:
+                        enlaces.append(accion)
+        filas.append({"numero": textos[0], "nombre": textos[1], "tipo": textos[2],
+                      "apertura_texto": textos[3], "estado": textos[4], "organismo": textos[5],
+                      "enlaces": enlaces})
+    return filas, sin_numero, encabezados
+
+
+def controles_paginacion(raiz):
+    """Enlaces del paginador del tipo __doPostBack('...','Page$n')."""
+    controles = []
+    for a in raiz.descendientes():
+        if a.tag != "a":
+            continue
+        accion = clasificar_href(a.attrs.get("href", ""))
+        if accion and accion[0] == "postback" and re.match(r"^Page\$", accion[2], re.I):
+            controles.append((accion[1], accion[2], a.texto()))
+    return controles
+
+
+def siguiente_pagina(controles, actual):
+    """Elige el control de la página siguiente. Devuelve (destino, argumento, número) o None."""
+    for destino, argumento, _ in controles:
+        if argumento.lower() == "page$%d" % (actual + 1):
+            return destino, argumento, actual + 1
+    mayores = []
+    for destino, argumento, _ in controles:
+        m = re.match(r"^Page\$(\d+)$", argumento, re.I)
+        if m and int(m.group(1)) > actual:
+            mayores.append((int(m.group(1)), destino, argumento))
+    if mayores:
+        n, destino, argumento = min(mayores)
+        return destino, argumento, n
+    for destino, argumento, _ in controles:
+        if argumento.lower() == "page$next":
+            return destino, argumento, actual + 1
+    return None
+
+
+def script_manager(html):
+    """(id del ScriptManager, id del primer UpdatePanel) si la página usa MS-Ajax."""
+    m = re.search(r"PageRequestManager\._initialize\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"][^'\"]*['\"]\s*,\s*\[(.*?)\]", html, re.S)
+    if not m:
+        return None
+    paneles = re.findall(r"['\"][tf]?([^'\"]+)['\"]", m.group(2))
+    return (m.group(1), paneles[0]) if paneles else None
+
+
+def parsear_delta(texto):
+    """Respuesta asíncrona de ASP.NET AJAX: longitud|tipo|id|contenido| ..."""
+    piezas, i = [], 0
+    while i < len(texto):
+        j = texto.index("|", i)
+        largo = int(texto[i:j])
+        k = texto.index("|", j + 1)
+        tipo = texto[j + 1:k]
+        l = texto.index("|", k + 1)
+        ident = texto[k + 1:l]
+        contenido = texto[l + 1:l + 1 + largo]
+        if texto[l + 1 + largo:l + 2 + largo] != "|":
+            raise ValueError("respuesta asíncrona mal formada")
+        piezas.append((tipo, ident, contenido))
+        i = l + 2 + largo
+    return piezas
+
+
+def es_delta(texto):
+    return bool(re.match(r"^\d+\|[A-Za-z]+\|[^|]*\|", texto.lstrip("\ufeff")))
+
+
+# ---------------------------------------------------------------
+# CONTRAT.AR: sesión HTTP con cookies, pausas y límites
+# ---------------------------------------------------------------
+
+class ErrorPortal(Exception):
+    pass
+
+
+class SinEnlace(ErrorPortal):
+    """La fila del listado no trae ningún enlace a su ficha (no es un fallo de extracción)."""
+
+
+class Pagina:
+    """Una página ASP.NET ya leída: su estado de formulario permite hacer postbacks."""
+
+    def __init__(self, url, html, campos, action, raiz, sm):
+        self.url, self.html, self.campos, self.action, self.raiz, self.sm = url, html, campos, action, raiz, sm
+
+    @classmethod
+    def desde_html(cls, url, html):
+        raiz = parsear(html)
+        f = formulario(raiz)
+        campos = campos_de(f) if f is not None else {}
+        return cls(url, html, campos, f.attrs.get("action", "") if f is not None else "", raiz, script_manager(html))
+
+
+class SesionContratar:
+    def __init__(self, cfg):
+        self.base = cfg["base"]
+        self.parsed = urlparse(self.base)
+        self.pausa, self.timeout, self.max_pedidos = cfg["pausa"], cfg["timeout"], cfg["max_pedidos"]
+        self.pedidos, self._ultimo = 0, 0.0
+        self.bitacora = []
+        self.reiniciar()
+
+    def reiniciar(self):
+        self.opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+    def url_permitida(self, url):
+        p = urlparse(url)
+        return p.scheme == self.parsed.scheme and p.hostname == self.parsed.hostname
+
+    def pedir(self, url, datos=None, cabeceras=None, referer=None):
+        if not self.url_permitida(url):
+            raise ErrorPortal("URL fuera del portal oficial: %s" % url[:80])
+        ultimo_error = None
+        for intento in (1, 2):
+            if self.pedidos >= self.max_pedidos:
+                raise ErrorPortal("límite de pedidos alcanzado (%d)" % self.max_pedidos)
+            espera = self.pausa - (time.time() - self._ultimo)
+            if espera > 0 and self.pedidos:
+                time.sleep(espera)
+            cab = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml",
+                   "Accept-Language": "es-AR,es;q=0.9"}
+            if referer:
+                cab["Referer"] = referer
+            cab.update(cabeceras or {})
+            self.pedidos += 1
+            t0 = time.time()
+            self._ultimo = t0
+            try:
+                with self.opener.open(Request(url, data=datos, headers=cab), timeout=self.timeout) as r:
+                    crudo = r.read(6_000_000)
+                    charset = r.headers.get_content_charset() or "utf-8"
+                    texto = crudo.decode(charset if charset.lower() != "utf-8" else "utf-8-sig", errors="replace")
+                    resp = {"html": texto, "url_final": r.geturl(), "status": r.status}
+                self.bitacora.append(("POST" if datos else "GET", url, resp["status"], resp["url_final"], round(time.time() - t0, 2)))
+                return resp
+            except HTTPError as e:
+                self.bitacora.append(("POST" if datos else "GET", url, e.code, None, round(time.time() - t0, 2)))
+                ultimo_error = ErrorPortal("HTTP %s en %s" % (e.code, urlparse(url).path))
+                if e.code < 500:
+                    break
+            except (URLError, TimeoutError, OSError) as e:
+                self.bitacora.append(("POST" if datos else "GET", url, None, None, round(time.time() - t0, 2)))
+                ultimo_error = ErrorPortal("%s: %s" % (type(e).__name__, e))
             if intento == 1:
-                time.sleep(3)
-    raise RuntimeError(f"No se pudo leer CONTRAT.AR: {ultimo_error}")
+                time.sleep(3 if self.pausa else 0)
+        raise ultimo_error
+
+    def abrir(self):
+        """Abre la sesión pública: la home entrega las cookies ASP.NET."""
+        self.reiniciar()
+        return self.pedir(self.base + "/")
+
+    def leer_pagina(self, url, referer=None):
+        resp = self.pedir(url, referer=referer)
+        if es_default(resp["url_final"]) and not es_default(url):
+            raise ErrorPortal("el portal redirigió a Default.aspx (sesión no aceptada)")
+        return Pagina.desde_html(resp["url_final"], resp["html"])
+
+    def postback(self, pagina, destino, argumento, asincrono=False):
+        if "__VIEWSTATE" not in pagina.campos:
+            raise ErrorPortal("la página no trae __VIEWSTATE; no se puede hacer postback")
+        campos = dict(pagina.campos)
+        campos["__EVENTTARGET"], campos["__EVENTARGUMENT"] = destino, argumento
+        cab = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
+        if asincrono:
+            if not pagina.sm:
+                raise ErrorPortal("la página no tiene ScriptManager")
+            campos[pagina.sm[0]] = "%s|%s" % (pagina.sm[1], destino)
+            campos["__ASYNCPOST"] = "true"
+            cab.update({"X-MicrosoftAjax": "Delta=true", "X-Requested-With": "XMLHttpRequest",
+                        "Cache-Control": "no-cache", "Accept": "*/*"})
+        url = urljoin(pagina.url, pagina.action) if pagina.action else pagina.url
+        return self.pedir(url, datos=urlencode(campos).encode("utf-8"), cabeceras=cab, referer=pagina.url)
+
+    def respuesta_a_pagina(self, resp, anterior):
+        """Convierte la respuesta de un postback en una Pagina (maneja el formato asíncrono)."""
+        texto = resp["html"]
+        if not es_delta(texto):
+            return Pagina.desde_html(resp["url_final"], texto), None
+        piezas = parsear_delta(texto.lstrip("\ufeff"))
+        for tipo, ident, contenido in piezas:
+            if tipo == "pageRedirect":
+                return None, urljoin(anterior.url, contenido)
+            if tipo == "error":
+                raise ErrorPortal("error asíncrono del servidor: %s" % contenido[:120])
+        html = " ".join(c for t, _, c in piezas if t == "updatePanel")
+        raiz = parsear(html)
+        campos = dict(anterior.campos)
+        campos.update(campos_de(raiz))
+        for t, ident, contenido in piezas:
+            if t == "hiddenField":
+                campos[ident] = contenido
+        return Pagina(anterior.url, html, campos, anterior.action, raiz, anterior.sm), None
+
+
+def es_default(url):
+    return urlparse(url or "").path.lower().endswith("/default.aspx")
 
 
 class LectorDetalle(HTMLParser):
@@ -319,289 +700,519 @@ def extraer_detalle(html, numero):
     return campos, circulares
 
 
-def enlace_expediente(href):
-    # Solo se siguen enlaces HTTPS del portal oficial, nunca archivos adjuntos.
-    href = unescape(href).replace('&amp;', '&')
-    if href.lower().startswith('javascript:') or href.startswith('#'):
+
+# ---------------------------------------------------------------
+# CONTRAT.AR: clasificación de relevancia (separada del descubrimiento)
+# ---------------------------------------------------------------
+
+EQUIPOS_DEEP = [
+    r"ups", r"sai", r"sistemas? de alimentacion ininterrumpida", r"rectificador(?:es)?",
+    r"cargadores? (?:de )?bateri\w*", r"cargadores? y rectificadores?", r"bancos? de bateri\w*",
+    r"bateri\w* (?:estacionari\w*|industrial\w*|de plomo|de niquel|de litio|de respaldo)",
+    r"corriente continua", r"energia critica",
+    r"convertidor(?:es)? (?:de frecuencia|estatic\w*|cc|ca|de potencia)", r"inversor(?:es)?",
+    r"bess", r"almacenamiento de energia", r"fuentes? de alimentacion", r"servicios auxiliares",
+    r"grupos? electrogenos?",
+]
+OBRAS_ELECTRICAS = [
+    r"subestacion(?:es)?", r"estaci(?:on|ones) transformador\w*", r"transformador(?:es)? de potencia",
+    r"transporte de energia electrica", r"sistema de transporte de energia", r"alta tension",
+    r"media tension", r"lineas? de transmision", r"lineas? electricas?",
+    r"centrales? (?:termic\w*|hidroelectric\w*|nuclear\w*|solar\w*|eolic\w*|fotovoltaic\w*)",
+    r"parques? (?:solar\w*|eolic\w*|fotovoltaic\w*)", r"energia electrica", r"electrificacion",
+    r"interconexion electrica", r"tableros? electricos?", r"scada", r"telecontrol",
+    r"protecciones? electricas?", r"distribucion electrica", r"redes? electricas?",
+]
+_RE_EQUIPOS = re.compile(r"\b(?:%s)\b" % "|".join(EQUIPOS_DEEP))
+_RE_OBRAS = re.compile(r"\b(?:%s)\b" % "|".join(OBRAS_ELECTRICAS))
+
+
+def clasificar_relevancia(nombre, tipo):
+    """Clasifica solo con los metadatos públicos del listado (nombre y tipo). No lee pliegos."""
+    texto = normalizar(nombre)
+    equipos = sorted({m.group(0) for m in _RE_EQUIPOS.finditer(texto)})
+    obras = sorted({m.group(0) for m in _RE_OBRAS.finditer(texto)})
+    directa = "directa" in normalizar(tipo)
+    if equipos:
+        return ("Compra directa de equipos" if directa else "Coincidencia directa"), equipos + obras
+    if obras:
+        return "Obra contextual: revisar pliego", obras
+    return None, []
+
+
+# ---------------------------------------------------------------
+# CONTRAT.AR: fichas (enlace directo o postback)
+# ---------------------------------------------------------------
+
+def enlace_ficha(sesion, href, base_pagina):
+    url = urljoin(base_pagina, unescape(href).replace("&amp;", "&"))
+    if not sesion.url_permitida(url) or es_default(url):
         return None
-    url = urljoin(URL_CONTRATAR, href)
-    parsed = urlparse(url)
-    if parsed.scheme != 'https' or parsed.hostname != 'contratar.gob.ar':
-        return None
-    if re.search(r'\.(pdf|zip|docx?|xlsx?)$', parsed.path, re.I):
+    if re.search(r"\.(pdf|zip|rar|docx?|xlsx?)$", urlparse(url).path, re.I):
         return None
     return url
 
 
-# URL de ficha oficial contrastada para el expediente de prueba AMBA I.
-# No se inventan URLs para otros procesos: se utilizan sus enlaces del listado.
-FICHAS_VERIFICADAS = {
-    '34-0003-LPU26': 'https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D',
-}
+def _ruta(url):
+    return urlparse(url).path.lower()
 
 
-def resolver_ficha(numero, href):
-    enlace = enlace_expediente(href)
-    if enlace and ('VistaPreviaPliegoCiudadano' in enlace or 'VistaPrevia' in enlace):
-        return enlace
-    return FICHAS_VERIFICADAS.get(numero) or enlace
-
-
-def buscar_contratar():
-    html, opener, cabeceras = obtener_html_contratar(URL_CONTRATAR)
-    lector = LectorTablaContratar()
-    lector.feed(html)
-    if not lector.filas:
-        raise RuntimeError(f"No se pudo leer la tabla de CONTRAT.AR (HTML: {len(html)} caracteres, tabla esperada: {'ctl00_CPH1_GridListaPliegos' in html}). Revisar sesión, estructura y enlaces.")
-
-    resultados = []
-    vistos = set()
-    sin_numero_valido = 0
-    sin_coincidencia = 0
-
-    for numero, nombre, tipo, apertura_texto, estado, organismo in lector.filas:
-        if not re.fullmatch(r"[0-9]+(?:/[0-9]+)?-[0-9]+-[A-Z]+[0-9]+", numero):
-            sin_numero_valido += 1
+def abrir_postback(sesion, pagina, destino, argumento, estado):
+    """Ejecuta el postback de una fila y devuelve (html, url_final). Prueba POST normal y, si la
+    página usa ScriptManager, también asíncrono. Siempre exige un resultado distinto del listado."""
+    modos = [False, True] if estado.get("modo_async") is not True else [True, False]
+    fallos = []
+    for asincrono in modos:
+        if asincrono and not pagina.sm:
             continue
-        if not any(termino in normalizar(nombre) for termino in TERMINOS):
-            sin_coincidencia += 1
-            continue
-        if numero in vistos:
-            continue
-        vistos.add(numero)
-
-        apertura = None
-        coincidencia = re.search(
-            r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})", apertura_texto
-        )
-        if coincidencia:
-            try:
-                apertura = datetime.strptime(
-                    " ".join(coincidencia.groups()), "%d/%m/%Y %H:%M"
-                ).strftime("%Y-%m-%dT%H:%M:00")
-            except ValueError:
-                pass
-
-        detalle_url = resolver_ficha(numero, lector.enlaces.get(numero, ''))
-        campos = {}
-        circulares = []
-        detalle_verificado = False
-        if detalle_url:
-            try:
-                pagina = descargar_contratar(opener, cabeceras, detalle_url)
-                campos, circulares = extraer_detalle(pagina, numero)
-                detalle_verificado = any(campos.values())
-            except Exception as error:
-                print(f"CONTRAT.AR {numero}: detalle pendiente: {error}")
-
-        resultados.append({
-            "clasificacionDEEP": ("Coincidencia directa" if any(t in normalizar(nombre) for t in ["ups", "rectificador", "cargador", "bateria", "corriente continua", "bess", "energia critica"]) else "Obra contextual: revisar pliego"),
-            "numero": numero,
-            "nombre": nombre,
-            "organismo": organismo,
-            "sector": "Obra pública / posible energía",
-            "fuente": "CONTRAT.AR",
-            "estadoOficial": estado,
-            "publicacion": campos.get("publicacion"),
-            "consultas": campos.get("consultas"),
-            "cierreOfertas": campos.get("cierreOfertas"),
-            "documentacionFisica": campos.get("documentacionFisica"),
-            "apertura": campos.get("apertura") or apertura,
-            "detalleVerificado": detalle_verificado,
-            "circulares": circulares,
-            "enlaceCirculares": detalle_url,
-            "revisionCirculares": "verificada" if detalle_verificado else "pendiente",
-            "plazoVerificado": bool(campos.get("cierreOfertas")),
-            "enlace": detalle_url or URL_CONTRATAR,
-            "observaciones": (
-                "Referencia detectada en listado oficial de próximas aperturas. "
-                "Fechas y circulares tomadas del detalle cuando se pudo acceder. "
-                "La apertura no equivale al cierre de ofertas. "
-                "Tipo: " + tipo
-            )
-        })
-
-    ahora = datetime.now()
-    def vencida(valor):
         try:
-            return bool(valor) and datetime.fromisoformat(valor) < ahora
-        except ValueError:
-            return False
-    # No excluir por fecha de apertura: NO es el cierre de ofertas.
-    resultados = [r for r in resultados if not vencida(r.get("cierreOfertas"))]
-    detalle = (
-        f"Filas leídas: {len(lector.filas)}; "
-        f"sin número de proceso válido: {sin_numero_valido}; "
-        f"sin términos de interés: {sin_coincidencia}; "
-        f"registrados: {len(resultados)}."
+            resp = sesion.postback(pagina, destino, argumento, asincrono=asincrono)
+            nueva, redireccion = sesion.respuesta_a_pagina(resp, pagina)
+            if redireccion:
+                resp2 = sesion.pedir(redireccion, referer=pagina.url)
+                return resp2["html"], resp2["url_final"]
+            if es_default(resp["url_final"]):
+                raise ErrorPortal("el postback devolvió Default.aspx")
+            return nueva.html, resp["url_final"]
+        except ErrorPortal as e:
+            fallos.append("%s: %s" % ("asíncrono" if asincrono else "normal", e))
+    raise ErrorPortal("postback de ficha sin resultado (%s)" % "; ".join(fallos))
+
+
+def resolver_ficha(sesion, pagina, fila, estado):
+    """Intenta abrir la ficha del expediente. Devuelve (campos, circulares, url_ficha_verificada)
+    o lanza ErrorPortal con el detalle."""
+    candidatos = []
+    for accion in fila["enlaces"]:
+        if accion[0] == "directo":
+            url = enlace_ficha(sesion, accion[1], pagina.url)
+            if url:
+                candidatos.append(("directo", url))
+        else:
+            candidatos.append(("postback", accion[1], accion[2]))
+    semilla = FICHAS_CONOCIDAS.get(fila["numero"])
+    if semilla and not any(c[0] == "directo" and c[1] == semilla for c in candidatos):
+        candidatos.append(("directo", semilla))
+    candidatos.sort(key=lambda c: (c[0] != "directo", "vistaprevia" not in c[1].lower() if c[0] == "directo" else False))
+    if not candidatos:
+        raise SinEnlace("la fila no tiene enlace a la ficha")
+    fallos = []
+    for cand in candidatos[:3]:
+        try:
+            if cand[0] == "directo":
+                resp = sesion.pedir(cand[1], referer=pagina.url)
+                if es_default(resp["url_final"]):
+                    raise ErrorPortal("redirigió a Default.aspx")
+                html, url_final, estable = resp["html"], resp["url_final"], True
+            else:
+                html, url_final = abrir_postback(sesion, pagina, cand[1], cand[2], estado)
+                estable = (_ruta(url_final) != _ruta(pagina.url) and bool(urlparse(url_final).query))
+            campos, circulares = extraer_detalle(html, fila["numero"])
+            if not any(campos.values()):
+                raise ErrorPortal("la ficha no muestra fechas reconocibles")
+            url = enlace_ficha(sesion, url_final, url_final) if estable else None
+            return campos, circulares, url
+        except (ErrorPortal, RuntimeError) as e:
+            fallos.append(str(e)[:140])
+    raise ErrorPortal("; ".join(fallos))
+
+
+def apertura_de_listado(texto):
+    m = re.search(r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2})", texto)
+    if not m:
+        return None
+    try:
+        return datetime.strptime(" ".join(m.groups()), "%d/%m/%Y %H:%M").strftime("%Y-%m-%dT%H:%M:00")
+    except ValueError:
+        return None
+
+
+def nuevo_registro(fila, clasificacion, terminos, clave_listado, url_listado, pagina_n):
+    return {
+        "clasificacionDEEP": clasificacion,
+        "terminosDetectados": terminos,
+        "numero": fila["numero"],
+        "nombre": fila["nombre"] or "No disponible",
+        "organismo": fila["organismo"] or "No disponible",
+        "sector": "Obra pública / posible energía",
+        "fuente": "CONTRAT.AR",
+        "tipoProceso": fila["tipo"] or "No disponible",
+        "estadoOficial": fila["estado"] or "No disponible",
+        "publicacion": None,
+        "consultas": None,
+        "cierreOfertas": None,
+        "documentacionFisica": None,
+        "apertura": apertura_de_listado(fila["apertura_texto"]),
+        "detalleVerificado": False,
+        "circulares": [],
+        "enlaceCirculares": "",
+        "revisionCirculares": "pendiente",
+        "plazoVerificado": False,
+        "enlace": url_listado,
+        "tipoEnlace": "consulta_listado",
+        "listadoOrigen": clave_listado,
+        "paginaListado": pagina_n,
+        "observaciones": "",
+        "alertas": [],
+    }
+
+
+def texto_observaciones(reg):
+    partes = ["Referencia detectada en el listado oficial de CONTRAT.AR (%s). "
+              "Fechas y circulares tomadas de la ficha cuando se pudo acceder. "
+              "La apertura no equivale al cierre de ofertas. Tipo: %s." % (reg["listadoOrigen"], reg["tipoProceso"])]
+    if reg["tipoEnlace"] == "consulta_listado":
+        partes.append("El enlace es de consulta al listado oficial, no una ficha directa: buscar el expediente por su número.")
+    elif reg["tipoEnlace"] == "ficha_sin_verificar":
+        partes.append("El enlace proviene del portal pero la ficha no pudo verificarse en esta ejecución.")
+    if not reg["detalleVerificado"]:
+        partes.append("Fechas pendientes de verificar en la ficha oficial.")
+    return " ".join(partes)
+
+
+# ---------------------------------------------------------------
+# CONTRAT.AR: recorrido de listados con paginación
+# ---------------------------------------------------------------
+
+def recorrer_listado(sesion, cfg, clave, estado, acumulado):
+    nombre, ruta = LISTADOS_CONTRATAR[clave]
+    url = cfg["base"] + ruta
+    info = {"clave": clave, "nombre": nombre, "url": url, "paginas": 0, "filas": 0,
+            "completa": False, "motivo": "", "errores": []}
+    acumulado["listados"].append(info)
+
+    pagina = None
+    for intento in (1, 2):
+        try:
+            if intento == 2 or sesion.pedidos == 0:
+                sesion.abrir()
+            pagina = sesion.leer_pagina(url, referer=cfg["base"] + "/")
+            if encontrar_grilla(pagina.raiz) is None:
+                raise ErrorPortal("el listado no contiene la tabla esperada (HTML de %d caracteres)" % len(pagina.html))
+            break
+        except ErrorPortal as e:
+            info["errores"].append("Apertura del listado (intento %d): %s" % (intento, e))
+            pagina = None
+    if pagina is None:
+        info["motivo"] = "no se pudo abrir el listado"
+        return
+
+    actual = 1
+    while True:
+        info["paginas"] += 1
+        grilla = encontrar_grilla(pagina.raiz)
+        filas, sin_numero, _ = leer_filas(grilla)
+        acumulado["sin_numero"] += sin_numero
+        nuevas = 0
+        for fila in filas:
+            info["filas"] += 1
+            if fila["numero"] in acumulado["vistos"]:
+                acumulado["duplicados"] += 1
+                continue
+            acumulado["vistos"].add(fila["numero"])
+            nuevas += 1
+            clasificacion, terminos = clasificar_relevancia(fila["nombre"], fila["tipo"])
+            numero_objetivo = cfg.get("numero_objetivo", "")
+            if numero_objetivo and fila["numero"].upper() != numero_objetivo:
+                continue
+            if not clasificacion and not numero_objetivo:
+                acumulado["no_relevantes"] += 1
+                continue
+            if not clasificacion:
+                clasificacion = "Consulta por número"
+            reg = nuevo_registro(fila, clasificacion, terminos, clave, url, info["paginas"])
+            if estado["detalles"] < cfg["max_detalles"]:
+                estado["detalles"] += 1
+                try:
+                    campos, circulares, url_ficha = resolver_ficha(sesion, pagina, fila, estado)
+                    reg.update({
+                        "publicacion": campos.get("publicacion"), "consultas": campos.get("consultas"),
+                        "cierreOfertas": campos.get("cierreOfertas"), "documentacionFisica": campos.get("documentacionFisica"),
+                        "apertura": campos.get("apertura") or reg["apertura"],
+                        "circulares": circulares, "detalleVerificado": True, "revisionCirculares": "verificada",
+                        "plazoVerificado": bool(campos.get("cierreOfertas")),
+                    })
+                    if url_ficha:
+                        reg.update({"enlace": url_ficha, "enlaceCirculares": url_ficha, "tipoEnlace": "ficha"})
+                except SinEnlace:
+                    acumulado["sin_enlace"].append(fila["numero"])
+                except ErrorPortal as e:
+                    acumulado["detalles_fallidos"].append(fila["numero"])
+                    info["errores"].append("Ficha %s: %s" % (fila["numero"], e))
+                    directo = next((a[1] for a in fila["enlaces"] if a[0] == "directo" and enlace_ficha(sesion, a[1], pagina.url)), None)
+                    if directo:
+                        reg.update({"enlace": enlace_ficha(sesion, directo, pagina.url), "tipoEnlace": "ficha_sin_verificar"})
+            else:
+                acumulado["detalles_omitidos"].append(fila["numero"])
+            reg["observaciones"] = texto_observaciones(reg)
+            acumulado["registros"][fila["numero"]] = reg
+
+        if info["paginas"] == 1 and not filas:
+            info["completa"] = True
+            info["motivo"] = "el listado no devolvió filas"
+            return
+        if info["paginas"] > 1 and nuevas == 0:
+            info["motivo"] = "la página %d no aportó filas nuevas (posible bucle de paginación)" % actual
+            return
+
+        siguiente = siguiente_pagina(controles_paginacion(pagina.raiz), actual)
+        if not siguiente:
+            info["completa"] = True
+            info["motivo"] = "sin más páginas"
+            return
+        if info["paginas"] >= cfg["max_paginas"]:
+            info["motivo"] = "límite de %d páginas alcanzado; quedan páginas sin leer" % cfg["max_paginas"]
+            return
+        destino, argumento, numero_sig = siguiente
+        try:
+            pagina = avanzar_pagina(sesion, pagina, destino, argumento, estado)
+        except ErrorPortal as e:
+            info["errores"].append("Avance a la página %d: %s" % (numero_sig, e))
+            info["motivo"] = "falló el avance a la página %d" % numero_sig
+            return
+        actual = numero_sig
+
+
+def avanzar_pagina(sesion, pagina, destino, argumento, estado):
+    modos = [True, False] if estado.get("modo_async") is True else [False, True]
+    fallos = []
+    for asincrono in modos:
+        if asincrono and not pagina.sm:
+            continue
+        try:
+            resp = sesion.postback(pagina, destino, argumento, asincrono=asincrono)
+            nueva, redireccion = sesion.respuesta_a_pagina(resp, pagina)
+            if redireccion or nueva is None:
+                raise ErrorPortal("el avance redirigió fuera del listado")
+            if es_default(resp["url_final"]):
+                raise ErrorPortal("el avance devolvió Default.aspx")
+            if encontrar_grilla(nueva.raiz) is None:
+                raise ErrorPortal("la respuesta no contiene la tabla del listado")
+            estado["modo_async"] = asincrono
+            return nueva
+        except ErrorPortal as e:
+            fallos.append("%s: %s" % ("asíncrono" if asincrono else "normal", e))
+    raise ErrorPortal("; ".join(fallos))
+
+
+def extraer_contratar(cfg):
+    sesion = SesionContratar(cfg)
+    acumulado = {"registros": {}, "vistos": set(), "listados": [], "sin_numero": 0, "duplicados": 0,
+                 "no_relevantes": 0, "detalles_fallidos": [], "detalles_omitidos": [], "sin_enlace": []}
+    estado = {"detalles": 0, "modo_async": None}
+    for clave in cfg["listados"]:
+        try:
+            recorrer_listado(sesion, cfg, clave, estado, acumulado)
+        except ErrorPortal as e:  # p. ej. límite de pedidos
+            acumulado["listados"][-1]["errores"].append(str(e))
+            acumulado["listados"][-1]["motivo"] = acumulado["listados"][-1]["motivo"] or str(e)
+    acumulado["pedidos"] = sesion.pedidos
+    acumulado["modo_paginacion"] = {None: "no se probó", False: "POST normal", True: "POST asíncrono"}[estado["modo_async"]]
+    acumulado["completa"] = (
+        bool(acumulado["listados"]) and all(l["completa"] for l in acumulado["listados"])
+        and not acumulado["detalles_fallidos"] and not acumulado["detalles_omitidos"]
     )
-    return resultados, detalle
+    return acumulado
+
+
+# ---------------------------------------------------------------
+# Fusión con registros previos, vigencia y alertas
+# ---------------------------------------------------------------
+
+def _fecha(valor):
+    try:
+        return datetime.fromisoformat(valor) if valor else None
+    except ValueError:
+        return None
+
+
+def vencido(reg, ahora, cfg):
+    cierre = _fecha(reg.get("cierreOfertas"))
+    if cierre:
+        return cierre < ahora
+    apertura = _fecha(reg.get("apertura"))
+    # Sin cierre publicado, ya no se pueden presentar ofertas una vez realizado el acto de apertura.
+    return bool(cfg["excluir_apertura_vencida"] and apertura and apertura < ahora)
+
+
+def _ficha_previa(previo):
+    tipo = previo.get("tipoEnlace") or ("ficha" if "VistaPrevia" in str(previo.get("enlace", "")) else "")
+    return tipo == "ficha"
+
+
+def fusionar(ext, previos, cfg, ahora):
+    previos_por_numero = {p.get("numero"): p for p in previos if p.get("numero")}
+    finales, notas = [], []
+    for numero, reg in ext["registros"].items():
+        previo = previos_por_numero.get(numero, {})
+        if not reg["detalleVerificado"] and previo.get("detalleVerificado"):
+            for campo in ("publicacion", "consultas", "cierreOfertas", "documentacionFisica", "apertura"):
+                if not reg.get(campo) and previo.get(campo):
+                    reg[campo] = previo[campo]
+            reg["circulares"] = previo.get("circulares", [])
+            reg["detalleVerificado"] = True
+            reg["revisionCirculares"] = "pendiente"
+            reg["plazoVerificado"] = bool(reg.get("cierreOfertas"))
+            if _ficha_previa(previo):
+                reg.update({"enlace": previo["enlace"], "enlaceCirculares": previo.get("enlaceCirculares") or previo["enlace"], "tipoEnlace": "ficha"})
+            reg["observaciones"] = texto_observaciones(reg) + " Se conservan las fechas verificadas en una ejecución anterior."
+            reg["alertas"] = previo.get("alertas", [])
+        elif reg["detalleVerificado"]:
+            alertas = []
+            for campo, etiqueta in (("consultas", "Fin de consultas"), ("documentacionFisica", "Fin de documentación física"),
+                                    ("apertura", "Primer acto de apertura"), ("cierreOfertas", "Cierre de ofertas")):
+                antes, despues = previo.get(campo), reg.get(campo)
+                if antes and despues and antes != despues:
+                    alertas.append("%s: %s → %s" % (etiqueta, antes, despues))
+            antes_circ = {str(c.get("numero")) + ":" + str(c.get("publicacion")) for c in previo.get("circulares", [])}
+            for c in reg["circulares"]:
+                if previo and str(c["numero"]) + ":" + str(c["publicacion"]) not in antes_circ:
+                    alertas.append("Circular nueva N° %s (%s)" % (c["numero"], c["publicacion"]))
+            reg["alertas"] = alertas
+        reg["ultimaVerificacion"] = datetime.now(timezone.utc).isoformat()
+        finales.append(reg)
+
+    for numero, previo in previos_por_numero.items():
+        if numero in ext["registros"]:
+            continue
+        # No apareció en esta consulta. Solo se descarta si ya venció; si no, se conserva.
+        previo = dict(previo)
+        aviso = ("No figuró en la última consulta completa del listado; se conserva el último dato verificado."
+                 if ext["completa"] else
+                 "La última consulta quedó incompleta; se conserva el último dato verificado.")
+        previo["alertas"] = [a for a in previo.get("alertas", []) if not a.startswith(("No figuró", "La última consulta"))] + [aviso]
+        finales.append(previo)
+        notas.append("Conservado %s" % numero)
+
+    vigentes = [r for r in finales if not vencido(r, ahora, cfg)]
+    descartados = len(finales) - len(vigentes)
+    vistos, unicos = set(), []
+    for r in vigentes:
+        if r.get("numero") not in vistos:
+            vistos.add(r.get("numero"))
+            unicos.append(r)
+    unicos.sort(key=lambda r: (r.get("apertura") or "9999", r.get("numero") or ""))
+    return unicos, notas, descartados
 
 
 # ---------------------------------------------------------------
 # Programa principal
 # ---------------------------------------------------------------
 
-# (clave en "fuente", nombre en el tablero, URL, función,
-#  ¿un resultado vacío es sospechoso?)
-FUENTES = [
-    ("CAMMESA", "CAMMESA - Convocatorias", URL_CAMMESA,
-     lambda: (buscar_cammesa(), None), True),
-    ("CONTRAT.AR", "CONTRAT.AR - Obra pública", URL_CONTRATAR,
-     buscar_contratar, True),
-]
-
-
-def cargar_anterior():
-    archivo = Path("licitaciones.json")
-    if archivo.exists():
+def cargar_anterior(archivo):
+    ruta = Path(archivo)
+    if ruta.exists():
         try:
-            datos = json.loads(archivo.read_text(encoding="utf-8"))
-            lista = datos.get("licitaciones", [])
+            datos = json.loads(ruta.read_text(encoding="utf-8"))
+            lista = datos.get("licitaciones", []) if isinstance(datos, dict) else datos
             if isinstance(lista, list):
-                return [item for item in lista if isinstance(item, dict)]
+                return [i for i in lista if isinstance(i, dict)]
         except (ValueError, OSError, AttributeError):
             pass
     return []
 
 
 def main():
-    anteriores = {}
-    for item in cargar_anterior():
-        anteriores.setdefault(item.get("fuente"), []).append(item)
+    parser = argparse.ArgumentParser(description="Agente DEEP - CONTRAT.AR")
+    parser.add_argument("--numero", default="", help="Número exacto del proceso a buscar en los listados oficiales")
+    args = parser.parse_args()
+    cfg = configuracion()
+    cfg["numero_objetivo"] = args.numero.strip().upper()
+    if cfg["numero_objetivo"] and not NUMERO_RE.fullmatch(cfg["numero_objetivo"]):
+        parser.error("Número de proceso no válido. Ejemplo: 34-0003-LPU26")
+    previos = [r for r in cargar_anterior(cfg["salida"]) if r.get("fuente") == "CONTRAT.AR"]
+    ahora = ahora_argentina()
 
-    fuentes = []
-    licitaciones = []
-    fallidas = 0
+    try:
+        ext = extraer_contratar(cfg)
+        fallo_total = None
+    except Exception as error:  # error inesperado: se conservan los registros previos
+        ext = {"registros": {}, "listados": [], "completa": False, "pedidos": 0, "sin_numero": 0, "duplicados": 0,
+               "no_relevantes": 0, "detalles_fallidos": [], "detalles_omitidos": [], "sin_enlace": [], "vistos": set(),
+               "modo_paginacion": "no se probó"}
+        fallo_total = "%s: %s" % (type(error).__name__, error)
 
-    for clave, nombre, url, funcion, vacio_sospechoso in FUENTES:
-        if clave == "CAMMESA" and not PUBLICAR_CAMMESA:
-            fuentes.append({"nombre": nombre, "url": url, "estado": "en pausa", "registros": 0})
-            anteriores.pop(clave, None)
-            continue
-        previos = anteriores.pop(clave, [])
-        try:
-            registros, detalle = funcion()
-            if not registros and previos and vacio_sospechoso:
-                raise RuntimeError(
-                    "La consulta no devolvió ningún registro; "
-                    "se considera anómalo"
-                )
-            if clave == "CONTRAT.AR":
-                por_numero = {r.get('numero'): r for r in previos}
-                for registro in registros:
-                    previo = por_numero.get(registro['numero'], {})
-                    if not registro.get('detalleVerificado'):
-                        # No borrar fechas oficiales verificadas en una ejecución previa.
-                        for campo in ('publicacion', 'consultas', 'cierreOfertas', 'documentacionFisica', 'apertura'):
-                            if not registro.get(campo) and previo.get('detalleVerificado'):
-                                registro[campo] = previo.get(campo)
-                        registro['circulares'] = previo.get('circulares', [])
-                        registro['revisionCirculares'] = 'pendiente'
-                        registro['alertas'] = previo.get('alertas', [])
-                        registro['detalleVerificado'] = bool(previo.get('detalleVerificado'))
-                        registro['plazoVerificado'] = bool(registro.get('cierreOfertas'))
-                    else:
-                        alertas = []
-                        for campo, etiqueta in (
-                            ('consultas', 'Fin de consultas'),
-                            ('documentacionFisica', 'Fin de documentación física'),
-                            ('apertura', 'Primer acto de apertura'),
-                        ):
-                            antes, despues = previo.get(campo), registro.get(campo)
-                            if antes and despues and antes != despues:
-                                alertas.append(f'{etiqueta}: {antes} → {despues}')
-                        anteriores_circ = {str(c.get('numero')) + ':' + str(c.get('publicacion')) for c in previo.get('circulares', [])}
-                        for circular in registro.get('circulares', []):
-                            identificador = str(circular['numero']) + ':' + str(circular['publicacion'])
-                            if previos and identificador not in anteriores_circ:
-                                alertas.append('Circular nueva N° ' + circular['numero'] + ' (' + circular['publicacion'] + ')')
-                        registro['alertas'] = alertas
-                    if registro.get('alertas'):
-                        print('::warning title=CONTRAT.AR novedad ' + registro['numero'] + '::' + '; '.join(registro['alertas']))
-            licitaciones.extend(registros)
-            fuente = {
-                "nombre": nombre,
-                "url": url,
-                "estado": "consultada",
-                "registros": len(registros)
-            }
-            if detalle:
-                fuente["detalle"] = detalle
-            fuentes.append(fuente)
-            print(f"{clave}: referencias: {len(registros)}")
-            if detalle:
-                print(f"{clave}: {detalle}")
-        except Exception as error:
-            fallidas += 1
-            mensaje = f"{type(error).__name__}: {error}"
-            fuentes.append({
-                "nombre": nombre,
-                "url": url,
-                "estado": "error",
-                "detalle": f"{mensaje}. Se conservan registros previos no vencidos cuando existan.",
-                "registros": len(previos)
-            })
-            if clave == "CONTRAT.AR":
-                licitaciones.extend(previos)
-            print(f"{clave}: ERROR: {mensaje}")
-            print(f"::warning title={clave} no se pudo actualizar::{mensaje}")
+    errores = [e for l in ext["listados"] for e in l["errores"]]
+    if fallo_total:
+        errores.append("Error inesperado: " + fallo_total)
+    # Un listado vacío cuando había registros previos se considera anómalo, no una confirmación.
+    if not ext["registros"] and previos and ext["completa"] and not cfg.get("numero_objetivo"):
+        ext["completa"] = False
+        errores.append("El listado devolvió 0 registros relevantes y existen registros previos: se considera anómalo y se conservan.")
 
-    # Nunca incluir CAMMESA sin verificación de convocatorias vigentes.
-    licitaciones = [r for r in licitaciones if r.get("fuente") == "CONTRAT.AR"]
-    ahora = datetime.now()
-    def vigente(r):
-        fecha = r.get("cierreOfertas")
-        if fecha:
-            try:
-                return datetime.fromisoformat(fecha) >= ahora
-            except ValueError:
-                pass
-        return True
-    licitaciones = [r for r in licitaciones if vigente(r)]
+    licitaciones, notas, descartados = fusionar(ext, previos, cfg, ahora)
+    descubiertas = len(ext["vistos"])
+    paginas = sum(l["paginas"] for l in ext["listados"])
+    resumen_fuente = (
+        "Páginas leídas: %d; filas descubiertas: %d; relevantes para DEEP: %d; no relevantes: %d; sin número válido: %d; "
+        "duplicados: %d; fichas verificadas: %d de %d relevantes; pedidos HTTP: %d; paginación: %s; "
+        "registros conservados: %d; vencidos descartados: %d."
+        % (paginas, descubiertas, len(ext["registros"]), ext["no_relevantes"], ext["sin_numero"], ext["duplicados"],
+           sum(1 for r in ext["registros"].values() if r["detalleVerificado"]), len(ext["registros"]), ext["pedidos"],
+           ext["modo_paginacion"], len(notas), descartados))
+    if ext["sin_enlace"]:
+        resumen_fuente += " Sin enlace a ficha en el listado (pendientes de verificar, enlace de consulta): %s." % ", ".join(ext["sin_enlace"][:10])
+    if ext["detalles_omitidos"]:
+        resumen_fuente += " Fichas no consultadas por límite: %s." % ", ".join(ext["detalles_omitidos"][:10])
 
+    if ext["completa"]:
+        estado_fuente = "consultada"
+    else:
+        estado_fuente = "incompleta" if descubiertas else "error"
+    fuentes = [
+        {"nombre": "CAMMESA - Convocatorias", "url": URL_CAMMESA, "estado": "en pausa", "registros": 0},
+        {"nombre": "CONTRAT.AR - Obra pública", "url": cfg["base"] + LISTADOS_CONTRATAR[cfg["listados"][0]][1],
+         "estado": estado_fuente, "registros": len(licitaciones), "detalle": resumen_fuente,
+         "listados": [{k: v for k, v in l.items() if k != "errores"} for l in ext["listados"]],
+         "errores": errores[:20]},
+    ]
+    if not PUBLICAR_CAMMESA:
+        licitaciones = [r for r in licitaciones if r.get("fuente") == "CONTRAT.AR"]
 
     resultado = {
         "actualizado": datetime.now(timezone.utc).isoformat(),
         "versionAgente": VERSION_AGENTE,
-        "estado": (
-            "oportunidades_pendientes_de_verificacion"
-            if licitaciones
-            else "sin_registros_verificados"
-        ),
+        "estado": ("extraccion_incompleta" if not ext["completa"] else
+                   "oportunidades_pendientes_de_verificacion" if licitaciones else "sin_registros_verificados"),
+        "extraccionCompleta": bool(ext["completa"]),
         "fuentes": fuentes,
-        "licitaciones": licitaciones
+        "licitaciones": licitaciones,
     }
+    salida = Path(cfg["salida"])
+    temporal = salida.with_suffix(".tmp")
+    temporal.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporal.replace(salida)
 
-    print(f"VERSION ACTIVA: {VERSION_AGENTE}", flush=True)
-    print(f"CAMMESA PUBLICADA: {any(r.get('fuente') == 'CAMMESA' for r in licitaciones)}", flush=True)
-    print(f"CONTRAT.AR: {sum(r.get('fuente') == 'CONTRAT.AR' for r in licitaciones)}", flush=True)
-    Path("licitaciones.json").write_text(
-        json.dumps(resultado, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-
-    print("licitaciones.json generado.")
-    print("Total de registros:", len(licitaciones))
-    # Control crítico: impide que se dé por válida una ejecución que conserva CAMMESA.
-    comprobacion = json.loads(Path("licitaciones.json").read_text(encoding="utf-8"))
-    if any(x.get("fuente") == "CAMMESA" for x in comprobacion["licitaciones"]):
+    print("VERSION ACTIVA: " + VERSION_AGENTE)
+    print("CONTRAT.AR: " + resumen_fuente)
+    for e in errores:
+        print("ERROR DETALLE: " + e)
+        print("::warning title=CONTRAT.AR::" + e.replace("\n", " ")[:300])
+    print("licitaciones.json generado. Total de registros:", len(licitaciones))
+    if any(r.get("fuente") == "CAMMESA" for r in licitaciones) and not PUBLICAR_CAMMESA:
         raise RuntimeError("ERROR: CAMMESA sigue presente en el JSON")
 
-    resumen = os.environ.get("GITHUB_STEP_SUMMARY")
-    if resumen:
-        with open(resumen, "a", encoding="utf-8") as f:
-            f.write("## Resultado de la actualización\n\n")
-            f.write("| Fuente | Estado | Registros |\n|---|---|---|\n")
-            for fuente in fuentes:
-                f.write(
-                    f"| {fuente['nombre']} | {fuente['estado']} "
-                    f"| {fuente['registros']} |\n"
-                )
+    pasos = os.environ.get("GITHUB_STEP_SUMMARY")
+    if pasos:
+        with open(pasos, "a", encoding="utf-8") as f:
+            f.write("## Resultado de la actualización\n\n| Fuente | Estado | Registros |\n|---|---|---|\n")
+            for fu in fuentes:
+                f.write("| %s | %s | %s |\n" % (fu["nombre"], fu["estado"], fu["registros"]))
+            f.write("\n%s\n" % resumen_fuente)
+            if errores:
+                f.write("\n### Errores y pendientes\n\n" + "\n".join("- " + e for e in errores[:20]) + "\n")
 
-    # Si falló la única fuente activa, la corrida debe verse en rojo.
-    if fallidas >= sum(clave != "CAMMESA" or PUBLICAR_CAMMESA for clave, *_ in FUENTES):
-        print("::error title=Sin datos nuevos::Fallaron todas las fuentes.")
+    if cfg.get("numero_objetivo"):
+        hallado = cfg["numero_objetivo"] in ext["registros"]
+        print("BUSQUEDA_POR_NUMERO:", cfg["numero_objetivo"], "ENCONTRADO" if hallado else "NO ENCONTRADO EN LOS LISTADOS CONSULTADOS")
+        if not hallado:
+            print("Consultar en https://contratar.gob.ar/BuscarAvanzado.aspx (el buscador avanzado no está automatizado).")
+            sys.exit(2)
+        if not ext["completa"]:
+            print("::warning title=Ficha sin verificar::Se halló el proceso en el listado, pero falta verificar su ficha.")
+        return
+    if not ext["completa"]:
+        print("::error title=CONTRAT.AR extracción incompleta::Se conservaron los registros verificados; revisar el detalle.")
         sys.exit(1)
 
 
