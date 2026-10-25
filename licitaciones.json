@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-10-24T19:55:55.975372+00:00",
+  "actualizado": "2026-10-25T01:40:24.896014+00:00",
   "versionAgente": "DEEP-CONTRATAR-FECHAS-20261024",
   "estado": "oportunidades_pendientes_de_verificacion",
   "fuentes": [
@@ -48,10 +48,7 @@
       "plazoVerificado": false,
       "enlace": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
       "observaciones": "Referencia detectada en listado oficial de próximas aperturas. Fechas y circulares tomadas del detalle cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública",
-      "alertas": [
-        "Circular nueva N° 1 (11/09/2026)",
-        "Circular nueva N° 2 (22/09/2026)"
-      ]
+      "alertas": []
     }
   ]
 }
