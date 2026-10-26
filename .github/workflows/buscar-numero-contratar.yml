@@ -1,92 +1,83 @@
 
 name: Buscar número CONTRAT.AR (manual)
+
 on:
   workflow_dispatch:
     inputs:
       numero:
-        description: 'Número exacto (ejemplo 34-0003-LPU26)'
-        required: false
+        description: 'Número de proceso, por ejemplo 34-0003-LPU26'
+        required: true
         default: '34-0003-LPU26'
         type: string
       modo:
-        description: 'Buscar número o diagnosticar el buscador avanzado'
+        description: 'Tipo de consulta'
         required: true
-        default: 'diagnostico'
+        default: 'avanzado'
         type: choice
         options:
+          - avanzado
           - diagnostico
           - numero
+
 permissions:
   contents: read
-concurrency:
-  group: consulta-contratar-numero
-  cancel-in-progress: false
+
 jobs:
   buscar:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Obtener archivos del repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Diagnosticar buscador avanzado sin tocar resultados
-        if: ${{ inputs.modo == 'diagnostico' }}
-        continue-on-error: true
+
+      - name: Consultar buscador avanzado
+        if: ${{ inputs.modo == 'avanzado' }}
         env:
-          DEEP_ARCHIVO_SALIDA: /tmp/diagnostico-no-publicar.json
+          NUMERO_SOLICITADO: ${{ inputs.numero }}
+        run: |
+          python buscar_numero_avanzado.py --numero "$NUMERO_SOLICITADO"
+
+      - name: Guardar resultado de búsqueda avanzada
+        if: ${{ always() && inputs.modo == 'avanzado' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-busqueda-avanzada
+          path: resultado_busqueda_avanzada.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Diagnosticar buscador avanzado
+        if: ${{ inputs.modo == 'diagnostico' }}
         run: |
           python diagnostico_busqueda_avanzada.py
-      - name: Guardar diagnóstico del buscador
+
+      - name: Guardar diagnóstico
         if: ${{ always() && inputs.modo == 'diagnostico' }}
         uses: actions/upload-artifact@v4
         with:
           name: diagnostico-buscador-avanzado
           path: diagnostico_busqueda_avanzada.json
           if-no-files-found: warn
-      - name: Consultar el número en los listados oficiales (sin publicar)
+
+      - name: Buscar en listados oficiales
         if: ${{ inputs.modo == 'numero' }}
-        id: consulta
-        continue-on-error: true
         env:
           NUMERO_SOLICITADO: ${{ inputs.numero }}
           DEEP_ARCHIVO_SALIDA: /tmp/consulta-numero.json
-          CONTRATAR_LISTADOS: proximas,ultimos90
-          CONTRATAR_MAX_DETALLES: '1'
-          CONTRATAR_MAX_PEDIDOS: '25'
-          CONTRATAR_PAUSA: '2'
         run: |
-          if test -f licitaciones.json; then cp licitaciones.json /tmp/consulta-numero.json; fi
           python buscar_licitaciones.py --numero "$NUMERO_SOLICITADO"
-      - name: Resumen de resultado
-        if: ${{ always() && inputs.modo == 'numero' }}
-        env:
-          NUMERO_SOLICITADO: ${{ inputs.numero }}
-        run: |
-          python - <<'PY'
-          import json,os,pathlib
-          n=os.environ['NUMERO_SOLICITADO'].strip().upper()
-          p=pathlib.Path('/tmp/consulta-numero.json')
-          d=json.loads(p.read_text()) if p.exists() else {}
-          r=next((x for x in d.get('licitaciones',[]) if x.get('numero','').upper()==n),None)
-          print('Número:',n,'Encontrado en archivo:',bool(r))
-          if r:
-              for k in ('numero','nombre','apertura','cierreOfertas','consultas','documentacionFisica','circulares','detalleVerificado','enlace','tipoEnlace'):
-                  print(k,':',r.get(k))
-          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
-              f.write('## Consulta por número: '+n+'\n\n')
-              f.write('**Resultado:** '+('Registro disponible (verificar última consulta y origen)' if r else 'No encontrado en los listados consultados')+'\n\n')
-              if r:
-                  for k in ('nombre','apertura','cierreOfertas','consultas','documentacionFisica','detalleVerificado','enlace'):
-                      f.write('- '+k+': '+str(r.get(k) or 'No disponible')+'\n')
-              f.write('\nEl buscador avanzado oficial sigue disponible: https://contratar.gob.ar/BuscarAvanzado.aspx\n')
-          PY
-      - name: Descargar JSON de consulta (no se publica)
+
+      - name: Guardar resultado de listados
         if: ${{ always() && inputs.modo == 'numero' }}
         uses: actions/upload-artifact@v4
         with:
-          name: consulta-contratar-numero
+          name: consulta-numero-listados
           path: /tmp/consulta-numero.json
           if-no-files-found: warn
           retention-days: 7
-  
