@@ -1,11 +1,21 @@
+
 name: Buscar número CONTRAT.AR (manual)
 on:
   workflow_dispatch:
     inputs:
       numero:
         description: 'Número exacto (ejemplo 34-0003-LPU26)'
-        required: true
+        required: false
+        default: '34-0003-LPU26'
         type: string
+      modo:
+        description: 'Buscar número o diagnosticar el buscador avanzado'
+        required: true
+        default: 'diagnostico'
+        type: choice
+        options:
+          - diagnostico
+          - numero
 permissions:
   contents: read
 concurrency:
@@ -20,7 +30,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Diagnosticar buscador avanzado sin tocar resultados
+        if: ${{ inputs.modo == 'diagnostico' }}
+        continue-on-error: true
+        env:
+          DEEP_ARCHIVO_SALIDA: /tmp/diagnostico-no-publicar.json
+        run: |
+          python diagnostico_busqueda_avanzada.py
+      - name: Guardar diagnóstico del buscador
+        if: ${{ always() && inputs.modo == 'diagnostico' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-buscador-avanzado
+          path: diagnostico_busqueda_avanzada.json
+          if-no-files-found: warn
       - name: Consultar el número en los listados oficiales (sin publicar)
+        if: ${{ inputs.modo == 'numero' }}
         id: consulta
         continue-on-error: true
         env:
@@ -34,7 +59,7 @@ jobs:
           if test -f licitaciones.json; then cp licitaciones.json /tmp/consulta-numero.json; fi
           python buscar_licitaciones.py --numero "$NUMERO_SOLICITADO"
       - name: Resumen de resultado
-        if: always()
+        if: ${{ always() && inputs.modo == 'numero' }}
         env:
           NUMERO_SOLICITADO: ${{ inputs.numero }}
         run: |
@@ -57,10 +82,11 @@ jobs:
               f.write('\nEl buscador avanzado oficial sigue disponible: https://contratar.gob.ar/BuscarAvanzado.aspx\n')
           PY
       - name: Descargar JSON de consulta (no se publica)
-        if: always()
+        if: ${{ always() && inputs.modo == 'numero' }}
         uses: actions/upload-artifact@v4
         with:
           name: consulta-contratar-numero
           path: /tmp/consulta-numero.json
           if-no-files-found: warn
           retention-days: 7
+  
