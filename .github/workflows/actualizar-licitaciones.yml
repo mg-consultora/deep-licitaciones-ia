@@ -1,49 +1,93 @@
-
-name: Actualizar licitaciones DEEP
+name: Actualizar licitaciones DEEP (seguro)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"
+    # GitHub cron usa UTC. 06:00 UTC = 03:00 Argentina (UTC-3).
+    - cron: '0 6 * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: actualizar-licitaciones
+  group: deep-licitaciones-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 35
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          ref: ${{ github.ref_name }}
+          fetch-depth: 1
 
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      - name: Ejecutar programa
-        run: python buscar_licitaciones.py
-
-      - name: Validar archivo generado
-        run: python -m json.tool licitaciones.json > /dev/null
-
-      - name: Publicar resultados en el repositorio
+      - name: Ejecutar extracción
+        id: extraer
+        continue-on-error: true
+        env:
+          PYTHONUNBUFFERED: '1'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -u buscar_licitaciones.py
 
+      - name: Validar extracción y registros
+        id: validar
+        if: steps.extraer.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          p = pathlib.Path('licitaciones.json')
+          if not p.is_file():
+              sys.exit('ERROR: licitaciones.json no existe')
+          d = json.loads(p.read_text(encoding='utf-8'))
+          print('VERSION:', d.get('versionAgente'))
+          print('ESTADO:', d.get('estado'))
+          print('EXTRACCION_COMPLETA:', d.get('extraccionCompleta'))
+          rows = d.get('licitaciones', [])
+          print('REGISTROS:', len(rows))
+          for f in d.get('fuentes', []):
+              print('FUENTE:', f.get('nombre'), 'ESTADO:', f.get('estado'), 'ERRORES:', f.get('errores', []))
+          if d.get('extraccionCompleta') is not True:
+              sys.exit('ERROR: extracción incompleta; no se publica')
+          if not isinstance(rows, list) or not rows:
+              sys.exit('ERROR: 0 registros; no se reemplaza la última publicación')
+          if not any(r.get('fuente') == 'CONTRAT.AR' and r.get('detalleVerificado') and r.get('ultimaVerificacion') for r in rows):
+              sys.exit('ERROR: ninguna ficha CONTRAT.AR verificada; no se publica')
+          print('VALIDACION SUPERADA: hay al menos una ficha verificada')
+          PY
+
+      - name: Guardar diagnóstico descargable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-deep-${{ github.run_number }}
+          path: licitaciones.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publicar solo información validada
+        if: steps.extraer.outcome == 'success' && steps.validar.outcome == 'success'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add licitaciones.json
-
           if git diff --cached --quiet; then
-            echo "Sin cambios en los resultados."
+            echo 'Sin cambios en licitaciones.json'
           else
-            git commit -m "Actualizar datos de licitaciones DEEP"
-            git push
+            git commit -m 'Actualizar licitaciones DEEP verificadas'
+            git push origin HEAD:${{ github.ref_name }}
           fi
+
+      - name: Informar falla real
+        if: steps.extraer.outcome != 'success' || steps.validar.outcome != 'success'
+        run: |
+          echo 'ERROR: no se pudo verificar una actualización válida de CONTRAT.AR.'
+          echo 'Se conserva el archivo anterior en el repositorio; no se publica un JSON vacío.'
+          exit 1
