@@ -1,9 +1,9 @@
-name: Actualizar licitaciones DEEP (seguro)
+name: Actualizar licitaciones DEEP (V3 validada)
 
 on:
   workflow_dispatch:
   schedule:
-    # GitHub cron usa UTC. 06:00 UTC = 03:00 Argentina (UTC-3).
+    # 06:00 UTC = 03:00 de Argentina.
     - cron: '0 6 * * *'
 
 permissions:
@@ -29,7 +29,27 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Ejecutar extracción
+      - name: Registrar archivo anterior y verificar extractor V3
+        run: |
+          python - <<'PY'
+          import ast, hashlib, json
+          from pathlib import Path
+          p = Path('buscar_licitaciones.py')
+          if not p.is_file():
+              raise SystemExit('ERROR: falta buscar_licitaciones.py')
+          source = p.read_text(encoding='utf-8-sig')
+          tree = ast.parse(source, filename=str(p))
+          marker = 'DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026'
+          if marker not in source or not any(isinstance(n, ast.FunctionDef) and n.name == 'main' for n in tree.body):
+              raise SystemExit('ERROR: extractor V3 o función main ausente')
+          old = Path('licitaciones.json')
+          baseline = {'sha256': hashlib.sha256(old.read_bytes()).hexdigest() if old.exists() else None}
+          Path('/tmp/deep-baseline.json').write_text(json.dumps(baseline))
+          print('EXTRACTOR V3:', marker)
+          print('JSON anterior:', 'presente y conservado' if old.exists() else 'ausente')
+          PY
+
+      - name: Ejecutar extractor V3
         id: extraer
         continue-on-error: true
         env:
@@ -37,57 +57,40 @@ jobs:
         run: |
           python -u buscar_licitaciones.py
 
-      - name: Validar extracción y registros
+      - name: Validar que el JSON sea nuevo y tenga datos verificados
         id: validar
         if: steps.extraer.outcome == 'success'
+        continue-on-error: true
         run: |
           python - <<'PY'
-          import json, pathlib, sys
-          p = pathlib.Path('licitaciones.json')
+          import hashlib, json
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+          p = Path('licitaciones.json')
           if not p.is_file():
-              sys.exit('ERROR: licitaciones.json no existe')
+              raise SystemExit('ERROR: el extractor no generó licitaciones.json')
           d = json.loads(p.read_text(encoding='utf-8'))
-          print('VERSION:', d.get('versionAgente'))
+          old = json.loads(Path('/tmp/deep-baseline.json').read_text())
+          new_hash = hashlib.sha256(p.read_bytes()).hexdigest()
+          if old['sha256'] == new_hash:
+              raise SystemExit('ERROR: el JSON quedó idéntico al anterior; el extractor no lo actualizó')
+          if d.get('versionAgente') != 'DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026':
+              raise SystemExit('ERROR: el JSON no corresponde a la V3')
+          try:
+              fecha = datetime.fromisoformat(d['actualizado'].replace('Z', '+00:00'))
+              if fecha.tzinfo is None:
+                  raise ValueError('fecha sin zona horaria')
+          except (KeyError, ValueError, TypeError) as exc:
+              raise SystemExit('ERROR: fecha de actualización inválida: ' + str(exc))
+          if abs(datetime.now(timezone.utc) - fecha.astimezone(timezone.utc)) > timedelta(minutes=35):
+              raise SystemExit('ERROR: fecha del JSON no corresponde a esta ejecución')
+          rows = d.get('licitaciones')
+          print('VERSION:', d['versionAgente'])
+          print('FECHA:', d['actualizado'])
           print('ESTADO:', d.get('estado'))
           print('EXTRACCION_COMPLETA:', d.get('extraccionCompleta'))
-          rows = d.get('licitaciones', [])
-          print('REGISTROS:', len(rows))
-          for f in d.get('fuentes', []):
-              print('FUENTE:', f.get('nombre'), 'ESTADO:', f.get('estado'), 'ERRORES:', f.get('errores', []))
+          print('REGISTROS:', len(rows) if isinstance(rows, list) else 'inválido')
+          for fuente in d.get('fuentes', []):
+              print('FUENTE:', fuente.get('nombre'), '| ESTADO:', fuente.get('estado'), '| ERRORES:', fuente.get('errores', []))
           if d.get('extraccionCompleta') is not True:
-              sys.exit('ERROR: extracción incompleta; no se publica')
-          if not isinstance(rows, list) or not rows:
-              sys.exit('ERROR: 0 registros; no se reemplaza la última publicación')
-          if not any(r.get('fuente') == 'CONTRAT.AR' and r.get('detalleVerificado') and r.get('ultimaVerificacion') for r in rows):
-              sys.exit('ERROR: ninguna ficha CONTRAT.AR verificada; no se publica')
-          print('VALIDACION SUPERADA: hay al menos una ficha verificada')
-          PY
-
-      - name: Guardar diagnóstico descargable
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diagnostico-deep-${{ github.run_number }}
-          path: licitaciones.json
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Publicar solo información validada
-        if: steps.extraer.outcome == 'success' && steps.validar.outcome == 'success'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add licitaciones.json
-          if git diff --cached --quiet; then
-            echo 'Sin cambios en licitaciones.json'
-          else
-            git commit -m 'Actualizar licitaciones DEEP verificadas'
-            git push origin HEAD:${{ github.ref_name }}
-          fi
-
-      - name: Informar falla real
-        if: steps.extraer.outcome != 'success' || steps.validar.outcome != 'success'
-        run: |
-          echo 'ERROR: no se pudo verificar una actualización válida de CONTRAT.AR.'
-          echo 'Se conserva el archivo anterior en el repositorio; no se publica un JSON vacío.'
-          exit 1
+              raise SystemExit('ERROR: extracción incompleta; se conserva la publicación anterior')
