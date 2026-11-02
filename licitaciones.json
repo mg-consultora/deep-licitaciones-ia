@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-11-01T06:38:53.107886+00:00",
+  "actualizado": "2026-11-02T06:58:34.642635+00:00",
   "versionAgente": "DEEP-CONTRATAR-ESTABLE-V2-20261025",
   "estado": "oportunidades_pendientes_de_verificacion",
   "fuentes": [
@@ -14,7 +14,7 @@
       "url": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
       "estado": "consultada",
       "registros": 1,
-      "detalle": "Filas leídas: 4; sin número de proceso válido: 0; sin términos de interés: 3; registrados: 1."
+      "detalle": "Filas leídas: 5; sin número de proceso válido: 0; sin términos de interés: 4; registrados: 1."
     }
   ],
   "licitaciones": [
