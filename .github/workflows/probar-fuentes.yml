@@ -21,3 +21,6 @@ jobs:
 
       - name: Probar fuentes oficiales
         run: python probar_fuentes_deep_robusto.py
+      - name: Diagnosticar fuentes oficiales DEEP
+        if: always()
+        run: python -u diagnostico_fuentes.py
