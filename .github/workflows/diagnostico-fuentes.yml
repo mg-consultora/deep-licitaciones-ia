@@ -1,0 +1,31 @@
+name: DEEP - Diagnóstico de fuentes oficiales
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    if: github.ref_name == 'prueba-v3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Descargar rama de prueba
+        uses: actions/checkout@v4
+        with:
+          ref: prueba-v3
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Comprobar DNS, TCP, TLS y HTTP
+        run: python -u diagnostico_fuentes.py
+      - name: Guardar resultados para revisión
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-fuentes
+          path: diagnostico_fuentes_resultado.json
+          if-no-files-found: ignore

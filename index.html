@@ -130,7 +130,7 @@ footer {
 <header>
   <div class="inner">
     <h1>Agente IA de Licitaciones | DEEP S.A.</h1>
-    <p>Oportunidades comerciales en Energía, Minería, Oil & Gas e Industria</p>
+    <p>Oportunidades comerciales en Energía, Minería, Oil &amp; Gas e Industria</p>
   </div>
 </header>
 
@@ -156,15 +156,15 @@ footer {
 
 <section class="stats">
   <div class="stat">
-    <span class="green">🟢 PRÓXIMA FECHA EN PLAZO</span>
+    <span class="green">🟢 EN PLAZO</span>
     <strong id="total-plazo">0</strong>
   </div>
   <div class="stat">
-    <span class="yellow">🟡 PRÓXIMA FECHA POR VENCER</span>
+    <span class="yellow">🟡 POR VENCER</span>
     <strong id="total-vencer">0</strong>
   </div>
   <div class="stat">
-    <span class="red">🔴 TODAS LAS FECHAS PASARON</span>
+    <span class="red">🔴 VENCIDA</span>
     <strong id="total-vencida">0</strong>
   </div>
   <div class="stat">
@@ -176,13 +176,12 @@ footer {
 <section class="panel">
   <h2>🔎 Consultar un proceso oficial</h2>
   <p class="note">
-    Ingresá el número que te envió el cliente (por ejemplo, 34-0003-LPU26).
-    Si ya está registrado en DEEP, se mostrará en la tabla y se abrirá
-    directamente el expediente. Para números nuevos, se abrirá el buscador público de CONTRAT.AR.
+    Ingresá el número de proceso que te envió el cliente.
+    Si está registrado, podrás abrir su expediente.
+    Si no está registrado, se abrirá el buscador de CONTRAT.AR.
   </p>
   <form id="consulta-form" class="search-row">
-    <input id="numero" required
-      placeholder="Ej.: 34-0003-LPU26">
+    <input id="numero" required placeholder="Ej.: 34-0003-LPU26">
     <button type="submit">Buscar número de proceso ↗</button>
   </form>
   <p id="mensaje-consulta" class="note"></p>
@@ -191,11 +190,11 @@ footer {
 <section class="panel">
   <h2>Licitaciones y obras</h2>
   <p class="note">
-    Los estados EN PLAZO, POR VENCER y VENCIDA se calculan únicamente con un cierre de ofertas verificado. Si no se publica, se indica SIN VERIFICAR.
-    Los registros de CAMMESA pueden ser proyectos en seguimiento, no necesariamente licitaciones abiertas.
-    Las fechas se muestran únicamente cuando están documentadas.
-    Si no se conoce un plazo, se indica "No informada" y se
-    conserva el enlace directo a la fuente oficial.
+    El semáforo se calcula exclusivamente con el cierre de ofertas
+    verificado. La fecha de apertura, el fin de consultas y la
+    presentación de documentación física no se utilizan como sustitutos.
+    Si no se conoce el cierre de ofertas, el registro aparece
+    como SIN VERIFICAR.
   </p>
 
   <div class="filters">
@@ -212,7 +211,7 @@ footer {
       <option value="">Todos los sectores</option>
       <option value="Energía">Energía</option>
       <option value="Minería">Minería</option>
-      <option value="Oil & Gas">Oil & Gas</option>
+      <option value="Oil & Gas">Oil &amp; Gas</option>
       <option value="Industria">Industria</option>
     </select>
   </div>
@@ -248,31 +247,7 @@ footer {
 <script>
 "use strict";
 
-// Registro inicial, documentado mediante capturas
-// oficiales de CONTRAT.AR.
-// No se actualiza automáticamente.
-
-const licitacionesManuales = []; // Solo registros actuales del JSON automático.
-
-let licitaciones = [...licitacionesManuales];
-
-function fechaArgentina(valor) {
-  if (!valor) return "No informada";
-  const fecha = new Date(valor);
-  if (Number.isNaN(fecha.getTime())) return "No informada";
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(fecha);
-}
-
-// El estado solo se calcula con un cierre de ofertas
-// expresamente identificado y verificado.
-// No se usa la apertura como sustituto.
+let licitaciones = [];
 
 function fechaValida(valor) {
   if (!valor) return null;
@@ -280,71 +255,127 @@ function fechaValida(valor) {
   return Number.isNaN(fecha.getTime()) ? null : fecha;
 }
 
-function estadoFecha(valor) {
+function fechaArgentina(valor) {
   const fecha = fechaValida(valor);
-  if (!fecha) return "SIN VERIFICAR";
-  const restante = fecha.getTime() - Date.now();
-  if (restante < 0) return "VENCIDA";
-  return restante <= 7 * 86400000 ? "POR VENCER" : "EN PLAZO";
+  if (!fecha) return "No informada";
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Argentina/Buenos_Aires"
+  }).format(fecha);
 }
 
 function calcularEstado(item) {
-  // Solo el cierre oficial verificado determina si una oferta sigue en plazo.
-  // Apertura, consultas y documentación son hitos diferentes.
-  if (item.fuente !== "CONTRAT.AR" || !item.plazoVerificado || !item.cierreOfertas) {
-    return "SIN VERIFICAR";
-  }
-  return estadoFecha(item.cierreOfertas);
+  if (item.plazoVerificado !== true) return "SIN VERIFICAR";
+
+  const fecha = fechaValida(item.cierreOfertas);
+  if (!fecha) return "SIN VERIFICAR";
+
+  const restante = fecha.getTime() - Date.now();
+  if (restante < 0) return "VENCIDA";
+  if (restante <= 7 * 86400000) return "POR VENCER";
+  return "EN PLAZO";
+}
+
+function crearTexto(etiqueta, contenido) {
+  const elemento = document.createElement(etiqueta);
+  elemento.textContent = contenido == null ? "" : String(contenido);
+  return elemento;
+}
+
+function agregarLinea(celda, titulo, fecha) {
+  if (!fecha) return;
+  celda.appendChild(
+    crearTexto("small", titulo + ": " + fechaArgentina(fecha))
+  );
+}
+
+function normalizarRegistro(item) {
+  if (!item || typeof item !== "object") return null;
+  if (!item.numero || !item.nombre) return null;
+
+  return {
+    numero: String(item.numero),
+    nombre: String(item.nombre),
+    organismo: String(item.organismo || "No informado"),
+    sector: String(item.sector || "Sin clasificar"),
+    fuente: String(item.fuente || "Fuente no informada"),
+    estadoOficial: String(item.estadoOficial || ""),
+    publicacion: item.publicacion || null,
+    consultas: item.consultas || null,
+    cierreOfertas: item.cierreOfertas || null,
+    documentacionFisica: item.documentacionFisica || null,
+    apertura: item.apertura || null,
+    plazoVerificado: item.plazoVerificado === true,
+    enlace: String(item.enlace || ""),
+    observaciones: String(item.observaciones || ""),
+    revisionCirculares: String(item.revisionCirculares || "pendiente"),
+    circulares: Array.isArray(item.circulares) ? item.circulares : [],
+    alertas: Array.isArray(item.alertas) ? item.alertas : [],
+    enlaceCirculares: String(item.enlaceCirculares || "")
+  };
 }
 
 function dibujarAlertas() {
   const contenedor = document.getElementById("alertas-contenido");
   contenedor.replaceChildren();
+
   let cantidad = 0;
-  licitaciones.filter(item => item.fuente === "CONTRAT.AR").forEach(item => {
-    const avisos = Array.isArray(item.alertas) ? item.alertas : [];
-    const revision = item.revisionCirculares || "pendiente";
+
+  licitaciones.forEach(item => {
+    const avisos = item.alertas;
+    const revision = item.revisionCirculares;
+
     if (!avisos.length && revision === "verificada") return;
+
     cantidad++;
+
     const bloque = document.createElement("p");
-    const titulo = crearTexto("strong", (item.numero || "Proceso") + " — " + (item.nombre || ""));
-    bloque.appendChild(titulo);
-    const texto = crearTexto("span", " | " + (avisos.length ? avisos.join("; ") : "Revisión automática de circulares pendiente"));
-    bloque.appendChild(texto);
+    bloque.appendChild(
+      crearTexto("strong", item.numero + " — " + item.nombre)
+    );
+
+    bloque.appendChild(
+      crearTexto(
+        "span",
+        " | " + (
+          avisos.length
+            ? avisos.join("; ")
+            : "Revisión de circulares pendiente"
+        )
+      )
+    );
+
     const destino = item.enlaceCirculares || item.enlace;
+
     if (destino && /^https:\/\//i.test(destino)) {
-      const link = crearTexto("a", " Abrir expediente oficial ↗");
-      link.href = destino;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      bloque.appendChild(link);
+      const enlace = crearTexto("a", " Abrir expediente ↗");
+      enlace.href = destino;
+      enlace.target = "_blank";
+      enlace.rel = "noopener noreferrer";
+      bloque.appendChild(enlace);
     }
+
     contenedor.appendChild(bloque);
   });
-  if (!cantidad) contenedor.textContent = "No se detectaron cambios de fechas ni circulares nuevas en la última consulta. Las novedades se comparan con el archivo automático anterior.";
-}
 
-function crearTexto(tag, contenido) {
-  const elemento = document.createElement(tag);
-  elemento.textContent = contenido || "";
-  return elemento;
-}
-
-function agregarLinea(celda, etiqueta, valor) {
-  const linea = document.createElement("div");
-  const negrita = crearTexto("strong", etiqueta + ": ");
-  const texto = document.createTextNode(
-    valor ? fechaArgentina(valor) : "No informada"
-  );
-  linea.append(negrita, texto);
-  celda.appendChild(linea);
+  if (!cantidad) {
+    contenedor.textContent =
+      "No hay alertas pendientes registradas en el archivo.";
+  }
 }
 
 function dibujar() {
   const texto = document.getElementById("buscar")
-    .value.toLowerCase().trim();
+    .value.trim().toLowerCase();
+
   const estadoFiltro =
     document.getElementById("filtrar-estado").value;
+
   const sectorFiltro =
     document.getElementById("filtrar-sector").value;
 
@@ -369,15 +400,18 @@ function dibujar() {
     conteos["SIN VERIFICAR"];
 
   const filtradas = licitaciones.filter(item => {
-    const estado = calcularEstado(item);
     const conjunto = [
-      item.numero, item.nombre, item.organismo, item.sector
+      item.numero,
+      item.nombre,
+      item.organismo,
+      item.sector,
+      item.fuente
     ].join(" ").toLowerCase();
 
     return conjunto.includes(texto)
-      && (!estadoFiltro || estado === estadoFiltro)
+      && (!estadoFiltro || calcularEstado(item) === estadoFiltro)
       && (!sectorFiltro ||
-          (item.sector || "").includes(sectorFiltro));
+          item.sector.toLowerCase().includes(sectorFiltro.toLowerCase()));
   });
 
   const cuerpo = document.getElementById("tabla-licitaciones");
@@ -387,12 +421,9 @@ function dibujar() {
     const fila = document.createElement("tr");
 
     const oportunidad = document.createElement("td");
-    oportunidad.appendChild(
-      crearTexto("strong", item.numero || "Sin número")
-    );
-    oportunidad.appendChild(
-      crearTexto("small", item.nombre || "Sin nombre")
-    );
+    oportunidad.appendChild(crearTexto("strong", item.numero));
+    oportunidad.appendChild(crearTexto("small", item.nombre));
+
     if (item.observaciones) {
       oportunidad.appendChild(
         crearTexto("small", item.observaciones)
@@ -401,42 +432,54 @@ function dibujar() {
 
     const organismo = document.createElement("td");
     organismo.appendChild(
-      crearTexto("strong", item.organismo || "No informado")
+      crearTexto("strong", item.organismo)
     );
     organismo.appendChild(
-      crearTexto("small", item.sector || "Sin clasificar")
+      crearTexto("small", item.sector)
     );
 
     const fechas = document.createElement("td");
     agregarLinea(fechas, "Publicación", item.publicacion);
     agregarLinea(fechas, "Fin de consultas", item.consultas);
-    agregarLinea(fechas, "Cierre de ofertas", item.cierreOfertas);
     agregarLinea(
-      fechas, "Documentación física", item.documentacionFisica
+      fechas,
+      "Documentación física",
+      item.documentacionFisica
     );
-    agregarLinea(fechas, "Primer acto de apertura", item.apertura);
-    if (item.fuente === "CONTRAT.AR") {
-      const cantidad = Array.isArray(item.circulares) ? item.circulares.length : 0;
-      fechas.appendChild(crearTexto("small", "Circulares detectadas: " + cantidad +
-        " | Revisión: " + (item.revisionCirculares || "pendiente")));
-      [["Fin de consultas", item.consultas],
-       ["Documentación física", item.documentacionFisica],
-       ["Primer acto de apertura", item.apertura]].forEach(([nombre, fecha]) => {
-        const estado = estadoFecha(fecha);
-        if (estado !== "SIN VERIFICAR") fechas.appendChild(crearTexto("small", nombre + ": " + estado));
-      });
+    agregarLinea(fechas, "Apertura", item.apertura);
+
+    if (item.plazoVerificado && fechaValida(item.cierreOfertas)) {
+      agregarLinea(
+        fechas,
+        "Cierre de ofertas verificado",
+        item.cierreOfertas
+      );
+    } else {
+      fechas.appendChild(
+        crearTexto("small", "Cierre de ofertas: NO VERIFICADO")
+      );
     }
+
+    fechas.appendChild(
+      crearTexto(
+        "small",
+        "Circulares registradas: " + item.circulares.length +
+        " | Revisión: " + item.revisionCirculares
+      )
+    );
 
     const estado = calcularEstado(item);
     const estadoCelda = document.createElement("td");
     const etiqueta = crearTexto("span", estado);
-    const clase = {
+
+    const clases = {
       "EN PLAZO": "green",
       "POR VENCER": "yellow",
       "VENCIDA": "red",
       "SIN VERIFICAR": "gray"
     };
-    etiqueta.className = "pill " + clase[estado];
+
+    etiqueta.className = "pill " + clases[estado];
     estadoCelda.appendChild(etiqueta);
 
     if (item.estadoOficial) {
@@ -446,198 +489,163 @@ function dibujar() {
     }
 
     const fuente = document.createElement("td");
-    if (item.enlace &&
-        /^https:\/\/[^ ]+$/i.test(item.enlace)) {
-      const enlace = document.createElement("a");
+
+    if (/^https:\/\//i.test(item.enlace)) {
+      const enlace = crearTexto(
+        "a",
+        "Ver en " + item.fuente + " ↗"
+      );
       enlace.href = item.enlace;
       enlace.target = "_blank";
       enlace.rel = "noopener noreferrer";
-      enlace.textContent =
-        "Ver en " + (item.fuente || "fuente oficial") + " ↗";
       fuente.appendChild(enlace);
     } else {
       fuente.textContent = "Enlace no informado";
     }
 
     fila.append(
-      oportunidad, organismo, fechas, estadoCelda, fuente
+      oportunidad,
+      organismo,
+      fechas,
+      estadoCelda,
+      fuente
     );
+
     cuerpo.appendChild(fila);
   });
 
   document.getElementById("sin-resultados").hidden =
     filtradas.length > 0;
+
   dibujarAlertas();
 }
 
-function normalizarRegistro(item) {
-  if (!item || typeof item !== "object") return null;
-  if (!item.numero || !item.nombre) return null;
-
-  return {
-    numero: String(item.numero),
-    nombre: String(item.nombre),
-    organismo: String(item.organismo || "No informado"),
-    sector: String(item.sector || "Sin clasificar"),
-    fuente: String(item.fuente || "Fuente oficial"),
-    estadoOficial: String(item.estadoOficial || ""),
-    publicacion: item.publicacion || null,
-    consultas: item.consultas || null,
-    cierreOfertas: item.cierreOfertas || null,
-    documentacionFisica: item.documentacionFisica || null,
-    apertura: item.apertura || null,
-    plazoVerificado: item.plazoVerificado === true,
-    enlace: String(item.enlace || ""),
-    observaciones: String(item.observaciones || ""),
-    detalleVerificado: item.detalleVerificado === true,
-    revisionCirculares: String(item.revisionCirculares || "pendiente"),
-    circulares: Array.isArray(item.circulares) ? item.circulares : [],
-    alertas: Array.isArray(item.alertas) ? item.alertas : [],
-    enlaceCirculares: String(item.enlaceCirculares || "")
-  };
-}
-
-// Lee un archivo JSON publicado junto a index.html.
-// Esto NO extrae datos directamente de los portales.
-// Requiere un proceso externo que genere registros verificados.
-
 async function cargarDatos() {
   const conexion = document.getElementById("conexion");
-  let datos;
+  const actualizacion = document.getElementById("actualizacion");
+
   try {
     const respuesta = await fetch(
       "./licitaciones.json?nocache=" + Date.now(),
       { cache: "no-store" }
     );
+
     if (!respuesta.ok) {
-      throw new Error("Archivo no publicado");
+      throw new Error("No se pudo acceder al JSON");
     }
 
-    datos = await respuesta.json();
+    const datos = await respuesta.json();
+
     const registros = Array.isArray(datos)
       ? datos
       : Array.isArray(datos.licitaciones)
         ? datos.licitaciones
         : [];
 
-    const validos = registros
+    licitaciones = registros
       .map(normalizarRegistro)
       .filter(Boolean);
 
-    const mapa = new Map();
-    licitacionesManuales.forEach(item =>
-      mapa.set(item.numero, item)
-    );
-    validos.forEach(item => {
-      const url = String(item.enlace || "");
-      if (url === "https://cammesaweb.cammesa.com/inicio-licitaciones/" ||
-          url.includes("/complejoshidrolectricos/")) return;
-      const clave = item.fuente === "CAMMESA"
-        ? "CAMMESA:" + item.nombre.toLowerCase().trim()
-        : item.numero;
-      // Los registros automáticos tienen prioridad sobre fichas manuales.
-      if (mapa.has(clave)) {
-        const manual = mapa.get(clave);
-        if (!item.detalleVerificado && manual) {
-          ["publicacion", "consultas", "documentacionFisica", "apertura"].forEach(campo => {
-            if (!item[campo]) item[campo] = manual[campo] || null;
-          });
-          item.observaciones = "Fechas conservadas de captura anterior; pendiente de revisión automática.";
-        }
-      }
-      mapa.set(clave, item);
-    });
+    const fechaArchivo = fechaValida(datos.actualizado);
 
-    licitaciones = Array.from(mapa.values()).filter(item => {
-      if (item.fuente !== "CONTRAT.AR") return false;
-      const fin = fechaValida(item.cierreOfertas);
-      // Una apertura pasada no demuestra que el cierre de ofertas haya vencido.
-      return !fin || fin.getTime() >= Date.now();
-    });
+    actualizacion.textContent =
+      "Última actualización del archivo: " +
+      (fechaArchivo
+        ? fechaArgentina(datos.actualizado)
+        : "No informada");
 
-    conexion.textContent = licitaciones.length
-      ? "Licitaciones vigentes cargadas desde la última actualización automática de CONTRAT.AR."
-      : "No se detectaron licitaciones vigentes en el archivo automático.";
+    const verificadas = licitaciones.filter(
+      item => item.plazoVerificado &&
+              fechaValida(item.cierreOfertas)
+    ).length;
+
+    conexion.textContent =
+      "Registros cargados: " + licitaciones.length +
+      " | Con cierre de ofertas verificado: " + verificadas +
+      ". La carga del archivo no significa que sus fuentes " +
+      "se hayan consultado nuevamente.";
+
+    if (datos.estado === "oportunidades_pendientes_de_verificacion") {
+      conexion.textContent +=
+        " El archivo indica que hay oportunidades pendientes de verificación.";
+    }
 
   } catch (error) {
-    conexion.textContent =
-      "No se pudo cargar licitaciones.json. No se muestran registros antiguos como si estuvieran vigentes.";
-  }
+    licitaciones = [];
+    actualizacion.textContent =
+      "Última actualización: no disponible";
 
-  document.getElementById("actualizacion").textContent =
-    "Última consulta del tablero: " +
-    new Date().toLocaleString("es-AR") +
-    (typeof datos !== "undefined" && datos.actualizado
-      ? " | Archivo automático: " + new Date(datos.actualizado).toLocaleString("es-AR")
-      : "");
+    conexion.textContent =
+      "No se pudo cargar licitaciones.json. " +
+      "Comprobá que esté publicado junto a index.html.";
+  }
 
   dibujar();
 }
 
 document.getElementById("buscar")
   .addEventListener("input", dibujar);
+
 document.getElementById("filtrar-estado")
   .addEventListener("change", dibujar);
+
 document.getElementById("filtrar-sector")
   .addEventListener("change", dibujar);
 
 document.getElementById("consulta-form")
-  .addEventListener("submit", async function(event) {
+  .addEventListener("submit", function(event) {
     event.preventDefault();
-    const numero = document.getElementById("numero").value.trim().toUpperCase();
-    const mensaje = document.getElementById("mensaje-consulta");
+
+    const numero = document.getElementById("numero")
+      .value.trim().toUpperCase();
+
     if (!numero) return;
 
+    const mensaje =
+      document.getElementById("mensaje-consulta");
+
     const registro = licitaciones.find(item =>
-      String(item.numero || "").trim().toUpperCase() === numero
+      item.numero.trim().toUpperCase() === numero
     );
+
     document.getElementById("buscar").value = numero;
     document.getElementById("filtrar-estado").value = "";
     document.getElementById("filtrar-sector").value = "";
+
     dibujar();
 
-    if (registro && registro.enlace &&
-        /^https:\/\/[^ ]+$/i.test(registro.enlace)) {
-      mensaje.textContent = "Expediente encontrado en DEEP: " + numero +
-        ". Abriendo el enlace registrado. Verificá allí las novedades oficiales.";
-      const ventana = window.open(registro.enlace, "_blank", "noopener,noreferrer");
-      if (!ventana) {
-        const enlace = document.createElement("a");
-        enlace.href = registro.enlace;
-        enlace.target = "_blank";
-        enlace.rel = "noopener noreferrer";
-        enlace.textContent = " Abrir expediente ↗";
-        mensaje.appendChild(enlace);
-      }
+    if (registro && /^https:\/\//i.test(registro.enlace)) {
+      mensaje.textContent =
+        "Proceso encontrado. Revisá el expediente oficial.";
+
+      const enlace = crearTexto("a", " Abrir expediente ↗");
+      enlace.href = registro.enlace;
+      enlace.target = "_blank";
+      enlace.rel = "noopener noreferrer";
+      mensaje.appendChild(enlace);
       return;
     }
 
-    // CONTRAT.AR no permite deducir el enlace del expediente desde el número.
-    // Se abre la búsqueda oficial sin fingir una extracción automática.
-    const ventana = window.open(
-      "https://contratar.gob.ar/BuscarAvanzado.aspx",
-      "_blank", "noopener,noreferrer"
+    mensaje.textContent =
+      "El proceso no está registrado en la base DEEP. " +
+      "Buscalo en el portal oficial.";
+
+    const enlace = crearTexto(
+      "a",
+      " Abrir buscador de CONTRAT.AR ↗"
     );
-    try {
-      await navigator.clipboard.writeText(numero);
-      mensaje.textContent = "El proceso no está en la base DEEP. " +
-        "Número copiado: " + numero + ". Pegalo en el buscador oficial de CONTRAT.AR.";
-    } catch (_) {
-      mensaje.textContent = "El proceso no está en la base DEEP. " +
-        "Buscá " + numero + " en CONTRAT.AR.";
-    }
-    if (!ventana) {
-      const enlace = document.createElement("a");
-      enlace.href = "https://contratar.gob.ar/BuscarAvanzado.aspx";
-      enlace.target = "_blank";
-      enlace.rel = "noopener noreferrer";
-      enlace.textContent = " Abrir buscador oficial ↗";
-      mensaje.appendChild(enlace);
-    }
+
+    enlace.href =
+      "https://contratar.gob.ar/BuscarAvanzado.aspx";
+    enlace.target = "_blank";
+    enlace.rel = "noopener noreferrer";
+
+    mensaje.appendChild(enlace);
   });
 
 dibujar();
 cargarDatos();
 </script>
+
 </body>
 </html>

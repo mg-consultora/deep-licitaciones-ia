@@ -1,49 +1,100 @@
-
-name: Actualizar licitaciones DEEP
+name: Actualizar licitaciones DEEP (control estricto)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: '0 6 * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: actualizar-licitaciones
+  group: deep-licitaciones-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 35
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
         with:
           persist-credentials: true
+          fetch-depth: 1
 
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      - name: Ejecutar programa
-        run: python buscar_licitaciones.py
-
-      - name: Validar archivo generado
-        run: python -m json.tool licitaciones.json > /dev/null
-
-      - name: Publicar resultados en el repositorio
+      - name: Verificar archivos y guardar referencia anterior
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          import ast, hashlib, json
+          from pathlib import Path
+          script = Path('buscar_licitaciones.py')
+          if not script.is_file():
+              raise SystemExit('Falta buscar_licitaciones.py en la raiz del repositorio')
+          source = script.read_text(encoding='utf-8-sig')
+          ast.parse(source)
+          if 'DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026' not in source:
+              raise SystemExit('La version del extractor no coincide con la esperada')
+          previous = Path('licitaciones.json')
+          digest = hashlib.sha256(previous.read_bytes()).hexdigest() if previous.exists() else None
+          Path('/tmp/deep-baseline.json').write_text(json.dumps({'sha256': digest}))
+          PY
 
+      - name: Ejecutar extractor
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python -u buscar_licitaciones.py
+
+      - name: Validar datos antes de publicar
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+          p = Path('licitaciones.json')
+          if not p.is_file():
+              raise SystemExit('No se genero licitaciones.json')
+          d = json.loads(p.read_text(encoding='utf-8'))
+          baseline = json.loads(Path('/tmp/deep-baseline.json').read_text())
+          if baseline['sha256'] == hashlib.sha256(p.read_bytes()).hexdigest():
+              raise SystemExit('El archivo no cambio')
+          if d.get('versionAgente') != 'DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026':
+              raise SystemExit('Version de datos incorrecta')
+          if d.get('extraccionCompleta') is not True:
+              raise SystemExit('La extraccion fue incompleta')
+          fecha = datetime.fromisoformat(d['actualizado'].replace('Z', '+00:00'))
+          if fecha.tzinfo is None or abs(datetime.now(timezone.utc) - fecha.astimezone(timezone.utc)) > timedelta(minutes=35):
+              raise SystemExit('Fecha de actualizacion invalida')
+          rows = d.get('licitaciones')
+          if not isinstance(rows, list):
+              raise SystemExit('El campo licitaciones no es una lista')
+          if not any(isinstance(r, dict) and r.get('plazoVerificado') is True and r.get('cierreOfertas') and r.get('enlace') for r in rows):
+              raise SystemExit('No hay oportunidades con cierre y enlace verificados: no se publica')
+          print('Validacion correcta:', len(rows), 'registros')
+          PY
+
+      - name: Publicar archivo validado en la rama actual
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add licitaciones.json
-
           if git diff --cached --quiet; then
-            echo "Sin cambios en los resultados."
+            echo 'No hay cambios para publicar'
           else
-            git commit -m "Actualizar datos de licitaciones DEEP"
-            git push
+            git commit -m 'Actualizar licitaciones verificadas DEEP'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+
+      - name: Guardar diagnostico de ejecucion
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-licitaciones
+          path: licitaciones.json
+          if-no-files-found: ignore
+          retention-days: 7
