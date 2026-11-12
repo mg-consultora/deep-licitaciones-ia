@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-11-12T01:27:21.326863+00:00",
+  "actualizado": "2026-11-12T02:26:13.679354+00:00",
   "versionAgente": "DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026",
   "estado": "oportunidades_pendientes_de_verificacion",
   "extraccionCompleta": true,
@@ -86,7 +86,7 @@
       "paginaListado": 1,
       "observaciones": "Referencia detectada en el listado oficial de CONTRAT.AR (proximas). Fechas y circulares tomadas de la ficha cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública.",
       "alertas": [],
-      "ultimaVerificacion": "2026-11-12T01:27:21.326836+00:00"
+      "ultimaVerificacion": "2026-11-12T02:26:13.679326+00:00"
     }
   ]
 }
