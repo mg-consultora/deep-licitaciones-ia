@@ -94,3 +94,26 @@ def configuracion():
         "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 15)),
         "reintentos": max(1, min(3, _entero("CONTRATAR_REINTENTOS", 1))),
         "excluir_apertura_vencida": os.environ.get("CONTRATAR_EXCLUIR_APERTURA_VENCIDA", "0") != "0",
+      
+        "archivo_salida": os.environ.get(
+            "DEEP_ARCHIVO_SALIDA", "licitaciones.json"
+        ),
+    }
+
+
+def main():
+    cfg = configuracion()
+    print("VERSION ACTIVA:", VERSION_AGENTE)
+    print("Portal:", cfg["base"])
+    print("Listados:", ", ".join(cfg["listados"]))
+    print("Archivo de salida:", cfg["archivo_salida"])
+    print(
+        "ERROR: El extractor está incompleto. "
+        "No se modifican los datos existentes."
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
