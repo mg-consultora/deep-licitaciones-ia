@@ -1,7 +1,8 @@
 {
-  "actualizado": "2026-10-25T14:42:45.954601+00:00",
-  "versionAgente": "DEEP-CONTRATAR-ESTABLE-V2-20261025",
+  "actualizado": "2026-11-12T01:27:21.326863+00:00",
+  "versionAgente": "DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026",
   "estado": "oportunidades_pendientes_de_verificacion",
+  "extraccionCompleta": true,
   "fuentes": [
     {
       "nombre": "CAMMESA - Convocatorias",
@@ -14,21 +15,47 @@
       "url": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
       "estado": "consultada",
       "registros": 1,
-      "detalle": "Filas leídas: 4; sin número de proceso válido: 0; sin términos de interés: 3; registrados: 1."
+      "listados": [
+        {
+          "clave": "proximas",
+          "nombre": "Próximas aperturas",
+          "url": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
+          "paginas": 1,
+          "filas": 5,
+          "completa": true,
+          "motivo": "",
+          "errores": []
+        },
+        {
+          "clave": "ultimos90",
+          "nombre": "Aperturas de los últimos 90 días",
+          "url": "https://contratar.gob.ar/ListarAperturaUltimos30Dias.aspx",
+          "paginas": 1,
+          "filas": 2,
+          "completa": true,
+          "motivo": "",
+          "errores": []
+        }
+      ],
+      "errores": []
     }
   ],
   "licitaciones": [
     {
       "clasificacionDEEP": "Obra contextual: revisar pliego",
+      "terminosDetectados": [
+        "sistema de transporte de energia"
+      ],
       "numero": "34-0003-LPU26",
       "nombre": "AMPLIACIÓN DEL SISTEMA DE TRANSPORTE DE ENERGÍA ELÉCTRICA BAJO CONCESIÓN DE OBRA PÚBLICA “AMBA I”",
       "organismo": "34/000 - Dirección General de Administración - MHA",
       "sector": "Obra pública / posible energía",
       "fuente": "CONTRAT.AR",
+      "tipoProceso": "Licitación Pública",
       "estadoOficial": "Publicado",
       "publicacion": "2026-08-12T00:00:00",
       "consultas": "2026-11-13T17:00:00",
-      "cierreOfertas": null,
+      "cierreOfertas": "2026-12-14T11:00:00",
       "documentacionFisica": "2026-12-14T11:00:00",
       "apertura": "2026-12-14T12:00:00",
       "detalleVerificado": true,
@@ -42,14 +69,24 @@
           "numero": "2",
           "publicacion": "22/09/2026",
           "tipo": "Sin consulta"
+        },
+        {
+          "numero": "3",
+          "publicacion": "11/11/2026",
+          "tipo": "Con consulta"
         }
       ],
-      "enlaceCirculares": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
+      "enlaceCirculares": "",
       "revisionCirculares": "verificada",
-      "plazoVerificado": false,
-      "enlace": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhyeqdlsIRjlbVzpmYCDKQ1YOo1f39Qg%7Cky815ZCD%7CkfxdssdIaOnmLmI4ts42%2FeS0aiuALKYAdQz06KinBOvULkr%2FDpt5kPBe0%3D",
-      "observaciones": "Referencia detectada en listado oficial de próximas aperturas. Fechas y circulares tomadas del detalle cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública",
-      "alertas": []
+      "plazoVerificado": true,
+      "tipoCierre": "recepcion_documentacion_fisica",
+      "enlace": "https://contratar.gob.ar/PLIEGO/VistaPreviaPliegoCiudadano.aspx?qs=BQoBkoMoEhxOJxLD06czKChcO7PsIP31cJs|uiIncWV|dxCP/3sCf1Fw6UcIk7ayHGc1kVP7y4wA7rS59FmCcn2vkT32fptk1Z3HKj24DOx|hRAD6Rx4ExCwk2N0Qsho2oLH5u|dwaXIBYELf63mtqxFnApErChR",
+      "tipoEnlace": "ficha_verificada",
+      "listadoOrigen": "proximas",
+      "paginaListado": 1,
+      "observaciones": "Referencia detectada en el listado oficial de CONTRAT.AR (proximas). Fechas y circulares tomadas de la ficha cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública.",
+      "alertas": [],
+      "ultimaVerificacion": "2026-11-12T01:27:21.326836+00:00"
     }
   ]
 }
