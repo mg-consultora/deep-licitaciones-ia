@@ -1,0 +1,51 @@
+name: Probar PDF real del Boletín Oficial
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prueba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descargar PDF real y comprobar lectura
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request, re, sys, hashlib
+          from datetime import date, timedelta
+          from html import unescape
+          root='https://otslist.boletinoficial.gob.ar/ots'
+          headers={'User-Agent':'Mozilla/5.0'}
+          def fetch(url,timeout=45):
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=timeout) as r:
+                  return r.read()
+          found=[]
+          for offset in range(7):
+              d=date.today()-timedelta(days=offset)
+              if d.weekday()>4: continue
+              url=f'{root}/?date_filter={d:%d-%m-%Y}'
+              try:
+                  page=fetch(url).decode('utf-8','replace')
+                  print('Listado',d,'caracteres',len(page),flush=True)
+              except Exception as exc:
+                  print('ERROR al consultar listado:',str(exc),flush=True); continue
+              # The OTS site uses SHA256 identifiers for downloadable editions.
+              for m in re.finditer(r'.{0,250}(?:tercera|3ra|3ª|secci[oó]n).{0,350}',unescape(page),re.I|re.S):
+                  snippet=m.group(0)
+                  ids=re.findall(r'[a-fA-F0-9]{64}',snippet)
+                  for h in ids: found.append((d,h.lower()))
+              if found: break
+          if not found:
+              print('RESULTADO: listado accesible, pero no se identificó con seguridad el PDF de Tercera Sección. No se modificó el tablero.')
+              sys.exit(1)
+          for d,h in found[:5]:
+              try:
+                  data=fetch(f'{root}/download/{h}/0/',90)
+                  print('PDF',d,'bytes',len(data),'cabecera PDF',data[:5]==b'%PDF-','SHA256 coincide',hashlib.sha256(data).hexdigest()==h,flush=True)
+                  if data.startswith(b'%PDF-'):
+                      print('RESULTADO: descarga de PDF real confirmada. Falta validar extracción con el agente de Claude.')
+                      sys.exit(0)
+              except Exception as exc: print('ERROR descargando PDF:',str(exc),flush=True)
+          print('RESULTADO: no se pudo descargar un PDF válido'); sys.exit(1)
+          PY
