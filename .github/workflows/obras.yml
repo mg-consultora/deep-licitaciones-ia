@@ -5,7 +5,7 @@ name: Obras futuras
 
 on:
   workflow_run:
-    workflows: ["Actualizar tablero"]
+    workflows: ["Actualizar tablero Claude DEEP"]
     types: [completed]
   schedule:
     - cron: "30 12 * * 1-5"      # respaldo: 9:30 de Argentina, por si el otro flujo tuviera otro nombre
