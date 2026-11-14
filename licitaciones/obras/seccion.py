@@ -123,7 +123,6 @@ body:not(.ver-obras) #obras{display:none}
   <span class="fc estimada">estimada</span> (previsiones, meses, semestres o años). Los equipos DEEP son potenciales, según el tipo de obra.</p>
   <div class="kp" id="o-kp"></div>
   <div class="resumen"><span id="o-resumen">Mostrando todas las obras</span><button class="b" id="o-todas" type="button">Mostrar todas / limpiar filtros</button></div>
-  <div class="pn" id="o-nov"></div>
   <div class="fl">
     <input type="search" id="o-q" placeholder="Buscar: YPF, gasoducto, Neuquén, subestación, litio…">
     <select id="o-sec"></select><select id="o-prov"></select>
@@ -136,6 +135,7 @@ body:not(.ver-obras) #obras{display:none}
     <button class="b" id="o-csv">Descargar CSV</button>
   </div>
   <div id="o-lista"></div>
+  <details class="pn" id="o-novedades-detalle"><summary style="cursor:pointer;font-weight:650">Novedades: obras nuevas, licitaciones abiertas y cambios de fecha (abrir / cerrar)</summary><div id="o-nov" style="margin-top:10px"></div></details>
   <div class="pn" id="o-fu"></div>
 </section>
 <script>
@@ -219,7 +219,7 @@ function pintar(){ kp(); const L=vis();
    ${p.nota?`<div class="fu">${e(p.nota)}</div>`:""}
    <div class="fu"><span class="lbl">Fuentes</span>${(p.fuentes||[]).slice(0,6).map(f=>`<a href="${e(f.link)}" target="_blank" rel="noopener">${e(f.medio||"Fuente")}${f.titulo?": "+e(f.titulo.slice(0,110)):""} ↗</a> <span class="ni">${f.fecha_nota?"· nota "+e(f.fecha_nota):""} · verificado ${e(f.fecha_verificacion)}</span>`).join("<br>")}</div>
   </div>`}).join("") : `<div class="vacio">No hay obras con estos filtros.</div>`; }
-$("o-nov").innerHTML = `<h2>Novedades: obras nuevas, licitaciones abiertas y cambios de fecha</h2>` + (D.novedades.length ? D.novedades.map(n=>
+$("o-nov").innerHTML = (D.novedades.length ? D.novedades.map(n=>
   `<div class="nv"><b>${e(n.tipo)}:</b> ${e(n.mensaje)} ${n.link?`<a href="${e(n.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="ni">· ${e((n.fecha||"").slice(0,10))}</span></div>`).join("") : `<div class="ni">Sin novedades todavía.</div>`);
 $("o-fu").innerHTML = `<h2>Fuentes del módulo de obras</h2><div class="ni" style="font-size:13px">Actualizado ${e(D.generado)}</div>` + D.fuentes.map(s=>`<div class="nv"><b>${e(s.nombre)}</b> <span class="${s.estado==="ok"?"ok":"error"}">${s.estado==="ok"?"Funcionando":"Sin respuesta"}</span><br><span class="ni">${e(s.detalle)}</span></div>`).join("");
 ["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta","o-man","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
