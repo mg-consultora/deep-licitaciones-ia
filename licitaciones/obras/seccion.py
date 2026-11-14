@@ -81,7 +81,7 @@ body:not(.ver-obras) #obras{display:none}
 #obras .intro{color:var(--o-mut);font-size:13px;margin:10px 0}
 #obras .kp{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
 #obras .k{background:var(--o-card);border:1px solid var(--o-ln);border-radius:12px;padding:10px 12px;cursor:pointer;user-select:none}
-#obras .k.off{opacity:.4}#obras .k b{font-size:22px;display:block}#obras .k span{font-size:12px;color:var(--o-mut)}
+#obras .k.on{border:2px solid #1f4e79;background:#e8eef6;box-shadow:0 0 0 1px #1f4e79}#obras .k.off{opacity:.65}#obras .k b{font-size:22px;display:block}#obras .k span{font-size:12px;color:var(--o-mut)}
 @media(max-width:700px){#obras .kp{grid-template-columns:repeat(2,1fr)}}
 #obras .pn{background:var(--o-card);border:1px solid var(--o-ln);border-radius:12px;padding:12px 16px;margin:12px 0}
 #obras .pn h2{font-size:15px;margin:0 0 8px}
@@ -113,6 +113,7 @@ body:not(.ver-obras) #obras{display:none}
 #obras .ok{color:#1e9e5a}#obras .error{color:#d1433a}
 #obras .nota{background:#fff4d6;color:#5c4400;border-radius:10px;padding:10px 14px;margin:10px 0;font-size:14px}
 #obras .vacio{text-align:center;color:var(--o-mut);padding:30px}
+#obras .resumen{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;background:var(--o-card);border:1px solid var(--o-ln);border-radius:10px;margin:12px 0;font-weight:650}
 </style>
 <section id="obras">
   <div id="o-nota"></div>
@@ -121,6 +122,7 @@ body:not(.ver-obras) #obras{display:none}
   Las fechas se marcan <span class="fc confirmada">confirmada</span> (día exacto, sin previsión) o
   <span class="fc estimada">estimada</span> (previsiones, meses, semestres o años). Los equipos DEEP son potenciales, según el tipo de obra.</p>
   <div class="kp" id="o-kp"></div>
+  <div class="resumen"><span id="o-resumen">Mostrando todas las obras</span><button class="b" id="o-todas" type="button">Mostrar todas / limpiar filtros</button></div>
   <div class="pn" id="o-nov"></div>
   <div class="fl">
     <input type="search" id="o-q" placeholder="Buscar: YPF, gasoducto, Neuquén, subestación, litio…">
@@ -141,7 +143,7 @@ body:not(.ver-obras) #obras{display:none}
 const D = __DATOS__;
 const T = ["Licitación abierta","Licitación anunciada / registro de proveedores","Adjudicado / en ejecución","Proyecto anunciado","Licitación cerrada"];
 const CAMPOS = [["lic_productos","Licitación de productos"],["lic_obra","Licitación de obra"],["inicio_compras","Inicio de compras"],["inicio_obra","Inicio de obra"],["fin_obra","Fin de obra / puesta en marcha"],["aprobacion_rigi","Aprobación RIGI"]];
-const on = new Set(T);
+let categoriaActiva = null; // null = todas; clic en una tarjeta = solo esa etapa
 const $ = id => document.getElementById(id);
 const e = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ni = v => (!v || v==="No informado") ? '<span class="ni">No informado</span>' : e(v);
@@ -172,10 +174,21 @@ function cumpleFecha(p){const campo=$("o-fecha").value,desde=$("o-desde").value,
   if(!desde&&!hasta)return !!(p.fechas||{})[campo];
   return !!fecha&&(!desde||fecha>=desde)&&(!hasta||fecha<=hasta);}
 
-function kp(){ $("o-kp").innerHTML = T.map((t,i)=>`<div class="k ${on.has(t)?"":"off"}" data-t="${e(t)}"><b>${D.proyectos.filter(p=>p.tipo===t).length}</b><span>${e(t)}</span></div>`).join("");
-  document.querySelectorAll("#o-kp .k").forEach(k=>k.onclick=()=>{const t=k.dataset.t; on.has(t)?on.delete(t):on.add(t); pintar();}); }
+function limpiarFiltros(){
+  ["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta"].forEach(id=>$(id).value="");
+  ["o-man","o-pro"].forEach(id=>$(id).checked=false);
+}
+function kp(){
+  $("o-kp").innerHTML=T.map((t,i)=>`<div class="k ${categoriaActiva===t?"on":categoriaActiva!==null?"off":""}" role="button" tabindex="0" aria-pressed="${categoriaActiva===t}" data-t="${e(t)}"><b>${D.proyectos.filter(p=>p.tipo===t).length}</b><span>${e(t)}</span></div>`).join("");
+  document.querySelectorAll("#o-kp .k").forEach(k=>{
+    const activar=()=>{ categoriaActiva=k.dataset.t; limpiarFiltros(); pintar(); $("o-resumen").scrollIntoView({behavior:"smooth",block:"start"}); };
+    k.onclick=activar;
+    k.onkeydown=ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();activar();}};
+  });
+}
+$("o-todas").onclick=()=>{categoriaActiva=null;limpiarFiltros();pintar();};
 function vis(){ const q=sinT($("o-q").value);
-  return D.proyectos.filter(p=>on.has(p.tipo) && (!$("o-sec").value||p.sector===$("o-sec").value) && (!$("o-prov").value||p.provincia===$("o-prov").value)
+  return D.proyectos.filter(p=>(categoriaActiva===null||p.tipo===categoriaActiva) && (!$("o-sec").value||p.sector===$("o-sec").value) && (!$("o-prov").value||p.provincia===$("o-prov").value)
    && (!$("o-prio").value||p.prioridad_comercial===$("o-prio").value)
     && (!$("o-oper").value||p.operadora===$("o-oper").value)
     && (!$("o-des").value||p.desarrolladora===$("o-des").value)
@@ -190,6 +203,8 @@ function fechas(p){ const f=p.fechas||{}; const con=CAMPOS.filter(([k])=>f[k]); 
   + (sin.length?`<div class="fu ni">Fechas no informadas por la fuente: ${sin.map(([,l])=>l).join(" · ")}</div>`:"")
   + ((p.historial_fechas||[]).length?`<div class="fu"><span class="lbl">Cambios de fecha</span>${p.historial_fechas.map(h=>`${e(h.antes)} → ${e(h.despues)} (${e(h.fecha)})`).join("<br>")}</div>`:""); }
 function pintar(){ kp(); const L=vis();
+  const titulo=categoriaActiva===null?"todas las obras":categoriaActiva.toLowerCase();
+  $("o-resumen").textContent=`Mostrando ${L.length} de ${D.proyectos.length} obras · ${titulo}`;
   $("o-lista").innerHTML = L.length ? L.map(p=>{ const i=T.indexOf(p.tipo); return `<div class="c t${i}">
    <div class="tt">${e(p.obra)}</div>
    <div><span class="prioridad ${e(p.prioridad_comercial)}">PRIORIDAD ${e(p.prioridad_comercial)}</span><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${p.propias_n?`<span class="bd bp">⭐ ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s) de tu lista"}</span>`:''}</div>
