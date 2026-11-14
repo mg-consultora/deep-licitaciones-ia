@@ -94,3 +94,141 @@ body:not(.ver-obras) #obras{display:none}
 #obras .fl label{font-size:13px;color:var(--o-mut);display:flex;gap:4px;align-items:center}
 #obras button.b{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--o-ln);background:var(--o-card);color:var(--o-tx);cursor:pointer}
 #obras .c{background:var(--o-card);border:1px solid var(--o-ln);border-left:6px solid #98a2b3;border-radius:12px;padding:14px 16px;margin:10px 0;overflow-wrap:anywhere}
+#obras .c.t0{border-left-color:#1e9e5a}#obras .c.t1{border-left-color:#e0a100}#obras .c.t2{border-left-color:#1f4e79}#obras .c.t3{border-left-color:#98a2b3}#obras .c.t4{border-left-color:#d1433a;opacity:.8}
+#obras .tt{font-weight:650;font-size:16px}#obras .st{color:var(--o-mut);font-size:13px;margin-top:2px}
+#obras .bd{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;margin:4px 6px 0 0}
+#obras .b0{background:#1e9e5a}#obras .b1{background:#e0a100}#obras .b2{background:#1f4e79}#obras .b3{background:#98a2b3}#obras .b4{background:#d1433a}
+#obras .bv{background:#5b3fa8}#obras .bp{background:#b7791f}
+#obras .g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;margin-top:10px;font-size:13px}
+#obras .g div>span:first-child,#obras .lbl{display:block;color:var(--o-mut);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+@media(max-width:700px){#obras .g{grid-template-columns:repeat(2,1fr)}}
+#obras .ni{color:var(--o-mut)}
+#obras table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+#obras td{padding:4px 6px;border-top:1px solid var(--o-ln);vertical-align:top}
+#obras .fc{font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:6px;white-space:nowrap}
+#obras .fc.confirmada{background:#dcf3e6;color:#11643a}#obras .fc.estimada{background:#fff0c7;color:#7a5600}
+#obras .eq{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:#e8eef6;color:#1f4e79;margin:3px 4px 0 0}
+#obras .fu{font-size:13px;margin-top:8px}#obras .fu a{color:#1f4e79}
+#obras .nv{padding:6px 0;border-top:1px solid var(--o-ln);font-size:14px}#obras .nv:first-of-type{border-top:0}
+#obras .ok{color:#1e9e5a}#obras .error{color:#d1433a}
+#obras .nota{background:#fff4d6;color:#5c4400;border-radius:10px;padding:10px 14px;margin:10px 0;font-size:14px}
+#obras .vacio{text-align:center;color:var(--o-mut);padding:30px}
+#obras .resumen{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;background:var(--o-card);border:1px solid var(--o-ln);border-radius:10px;margin:12px 0;font-weight:650}
+</style>
+<section id="obras">
+  <div id="o-nota"></div>
+  <p class="intro">Proyectos de inversión, obras futuras y compras privadas detectadas en sitios de empresas y medios especializados.
+  Cada dato sale de la fuente citada; lo que la fuente no dice figura como <i>No informado</i>.
+  Las fechas se marcan <span class="fc confirmada">confirmada</span> (día exacto, sin previsión) o
+  <span class="fc estimada">estimada</span> (previsiones, meses, semestres o años). Los equipos DEEP son potenciales, según el tipo de obra.</p>
+  <div class="kp" id="o-kp"></div>
+  <div class="resumen"><span id="o-resumen">Mostrando todas las obras</span><button class="b" id="o-todas" type="button">Mostrar todas / limpiar filtros</button></div>
+  <div class="fl">
+    <input type="search" id="o-q" placeholder="Buscar: YPF, gasoducto, Neuquén, subestación, litio…">
+    <select id="o-sec"></select><select id="o-prov"></select>
+    <select id="o-prio"><option value="">Prioridad: todas</option><option>ALTA</option><option>MEDIA</option><option>BAJA</option></select>
+    <select id="o-oper"></select><select id="o-des"></select><select id="o-ing"></select><select id="o-epc"></select>
+    <select id="o-equipo"></select><select id="o-fecha"><option value="">Fecha: todas</option><option value="lic_productos">Límite licitación productos</option><option value="lic_obra">Límite licitación obra</option><option value="inicio_compras">Inicio compras</option><option value="inicio_obra">Inicio obra</option><option value="fin_obra">Fin obra</option></select>
+    <label>Desde <input type="date" id="o-desde"></label><label>Hasta <input type="date" id="o-hasta"></label>
+    <label><input type="checkbox" id="o-man"> Solo verificadas</label>
+    <label><input type="checkbox" id="o-pro"> ⭐ Con empresas de mi lista</label>
+    <button class="b" id="o-csv">Descargar CSV</button>
+  </div>
+  <div id="o-lista"></div>
+  <details class="pn" id="o-novedades-detalle"><summary style="cursor:pointer;font-weight:650">Novedades: obras nuevas, licitaciones abiertas y cambios de fecha (abrir / cerrar)</summary><div id="o-nov" style="margin-top:10px"></div></details>
+  <div class="pn" id="o-fu"></div>
+</section>
+<script>
+(function(){
+const D = __DATOS__;
+const T = ["Licitación abierta","Licitación anunciada / registro de proveedores","Adjudicado / en ejecución","Proyecto anunciado","Licitación cerrada"];
+const CAMPOS = [["lic_productos","Licitación de productos"],["lic_obra","Licitación de obra"],["inicio_compras","Inicio de compras"],["inicio_obra","Inicio de obra"],["fin_obra","Fin de obra / puesta en marcha"],["aprobacion_rigi","Aprobación RIGI"]];
+let categoriaActiva = null; // null = todas; clic en una tarjeta = solo esa etapa
+const $ = id => document.getElementById(id);
+const e = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ni = v => (!v || v==="No informado") ? '<span class="ni">No informado</span>' : e(v);
+const sinT = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const main = document.querySelector("main") || document.body;
+const sec = $("obras"); main.appendChild(sec);
+const nav = document.createElement("nav"); nav.className = "pestanas";
+nav.innerHTML = `<button data-p="lic">Licitaciones públicas</button><button data-p="obras">Obras futuras y oportunidades privadas <span class="n">${D.proyectos.length}</span></button>`;
+main.parentNode.insertBefore(nav, main);
+function ver(p){ document.body.classList.toggle("ver-obras", p==="obras"); nav.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.p===p));
+  try{ history.replaceState(null,"", p==="obras" ? "#obras" : location.pathname); }catch(_){} }
+nav.querySelectorAll("button").forEach(b=>b.onclick=()=>ver(b.dataset.p));
+ver(location.hash==="#obras" || !document.getElementById("lista") ? "obras" : "lic");
+if (D.nota) $("o-nota").innerHTML = `<div class="nota">${D.nota}</div>`;
+function sel(id,campo,rot){ const v=[...new Set(D.proyectos.map(p=>p[campo]).filter(x=>x&&x!=="No informado"))].sort();
+  $(id).innerHTML=`<option value="">${rot}: todos</option>`+v.map(x=>`<option>${e(x)}</option>`).join(""); }
+sel("o-sec","sector","Sector"); sel("o-prov","provincia","Provincia");
+sel("o-oper","operadora","Operadora / titular");sel("o-des","desarrolladora","Desarrolladora");
+sel("o-ing","ingenieria","Ingeniería");sel("o-epc","epc","Ejecuta / EPC");
+const equipos=[...new Set(D.proyectos.flatMap(p=>p.equipos||[]))].sort();
+$("o-equipo").innerHTML='<option value="">Productos DEEP: todos</option>'+equipos.map(x=>`<option value="${e(x)}">${e(x)}</option>`).join("");
+function fechaISO(p,campo){const f=(p.fechas||{})[campo];if(!f)return "";
+  const s=(f.texto||"").trim();const iso=s.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);if(iso)return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const lat=s.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/);if(lat)return `${lat[3]}-${lat[2].padStart(2,"0")}-${lat[1].padStart(2,"0")}`;
+  return "";}
+function cumpleFecha(p){const campo=$("o-fecha").value,desde=$("o-desde").value,hasta=$("o-hasta").value;
+  if(!campo)return !(desde||hasta);const fecha=fechaISO(p,campo);
+  if(!desde&&!hasta)return !!(p.fechas||{})[campo];
+  return !!fecha&&(!desde||fecha>=desde)&&(!hasta||fecha<=hasta);}
+
+function limpiarFiltros(){
+  ["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta"].forEach(id=>$(id).value="");
+  ["o-man","o-pro"].forEach(id=>$(id).checked=false);
+}
+function kp(){
+  $("o-kp").innerHTML=T.map((t,i)=>`<div class="k ${categoriaActiva===t?"on":categoriaActiva!==null?"off":""}" role="button" tabindex="0" aria-pressed="${categoriaActiva===t}" data-t="${e(t)}"><b>${D.proyectos.filter(p=>p.tipo===t).length}</b><span>${e(t)}</span></div>`).join("");
+  document.querySelectorAll("#o-kp .k").forEach(k=>{
+    const activar=()=>{ categoriaActiva=k.dataset.t; limpiarFiltros(); pintar(); $("o-resumen").scrollIntoView({behavior:"smooth",block:"start"}); };
+    k.onclick=activar;
+    k.onkeydown=ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();activar();}};
+  });
+}
+$("o-todas").onclick=()=>{categoriaActiva=null;limpiarFiltros();pintar();};
+function vis(){ const q=sinT($("o-q").value);
+  return D.proyectos.filter(p=>(categoriaActiva===null||p.tipo===categoriaActiva) && (!$("o-sec").value||p.sector===$("o-sec").value) && (!$("o-prov").value||p.provincia===$("o-prov").value)
+   && (!$("o-prio").value||p.prioridad_comercial===$("o-prio").value)
+    && (!$("o-oper").value||p.operadora===$("o-oper").value)
+    && (!$("o-des").value||p.desarrolladora===$("o-des").value)
+    && (!$("o-ing").value||p.ingenieria===$("o-ing").value)
+    && (!$("o-epc").value||p.epc===$("o-epc").value)
+    && (!$("o-equipo").value||(p.equipos||[]).includes($("o-equipo").value))
+    && cumpleFecha(p)
+    && (!$("o-man").checked||p.verificado_manual) && (!$("o-pro").checked||p.propias_n>0)
+   && (!q || sinT(JSON.stringify([p.obra,p.operadora,p.epc,p.desarrolladora,p.ingenieria,p.provincia,p.localidad,p.sector,p.empresas,p.subobras,p.tipo_obra])).includes(q))); }
+function fechas(p){ const f=p.fechas||{}; const con=CAMPOS.filter(([k])=>f[k]); const sin=CAMPOS.filter(([k])=>!f[k]&&k!=="aprobacion_rigi");
+  return (con.length?`<table>${con.map(([k,l])=>`<tr><td style="width:42%">${l}</td><td>${e(f[k].texto)}<span class="fc ${f[k].tipo}">${f[k].tipo}</span></td></tr>`).join("")}</table>`:"")
+  + (sin.length?`<div class="fu ni">Fechas no informadas por la fuente: ${sin.map(([,l])=>l).join(" · ")}</div>`:"")
+  + ((p.historial_fechas||[]).length?`<div class="fu"><span class="lbl">Cambios de fecha</span>${p.historial_fechas.map(h=>`${e(h.antes)} → ${e(h.despues)} (${e(h.fecha)})`).join("<br>")}</div>`:""); }
+function pintar(){ kp(); const L=vis();
+  const titulo=categoriaActiva===null?"todas las obras":categoriaActiva.toLowerCase();
+  $("o-resumen").textContent=`Mostrando ${L.length} de ${D.proyectos.length} obras · ${titulo}`;
+  $("o-lista").innerHTML = L.length ? L.map(p=>{ const i=T.indexOf(p.tipo); return `<div class="c t${i}">
+   <div class="tt">${e(p.obra)}</div>
+   <div><span class="prioridad ${e(p.prioridad_comercial)}">PRIORIDAD ${e(p.prioridad_comercial)}</span><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${p.propias_n?`<span class="bd bp">⭐ ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s) de tu lista"}</span>`:''}</div>
+   <div class="st">${e(p.estado||"")}</div>
+   ${(p.subobras||[]).length?`<div class="st"><b>Subobras:</b> ${e(p.subobras.join(" · "))}</div>`:""}
+   <div class="g"><div><span>Operadora / titular</span>${ni(p.operadora)}</div><div><span>Desarrolladora</span>${ni(p.desarrolladora)}</div>
+    <div><span>Ingeniería</span>${ni(p.ingenieria)}</div><div><span>Contratista / EPC</span>${ni(p.epc)}</div>
+    <div><span>Provincia</span>${ni(p.provincia)}</div><div><span>Localidad</span>${ni(p.localidad)}</div>
+    <div><span>Presupuesto</span>${ni(p.presupuesto)}</div><div><span>Sector</span>${ni(p.sector)}</div></div>
+   ${fechas(p)}
+   ${(p.equipos||[]).length?`<div class="fu"><span class="lbl">Equipos DEEP potenciales (según tipo de obra)</span>${p.equipos.map(x=>`<span class="eq">${e(x)}</span>`).join("")}</div>`:""}
+   ${p.nota?`<div class="fu">${e(p.nota)}</div>`:""}
+   <div class="fu"><span class="lbl">Fuentes</span>${(p.fuentes||[]).slice(0,6).map(f=>`<a href="${e(f.link)}" target="_blank" rel="noopener">${e(f.medio||"Fuente")}${f.titulo?": "+e(f.titulo.slice(0,110)):""} ↗</a> <span class="ni">${f.fecha_nota?"· nota "+e(f.fecha_nota):""} · verificado ${e(f.fecha_verificacion)}</span>`).join("<br>")}</div>
+  </div>`}).join("") : `<div class="vacio">No hay obras con estos filtros.</div>`; }
+$("o-nov").innerHTML = (D.novedades.length ? D.novedades.map(n=>
+  `<div class="nv"><b>${e(n.tipo)}:</b> ${e(n.mensaje)} ${n.link?`<a href="${e(n.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="ni">· ${e((n.fecha||"").slice(0,10))}</span></div>`).join("") : `<div class="ni">Sin novedades todavía.</div>`);
+$("o-fu").innerHTML = `<h2>Fuentes del módulo de obras</h2><div class="ni" style="font-size:13px">Actualizado ${e(D.generado)}</div>` + D.fuentes.map(s=>`<div class="nv"><b>${e(s.nombre)}</b> <span class="${s.estado==="ok"?"ok":"error"}">${s.estado==="ok"?"Funcionando":"Sin respuesta"}</span><br><span class="ni">${e(s.detalle)}</span></div>`).join("");
+["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta","o-man","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
+$("o-csv").onclick=()=>{ const cols=["prioridad_comercial","motivo_prioridad","tipo","obra","estado","operadora","desarrolladora","ingenieria","epc","provincia","localidad","sector","presupuesto"];
+  const fl=["lic_productos","lic_obra","inicio_compras","inicio_obra","fin_obra"];
+  const q=v=>`"${(v??"").toString().replace(/"/g,'""')}"`;
+  const rows=[cols.concat(fl,["equipos","fuente"]).join(";")].concat(vis().map(p=>cols.map(c=>q(p[c])).concat(fl.map(k=>q(p.fechas&&p.fechas[k]?p.fechas[k].texto+" ("+p.fechas[k].tipo+")":"")),[q((p.equipos||[]).join(", ")),q(p.fuentes&&p.fuentes[0]?p.fuentes[0].link:"")]).join(";")));
+  const b=new Blob(["﻿"+rows.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="obras_futuras.csv"; a.click(); };
+pintar();
+})();
+</script>
+"""
