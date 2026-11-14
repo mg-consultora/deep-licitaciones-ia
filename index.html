@@ -4,6 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tablero de licitaciones</title>
+  <style>
+html { scroll-behavior: smooth; }
+.navegacion-deep {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 16px;
+  background: #102c4c;
+  flex-wrap: wrap;
+}
+.navegacion-deep a {
+  padding: 12px 22px;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #102c4c;
+  font-weight: bold;
+  text-decoration: none;
+}
+.navegacion-deep a:hover {
+  background: #dceafa;
+}
+</style>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#667085;--ln:#e4e7ec;--ac:#1f4e79;
 --verde:#1e9e5a;--amarillo:#e0a100;--rojo:#d1433a;--gris:#98a2b3}
@@ -44,9 +66,35 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 .item,.alerta,.tit{overflow-wrap:anywhere}.top>div:first-child{min-width:0}
 .est{font-size:12px;font-weight:600;white-space:nowrap}.ok{color:var(--verde)}.error{color:var(--rojo)}.pendiente_credenciales{color:var(--amarillo)}.desactivada{color:var(--gris)}
 .vacio{text-align:center;color:var(--mut);padding:30px}
+  /* Semáforo de licitaciones */
+.kpi:has(.i.verde) {
+  background: #e8f6ee;
+  border: 2px solid #22a45a;
+  color: #146c43;
+}
+.kpi:has(.i.amarillo) {
+  background: #fff1ce;
+  border: 2px solid #e0a100;
+  color: #925e00;
+}
+.kpi:has(.i.rojo) {
+  background: #fce9e9;
+  border: 2px solid #d1433a;
+  color: #a52a2a;
+}
+.kpi:has(.i.gris) {
+  background: #eaf0f8;
+  border: 2px solid #6685aa;
+  color: #30567e;
+}
 </style>
 </head>
 <body>
+  <nav class="navegacion-deep">
+  <a href="#licitaciones">📋 LICITACIONES PÚBLICAS</a>
+  <a href="#obras">🏗️ OBRAS FUTURAS Y PRIVADAS</a>
+</nav>
+<div id="licitaciones"></div>
 <header><h1>Tablero de licitaciones</h1><div class="sub" id="sub"></div></header>
 <main>
 <div id="nota"></div>
