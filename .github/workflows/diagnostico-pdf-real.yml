@@ -1,0 +1,64 @@
+name: Diagnostico PDF real Claude
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Instalar lector PDF
+        run: python -m pip install --quiet requests beautifulsoup4 pypdfium2
+      - name: Buscar edicion y leer PDF real
+        shell: bash
+        run: |
+          python - <<'PY'
+          import requests, re, hashlib, sys
+          from bs4 import BeautifulSoup
+          from datetime import date, timedelta, datetime
+          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0'})
+          root='https://otslist.boletinoficial.gob.ar'
+          found=[]
+          for offset in range(10):
+              d=date.today()-timedelta(days=offset)
+              if d.weekday()>4: continue
+              try:
+                  r=s.get(root+'/ots/',params={'date_filter':d.strftime('%d-%m-%Y')},timeout=40)
+                  print('LISTADO',d,'HTTP',r.status_code,'bytes',len(r.content),flush=True)
+                  r.raise_for_status()
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  for h in soup.find_all('h4'):
+                      try: day=datetime.strptime(h.get_text(strip=True),'%d-%m-%Y').date()
+                      except ValueError: continue
+                      if day!=d: continue
+                      table=h.find_next('table')
+                      if not table: continue
+                      for tr in table.find_all('tr'):
+                          cells=[td.get_text(' ',strip=True) for td in tr.find_all('td')]
+                          if len(cells)<2: continue
+                          hashes=re.findall(r'\b[0-9a-fA-F]{64}\b',' '.join(cells))
+                          if hashes and re.search(r'(^|\D)(3|tercera)(\D|$)',cells[0],re.I):
+                              found.append((day,hashes[0].lower()))
+                  if found: break
+              except Exception as e: print('ERROR LISTADO',repr(e),flush=True)
+          if not found:
+              print('RESULTADO: No se identifico PDF de Tercera Seccion en el HTML. NO demuestra bloqueo de PDF.')
+              sys.exit(1)
+          day,h=found[0]
+          try:
+              r=s.get(f'{root}/ots/download/{h}/0/',timeout=100)
+              print('DESCARGA',day,'HTTP',r.status_code,'bytes',len(r.content),'tipo',r.headers.get('Content-Type'),flush=True)
+              r.raise_for_status()
+              if not r.content.startswith(b'%PDF-'): raise ValueError('Respuesta no es PDF')
+              print('HASH SHA256', 'COINCIDE' if hashlib.sha256(r.content).hexdigest()==h else 'NO COINCIDE',flush=True)
+              import pypdfium2 as pdfium
+              doc=pdfium.PdfDocument(r.content)
+              print('PAGINAS',len(doc),flush=True)
+              text=doc[0].get_textpage().get_text_range()
+              print('CARACTERES PRIMERA PAGINA',len(text),flush=True)
+              print('RESULTADO: PDF REAL DESCARGADO Y LEIDO DESDE GITHUB',flush=True)
+          except Exception as e:
+              print('RESULTADO: PDF NO DESCARGADO/LEIDO:',repr(e),flush=True)
+              sys.exit(1)
+          PY
