@@ -1,0 +1,214 @@
+dias_hacia_atras: 30
+semaforo:
+  dias_amarillo: 7
+avisar_nuevas: false
+fuentes:
+  boletin_oficial: true
+  paginas_publicas: true
+  correo_invitaciones: false
+  portales_privados: false
+rubros:
+  puntaje_minimo: 2
+  terminos:
+    rectificador: 3
+    cargador de bateria: 3
+    cargadores de bateria: 3
+    cargador industrial: 3
+    banco de baterias: 3
+    bancos de baterias: 3
+    baterias estacionarias: 3
+    bateria estacionaria: 3
+    ups trifasic: 3
+    sistema de alimentacion ininterrumpida: 3
+    sistemas de alimentacion ininterrumpida: 3
+    corriente continua: 3
+    regex:\b(48|110|125|220)\s*v\.?\s*(cc|dc|c\.c\.): 3
+    tablero de inversor: 3
+    tableros de inversores: 3
+    energia critica: 3
+    servicios auxiliares: 2
+    sala de baterias: 3
+    opzs: 3
+    opzv: 3
+    niquel cadmio: 2
+    plomo calcio: 2
+    vrla: 2
+    ups: 2
+    regex:\bsai\b: 2
+    inversor: 1
+    convertidor: 1
+    baterias: 1
+    bateria: 1
+    cargador: 1
+    subestacion: 1
+    puesta en marcha: 1
+  excluir_titulo:
+  - bateria de uso aeronautico
+  - baterias de uso aeronautico
+  - baterias aeronauticas
+  - bateria aeronautica
+  - bateria para aeronave
+  - baterias para aeronaves
+  - bateria para avion
+  - baterias para aviones
+  - bateria automotor
+  - baterias automotor
+  - bateria para automovil
+  - baterias para automoviles
+  - bateria para motocicleta
+  - baterias para motocicletas
+  - bateria para camioneta
+  - baterias para camionetas
+  - bateria para vehiculo
+  - baterias para vehiculos
+  - ups para pc
+  - ups para computadora
+  - ups para computadoras
+  - ups de escritorio
+  - pilas alcalinas
+  excluir:
+  - automotor
+  - automovil
+  - vehicul
+  - camioneta
+  - neumatic
+  - pick up
+  - motocicleta
+  - jeep
+  - rodado
+  - pilas
+  - notebook
+  - celular
+  - handy
+sectores_prioritarios:
+- Energía eléctrica
+- Minería
+- Oil & Gas
+- Industria
+sectores:
+  Energía eléctrica:
+  - energia electrica
+  - sistema electrico
+  - subestacion
+  - estacion transformadora
+  - transmision electrica
+  - alta tension
+  - central termica
+  - central hidro
+  - hidroelectric
+  - nucleoelectric
+  - central nuclear
+  - cammesa
+  - transener
+  - edenor
+  - edesur
+  - epec
+  - epen
+  - edemsa
+  - yacyreta
+  - salto grande
+  - parque solar
+  - parque eolico
+  - generacion electrica
+  - distribuidora de energia
+  - ente provincial de energia
+  Minería:
+  - minera
+  - minero
+  - mineria
+  - mina
+  - litio
+  - cobre
+  - yacimientos mineros
+  - ymad
+  - jemse
+  - explotacion minera
+  - salar
+  Oil & Gas:
+  - petrol
+  - hidrocarbur
+  - gas natural
+  - gasoducto
+  - oleoducto
+  - ypf
+  - tgs
+  - tgn
+  - refineria
+  - vaca muerta
+  - gnl
+  - planta compresora
+  - energia argentina
+  - enarsa
+  - yacimiento
+  Industria:
+  - industrial
+  - planta industrial
+  - fabricaciones militares
+  - astillero
+  - siderurg
+  - fabrica
+  - parque industrial
+  - tandanor
+  - fadea
+  Telecom y datos:
+  - arsat
+  - centro de datos
+  - data center
+  - telecomunicacion
+  - centro de computos
+  Transporte:
+  - ferrocarril
+  - ferroviari
+  - trenes argentinos
+  - subte
+  - aeropuerto
+  - eana
+  - vialidad
+  - puerto
+  Salud:
+  - hospital
+  - sanatorio
+  - salud
+  Gobierno y educación:
+  - universidad
+  - ministerio
+  - municipalidad
+  - armada
+  - ejercito
+  - fuerza aerea
+  - policia
+paginas_publicas:
+- nombre: Chubut – licitaciones provinciales
+  url: https://licitaciones.chubut.gov.ar/
+- nombre: EANA
+  url: https://www.eana.com.ar/licitaciones
+- nombre: Energía Argentina (ENARSA)
+  url: https://www.energia-argentina.com.ar/
+- nombre: Nucleoeléctrica Argentina
+  url: https://www.na-sa.com.ar/
+- nombre: CAMMESA
+  url: https://cammesaweb.cammesa.com/
+  activa: false
+correo:
+  carpeta: INBOX
+  dias_hacia_atras: 30
+  remitentes:
+  - ariba.com
+  - ypf.com
+  - tgs.com.ar
+  - pluspetrol.net
+  - transener.com.ar
+  - edenor.com
+  - edesur.com.ar
+  - genneia.com.ar
+  - centralpuerto.com
+  - cammesa.com.ar
+portales_privados:
+- ariba
+- cammesa
+- transener
+- edenor
+- edesur
+- genneia
+- central_puerto
+- mineras
