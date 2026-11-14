@@ -1,0 +1,31 @@
+name: Diagnóstico Claude - Boletín Oficial
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Comprobar acceso real desde GitHub
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request, urllib.error, datetime, re
+          url='https://otslist.boletinoficial.gob.ar/ots/'
+          print('Probando acceso al Boletín Oficial desde GitHub Actions')
+          try:
+              req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req,timeout=45) as resp:
+                  body=resp.read(200000).decode('utf-8','replace')
+                  print('HTTP:',resp.status)
+                  print('URL final:',resp.url)
+                  print('HTML recibido:',len(body),'caracteres')
+                  print('Contiene referencia a PDF:',bool(re.search(r'pdf|tercera|3ra|secci[oó]n',body,re.I)))
+                  if resp.status!=200 or not body.strip(): raise RuntimeError('Respuesta no utilizable')
+              print('RESULTADO: acceso básico al sitio OK. Falta comprobar descarga y lectura del PDF con el agente completo.')
+          except Exception as exc:
+              print('RESULTADO: acceso fallido:',type(exc).__name__,str(exc))
+              raise SystemExit(1)
+          PY
