@@ -97,6 +97,10 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 </head>
 <body>
 <header><h1>__TITULO__</h1><div class="sub" id="sub"></div></header>
+<details id="control-deep" style="position:fixed;top:12px;right:12px;z-index:9999;background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:7px 12px;box-shadow:0 2px 8px #0002;font-size:12px;max-width:300px">
+  <summary style="cursor:pointer;font-weight:600">⚪ Control</summary>
+  <div id="control-detalle" style="margin-top:10px">Verificando procesos...</div>
+</details>
 <main>
 <div id="nota"></div>
 <div class="kpis" id="kpis"></div>
@@ -160,6 +164,61 @@ $("csv").onclick=()=>{ const cols=["semaforo","titulo","organismo","numero_proce
   const rows=[cols.join(";")].concat(visibles().map(p=>cols.map(c=>`"${(p[c]??"").toString().replace(/"/g,'""')}"`).join(";")));
   const b=new Blob(["﻿"+rows.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="licitaciones.csv"; a.click(); };
 pintar();
+// CONTROL DEEP: estado real de los agentes en GitHub
+(async function verificarControlDEEP() {
+  const repo = "mg-consultora/deep-licitaciones-ia";
+  const procesos = [
+    { nombre: "Tablero Claude", archivo: "actualizar-claude.yml", maxHoras: 36 },
+    { nombre: "Licitaciones (control estricto)", archivo: "actualizar-licitaciones.yml", maxHoras: 36 },
+    { nombre: "Obras futuras", archivo: "obras.yml", maxHoras: 72 }
+  ];
+
+  const detalle = document.getElementById("control-detalle");
+  const indicador = document.querySelector("#control-deep summary");
+  let hayError = false;
+  const resultados = [];
+
+  for (const proceso of procesos) {
+    const url = `https://api.github.com/repos/${repo}/actions/workflows/${proceso.archivo}/runs?per_page=1&branch=main`;
+
+    try {
+      const respuesta = await fetch(url, { cache: "no-store" });
+      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+      const datos = await respuesta.json();
+      const ejecucion = datos.workflow_runs?.[0];
+      if (!ejecucion) throw new Error("Sin ejecuciones");
+
+      const fecha = new Date(ejecucion.created_at);
+      const horas = (Date.now() - fecha.getTime()) / 3600000;
+      const correcto = ejecucion.status === "completed"
+        && ejecucion.conclusion === "success"
+        && horas <= proceso.maxHoras;
+
+      if (!correcto) hayError = true;
+
+      const estado = correcto ? "🟢" : "🔴";
+      const fechaTexto = fecha.toLocaleString("es-AR");
+
+      resultados.push(
+        `<div style="padding:6px 0;border-bottom:1px solid var(--ln)">
+          ${estado} <b>${proceso.nombre}</b><br>
+          <small>Última ejecución: ${fechaTexto}</small><br>
+          <a href="${ejecucion.html_url}" target="_blank" rel="noopener">Ver ejecución</a>
+        </div>`
+      );
+    } catch (error) {
+      hayError = true;
+      resultados.push(
+        `<div style="padding:6px 0">🔴 <b>${proceso.nombre}</b><br>
+        <small>No se pudo verificar: ${error.message}</small></div>`
+      );
+    }
+  }
+
+  indicador.textContent = hayError ? "🔴 Control" : "🟢 Control";
+  detalle.innerHTML = resultados.join("");
+})();
 </script>
 </body>
 </html>
