@@ -90,7 +90,7 @@ def configuracion():
         "max_detalles": max(0, _entero("CONTRATAR_MAX_DETALLES", 25)),
         "max_pedidos": max(2, _entero("CONTRATAR_MAX_PEDIDOS", 80)),
         "pausa": max(0.0, _decimal("CONTRATAR_PAUSA", 2.0)),
-        "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 35)),
+        "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 60)),
         "excluir_apertura_vencida": os.environ.get("CONTRATAR_EXCLUIR_APERTURA_VENCIDA", "0") != "0",
         "salida": os.environ.get("DEEP_ARCHIVO_SALIDA", "licitaciones.json"),
     }
@@ -149,7 +149,7 @@ def obtener_html(url):
             "Accept": "text/html"
         }
     )
-    with urlopen(solicitud, timeout=35) as respuesta:
+    with urlopen(solicitud, timeout=60) as respuesta:
         if respuesta.status != 200:
             raise RuntimeError(
                 f"Respuesta HTTP {respuesta.status}"
