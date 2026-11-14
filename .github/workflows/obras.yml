@@ -33,7 +33,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # opcional
         run: |
           # El tablero publicado suele estar en docs/index.html; si no, se usa salida/tablero.html.
-          if [ -f docs/index.html ]; then HTML=docs/index.html; else HTML=salida/tablero.html; fi
+          HTML=index.html
           echo "Tablero: $HTML"
           python obras.py --html "$HTML"
 
@@ -42,6 +42,7 @@ jobs:
           git config user.name "agente-licitaciones"
           git config user.email "agente-licitaciones@users.noreply.github.com"
           git add -f salida/obras.db
+          git add -f index.html
           [ -f docs/index.html ] && git add -f docs/index.html
           [ -f salida/tablero.html ] && git add -f salida/tablero.html
           git diff --cached --quiet && exit 0
