@@ -1,0 +1,72 @@
+# ============================================================================
+# Módulo "Obras futuras y oportunidades privadas" — configuración
+# Es independiente de config.yaml (el de licitaciones públicas no se toca).
+# ============================================================================
+
+activo: true
+dias_hacia_atras: 45        # antigüedad máxima de las notas a revisar
+
+# Mostrar en el tablero QUÉ empresa de tu lista aparece en una noticia.
+# Si el tablero es público (GitHub Pages gratis), dejar en false: igual se marca con ⭐
+# que apareció una empresa de tu lista, pero sin decir cuál.
+mostrar_nombres_empresas_propias: false
+
+# Lectura con inteligencia artificial (opcional). Si se carga la clave ANTHROPIC_API_KEY
+# en GitHub (Settings → Secrets), completa mejor obra, contratista, ingeniería y fechas.
+# Sin clave, el agente usa sus reglas propias. En ambos casos solo acepta datos que
+# estén escritos textualmente en la nota.
+ia:
+  modelo: claude-haiku-5-5
+  max_notas_por_corrida: 40
+
+# ----------------------------------------------------------------------------
+# Medios especializados. Para cada medio se prueba primero su canal RSS propio y,
+# además, una búsqueda en Google Noticias limitada a ese sitio.
+# ----------------------------------------------------------------------------
+medios:
+  - {nombre: EconoJournal, sitio: econojournal.com.ar, rss: "https://econojournal.com.ar/feed/"}
+  - {nombre: Energía Estratégica, sitio: energiaestrategica.com, rss: "https://www.energiaestrategica.com/feed/"}
+  - {nombre: Panorama Minero, sitio: panorama-minero.com, rss: "https://www.panorama-minero.com/feed/"}
+  - {nombre: Mining Press, sitio: miningpress.com}
+  - {nombre: Más Energía, sitio: mase.lmneuquen.com}
+  - {nombre: Diario Río Negro – Energía, sitio: rionegro.com.ar/energia}
+
+# Búsquedas generales en Google Noticias (Argentina). Encuentran notas de cualquier medio.
+busquedas:
+  - licitación obra parque solar OR eólico OR subestación Argentina
+  - licitación EPC gasoducto OR oleoducto OR planta compresora Argentina
+  - RIGI aprobado proyecto
+  - adjudicó construcción planta minera litio OR cobre Argentina
+  - registro de proveedores proyecto Vaca Muerta OR minero
+  - almacenamiento baterías BESS licitación Argentina
+  - línea de alta tensión licitación obra Argentina
+
+# ----------------------------------------------------------------------------
+# Qué cuenta como obra y qué equipos de DEEP podría necesitar.
+# Los equipos son POTENCIALES: se deducen del tipo de obra, no de la nota.
+# ----------------------------------------------------------------------------
+tipos_de_obra:
+  Parque solar: {claves: [parque solar, planta solar, fotovoltaic], equipos: [UPS para control y SCADA, Rectificadores y bancos de baterías para servicios auxiliares, Tableros de corriente continua]}
+  Parque eólico: {claves: [parque eolico, parque eólico, aerogenerador], equipos: [UPS para control y SCADA, Rectificadores y bancos de baterías para la subestación, Tableros]}
+  Almacenamiento (BESS): {claves: [almacenamiento, bess, baterias de gran escala], equipos: [Bancos de baterías, Inversores, Rectificadores para servicios auxiliares]}
+  Subestación / transmisión: {claves: [subestacion, estacion transformadora, linea de alta tension, lat 500, lat 132, transmision electrica, ampliacion de transporte], equipos: [Rectificadores-cargadores 110/125 Vcc, Bancos de baterías estacionarias, Tableros de servicios auxiliares cc]}
+  Central térmica / hidro / nuclear: {claves: [central termica, ciclo combinado, central hidroelectrica, represa, central nuclear, aprovechamiento hidroelectrico], equipos: [Sistemas de corriente continua 125/220 Vcc, Bancos de baterías, UPS industriales, Inversores]}
+  Oleoducto / gasoducto: {claves: [oleoducto, gasoducto, poliducto, ducto, estacion de bombeo], equipos: [UPS industriales para control de estaciones, Rectificadores y baterías para protección catódica y telecomando, Cargadores industriales]}
+  Planta compresora / tratamiento: {claves: [planta compresora, planta de tratamiento de gas, planta de procesamiento, planta de gnl, licuefaccion, ngl, planta separadora], equipos: [UPS industriales trifásicas, Rectificadores 110/125 Vcc, Bancos de baterías, Tableros de inversores]}
+  Puerto / terminal: {claves: [terminal portuaria, puerto petrolero, monoboya, terminal de exportacion, tanques de almacenamiento], equipos: [UPS industriales, Rectificadores y baterías, Tableros]}
+  Refinería / petroquímica: {claves: [refineria, petroquimic, planta de urea, planta de fertilizantes, cracker], equipos: [UPS industriales para DCS, Sistemas de corriente continua, Bancos de baterías]}
+  Mina / planta minera: {claves: [mina, minero, planta de litio, carbonato de litio, cobre, concentradora, planta de procesamiento minero, salar], equipos: [UPS industriales para control de planta, Rectificadores y bancos de baterías para subestación de la mina, Cargadores industriales]}
+  Industria / data center: {claves: [planta industrial, acería, aceria, data center, centro de datos, fabrica], equipos: [UPS industriales trifásicas, Bancos de baterías, Tableros de inversores]}
+
+# Palabras que indican movimiento comercial (suman puntos).
+senales:
+  licitacion: [licitacion, licitara, convocatoria, llamado a, pliego, recepcion de ofertas, concurso de precios, rfq, rfp]
+  proveedores: [registro de proveedores, ronda de proveedores, encuentro de proveedores, proveedores locales, compre local]
+  adjudicacion: [adjudico, adjudicacion, adjudicada, contrato epc, firmo el contrato, contratista]
+  inversion: [inversion de, invertira, rigi, decision final de inversion, fid, aprobo el proyecto]
+  obra: [construccion, obra, ampliacion, montaje, puesta en marcha, inicio de obra]
+
+# Notas que no sirven (finanzas, política sin obra, precios).
+excluir: [acciones de, cotizacion, bonos, dolar blue, riesgo pais, tarifa social, paritaria, balance trimestral, resultado trimestral]
+
+puntaje_minimo: 4

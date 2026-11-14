@@ -1,0 +1,112 @@
+# Registro manual de obras verificadas.
+# Se puede agregar una obra copiando un bloque. Reglas:
+#  - Escribir solo lo que dice la fuente. Lo que no se sabe va como "No informado".
+#  - Las fechas que la fuente da como previsión van en "fechas_estimadas"; solo las fechas
+#    firmes (resolución, pliego, convocatoria) van en "fechas_confirmadas".
+#  - Siempre poner fuente y fecha de verificación.
+# Estas obras se marcan en el tablero como "Verificado manualmente" y tienen prioridad sobre
+# lo que el agente lee en las noticias. Nunca se borran solas.
+
+- obra: Los Azules (cobre)
+  operadora: McEwen Copper
+  provincia: San Juan
+  localidad: Calingasta
+  sector: Minería
+  tipo: Proyecto anunciado
+  estado: RIGI aprobado
+  presupuesto: "US$ 2.672 millones"
+  fuente: "https://www.panorama-minero.com/www.spire-events.com![Mining/news/mc-ewen-copper-s-los-azules-joins-argentina-s-large-investment-incentive-regime-rigi"
+  fecha_verificacion: "2026-11-13"
+  nota: "Primer proyecto de cátodos de cobre de alta pureza del país, según la fuente."
+
+- obra: Cauchari-Olaroz – ampliación (Etapa 2)
+  operadora: Lithium Argentina / Minera Exar
+  provincia: Jujuy
+  sector: Minería
+  tipo: Proyecto anunciado
+  estado: RIGI aprobado
+  presupuesto: "US$ 1.241 millones"
+  fuente: "https://www.ellitoral.com/economia/rigi-nuevos-proyectos-gasoducto-litiomineria-energiarenovable-infraestructura_0_DmyHIleurF.amp.html"
+  fecha_verificacion: "2026-11-13"
+
+- obra: Gasoducto San Matías
+  sector: Oil & Gas
+  tipo: Proyecto anunciado
+  estado: RIGI aprobado
+  presupuesto: "US$ 1.300 millones"
+  fuente: "https://www.ellitoral.com/economia/rigi-nuevos-proyectos-gasoducto-litiomineria-energiarenovable-infraestructura_0_DmyHIleurF.amp.html"
+  fecha_verificacion: "2026-11-13"
+
+- obra: Oleoducto Vaca Muerta Oil Sur (VMOS) – tramo rionegrino
+  operadora: VMOS
+  provincia: Río Negro
+  sector: Oil & Gas
+  tipo: "Licitación anunciada / registro de proveedores"
+  estado: "RIGI aprobado · en construcción · registro de proveedores para la operación"
+  presupuesto: "US$ 2.720 millones (tramo rionegrino)"
+  subobras: ["Tanques de gran escala", "Operación del oleoducto"]
+  fuente: "https://www.iprofesional.com/energia/456154-cuales-son-los-rigi-aprobados-y-cuales-en-revision-que-ya-rozan-los-us100000-millones"
+  fuentes_extra: ["https://www.rionegro.com.ar/tag/oleoducto/"]
+  fecha_verificacion: "2026-11-13"
+  nota: "Diario Río Negro informó que VMOS abrió el registro de proveedores para la operación."
+
+- obra: Gasoducto dedicado Tratayén – SAO
+  provincia: Río Negro
+  localidad: General Roca (encuentro de proveedores)
+  sector: Oil & Gas
+  tipo: "Licitación anunciada / registro de proveedores"
+  estado: "Proyecto anunciado · relevamiento de proveedores"
+  fuente: "https://www.rionegro.com.ar/tag/tratayen/"
+  fecha_verificacion: "2026-11-13"
+  nota: "Río Negro reunió en Roca a 220 posibles proveedores para informar requisitos y pasos para integrarse."
+
+- obra: Desarrollo integral Los Toldos II Este
+  operadora: UT RIGI Los Toldos
+  provincia: Neuquén
+  sector: Oil & Gas
+  tipo: Proyecto anunciado
+  estado: RIGI aprobado
+  fechas_confirmadas:
+    aprobacion_rigi: "09/10/2026 (resolución publicada en el Boletín Oficial)"
+  fuente: "https://www.iprofesional.com/negocios/466279-cuales-son-los-10-proyectos-mas-grandes-del-rigi-y-cuanto-dinero-invertiran"
+  fecha_verificacion: "2026-11-13"
+
+- obra: MARA (cobre)
+  operadora: Glencore
+  sector: Minería
+  tipo: Proyecto anunciado
+  estado: "RIGI aprobado (anuncio de Glencore del 02/10/2026)"
+  presupuesto: "aprox. US$ 4.000 millones"
+  fuente: "https://www.iprofesional.com/negocios/466279-cuales-son-los-10-proyectos-mas-grandes-del-rigi-y-cuanto-dinero-invertiran"
+  fecha_verificacion: "2026-11-13"
+
+- obra: Tres Quebradas – ampliación (litio)
+  operadora: LIEX
+  provincia: Catamarca
+  sector: Minería
+  tipo: Proyecto anunciado
+  estado: RIGI aprobado
+  presupuesto: "US$ 709 millones"
+  fuente: "https://www.panorama-minero.com/www.spire-events.com![Mining/news/page/3"
+  fecha_verificacion: "2026-11-13"
+  nota: "Amplía capacidad de producción e infraestructura, según la fuente."
+
+- obra: PSJ Cobre Mendocino
+  operadora: Minera San Jorge
+  provincia: Mendoza
+  sector: Minería
+  tipo: Adjudicado / en ejecución
+  estado: "Etapa de ejecución bajo RIGI, con metas de inversión hasta 2028"
+  fechas_estimadas:
+    fin_obra: "metas de inversión hasta 2028"
+  fuente: "https://www.panorama-minero.com/home.htm/news/page/3"
+  fecha_verificacion: "2026-11-13"
+
+- obra: Rincón (litio)
+  operadora: Rio Tinto
+  sector: Minería
+  tipo: Proyecto anunciado
+  estado: "RIGI aprobado (primer proyecto minero en el régimen)"
+  presupuesto: "US$ 2.500 millones"
+  fuente: "https://www.panorama-minero.com/cot.htm/news/rincon-inaugurates-the-mining-rigi-with-a-us-2-5-billion-investment"
+  fecha_verificacion: "2026-11-13"

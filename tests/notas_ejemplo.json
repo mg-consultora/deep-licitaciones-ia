@@ -1,0 +1,44 @@
+[
+  {
+    "titulo": "Licitan la ampliación de la Estación Transformadora Cerro Ejemplo en Neuquén (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-1",
+    "medio": "Medio de ejemplo",
+    "fecha": "2026-11-10",
+    "texto": "El Ente Provincial de Ejemplo publicó el llamado a licitación para la ampliación de la Estación Transformadora Cerro Ejemplo, en la localidad de Plaza Ejemplo, provincia del Neuquén. La obra incluye una nueva sala de control y servicios auxiliares en corriente continua. La recepción de ofertas cerrará el 15 de diciembre de 2026. El presupuesto oficial es de US$ 38 millones. Se prevé que la puesta en marcha sea en el segundo semestre de 2027."
+  },
+  {
+    "titulo": "Gasoducto Ejemplo Sur: abren el registro de proveedores (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-2",
+    "medio": "Medio de ejemplo",
+    "fecha": "2026-11-05",
+    "texto": "La empresa Transportadora Ejemplo abrió el registro de proveedores para el Gasoducto Ejemplo Sur, que unirá Tratayén con la costa de Río Negro. El proyecto, operado por Transportadora Ejemplo, contempla tres plantas compresoras y estaciones de medición. La ingeniería de detalle estará a cargo de Ingeniería Ejemplar. La compañía estima que el inicio de obra será a principios de 2027 y que la habilitación comercial llegará hacia 2029. La inversión de US$ 1.200 millones fue presentada al RIGI."
+  },
+  {
+    "titulo": "Adjudicaron el parque solar Llanura Ejemplo en San Juan (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-3",
+    "medio": "Otro medio de ejemplo",
+    "fecha": "2026-10-28",
+    "texto": "Energías Ejemplo adjudicó a la UTE Montajes Ejemplo la construcción del Parque Solar Llanura Ejemplo, de 150 MW, en el departamento de Ullum, provincia de San Juan. El proyecto es desarrollado por Solar Ejemplo Desarrollos. Incluye una subestación elevadora de 33/132 kV. El inicio de obra fue el 3 de noviembre de 2026."
+  },
+  {
+    "titulo": "Minera Ejemplo obtuvo el RIGI para su planta de carbonato de litio (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-4",
+    "medio": "Medio de ejemplo",
+    "fecha": "2026-11-08",
+    "texto": "El Ministerio de Economía aprobó el ingreso al RIGI del Proyecto Salar Ejemplo, de Minera Ejemplo, en Catamarca, con una inversión de US$ 650 millones. La planta de carbonato de litio tendrá una capacidad de 25.000 toneladas anuales. La empresa proyecta lanzar la licitación de equipos eléctricos en marzo de 2027 y espera la primera producción en 2029."
+  },
+  {
+    "titulo": "Gasoducto Ejemplo Sur: postergan el inicio de obra (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-5",
+    "medio": "Otro medio de ejemplo",
+    "fecha": "2026-11-12",
+    "texto": "Transportadora Ejemplo informó que el inicio de obra del Gasoducto Ejemplo Sur se estima ahora para mediados de 2027, por demoras en la ingeniería. El registro de proveedores sigue abierto."
+  },
+  {
+    "titulo": "El riesgo país bajó y subieron las acciones de energía (EJEMPLO)",
+    "link": "https://ejemplo.invalid/nota-6",
+    "medio": "Medio de ejemplo",
+    "fecha": "2026-11-11",
+    "texto": "Las acciones de empresas energéticas subieron 4% y el riesgo país cayó. Los bonos en dólares acompañaron la suba."
+  }
+]

@@ -1,0 +1,100 @@
+# Empresas prioritarias para el módulo "Obras futuras y oportunidades privadas".
+# Solo datos públicos: nombre, sector y página pública de proveedores. Sin contactos.
+# "alias" son otras formas en que la prensa nombra a la empresa (el agente las busca en las noticias).
+# "origen": directorio = del Directorio de Empresas Energéticas; agregada = sumada por relevancia.
+
+Oil & Gas:
+  - {nombre: YPF, alias: [YPF S.A.], portal: "https://proveedores.ypf.com", origen: directorio}
+  - {nombre: Vista Energy, alias: [Vista], portal: "https://www.vistaenergy.com/proveedores", origen: directorio}
+  - {nombre: Pan American Energy, alias: [PAE], portal: "https://www.pae.com.ar/proveedores", origen: directorio}
+  - {nombre: Chevron Argentina, alias: [Chevron], portal: "https://www.chevron.com/worldwide/argentina", origen: directorio}
+  - {nombre: Tecpetrol, portal: "https://www.tecpetrol.com/es/proveedores", origen: directorio}
+  - {nombre: Pluspetrol, portal: "https://www.pluspetrol.net/proveedores", origen: directorio}
+  - {nombre: Pampa Energía, alias: [Pampa Energia], portal: "https://www.pampaenergia.com/proveedores", origen: directorio}
+  - {nombre: CGC, alias: [Compañía General de Combustibles], portal: "https://www.cgc.com.ar/proveedores", origen: directorio}
+  - {nombre: TotalEnergies, alias: [Total Austral], portal: "https://corporate.totalenergies.ar/proveedores", origen: directorio}
+  - {nombre: Phoenix Global Resources, alias: [Phoenix], portal: "https://www.phoenixglobalresources.com", origen: directorio}
+  - {nombre: Shell Argentina, alias: [Shell], portal: "https://www.shell.com.ar/proveedores", origen: directorio}
+  - {nombre: SLB, alias: [Schlumberger], portal: "https://www.slb.com/how-we-work/suppliers", origen: directorio}
+  - {nombre: Halliburton, portal: "https://www.halliburton.com/en/about-us/suppliers", origen: directorio}
+  - {nombre: Baker Hughes, portal: "https://www.bakerhughes.com/company/suppliers", origen: directorio}
+  - {nombre: Weatherford, portal: "https://www.weatherford.com/en/supplier-resources", origen: directorio}
+  - {nombre: San Antonio Internacional, portal: "https://www.sanantonio.com.ar/proveedores", origen: directorio}
+  - {nombre: Capex, origen: agregada}
+  - {nombre: Aconcagua Energía, alias: [Aconcagua Energia], origen: agregada}
+  - {nombre: Petroquímica Comodoro Rivadavia, alias: [PCR], origen: agregada}
+  - {nombre: Gas y Petróleo del Neuquén, alias: [GyP], origen: agregada}
+  - {nombre: TanGo Energy, origen: agregada}
+  - {nombre: Energía Argentina, alias: [ENARSA, Energia Argentina], origen: agregada}
+
+Midstream:
+  - {nombre: TGS, alias: [Transportadora de Gas del Sur], portal: "https://www.tgs.com.ar/proveedores", origen: directorio}
+  - {nombre: TGN, alias: [Transportadora de Gas del Norte], portal: "https://www.tgn.com.ar/proveedores", origen: directorio}
+  - {nombre: Oldelval, portal: "https://www.oldelval.com.ar/proveedores", origen: directorio}
+  - {nombre: VMOS, alias: [Vaca Muerta Oil Sur, Vaca Muerta Oleoducto Sur], origen: directorio}
+  - {nombre: OTASA, alias: [Oleoducto Trasandino], origen: directorio}
+  - {nombre: Camuzzi, alias: [Camuzzi Gas], portal: "https://www.camuzzi.com.ar/proveedores", origen: directorio}
+  - {nombre: Southern Energy, origen: agregada}
+
+Contratistas y EPC:
+  - {nombre: SACDE, portal: "https://www.sacde.com.ar/proveedores", origen: directorio}
+  - {nombre: Techint Ingeniería y Construcción, alias: [Techint, Techint E&C], portal: "https://www.techint.com/es/proveedores", origen: directorio}
+  - {nombre: Pecom, alias: [Skanska], portal: "https://www.skanska.com.ar/proveedores", origen: directorio}
+  - {nombre: Contreras Hermanos, alias: [Contreras Hnos], portal: "https://www.contrerashnos.com.ar", origen: directorio}
+  - {nombre: Ingeniería Alsina, alias: [Ingenieria Alsina], portal: "https://www.ingenieriaalsina.com.ar", origen: directorio}
+  - {nombre: Milicic, origen: agregada}
+  - {nombre: Esuco, origen: agregada}
+  - {nombre: Electroingeniería, alias: [Electroingenieria], origen: agregada}
+  - {nombre: BTU, origen: agregada}
+
+Downstream y petroquímica:
+  - {nombre: Raízen, alias: [Raizen], portal: "https://www.raizen.com.ar/proveedores", origen: directorio}
+  - {nombre: Axion Energy, alias: [Axion], portal: "https://www.axionenergy.com/proveedores", origen: directorio}
+  - {nombre: Refi Pampa, alias: [Refinería Pampa], portal: "https://www.refineriapampa.com.ar", origen: directorio}
+  - {nombre: Refinor, portal: "https://www.refinor.com.ar/proveedores", origen: directorio}
+  - {nombre: Profertil, portal: "https://www.profertil.com.ar/proveedores", origen: directorio}
+  - {nombre: PBB Polisur, alias: [Dow Argentina, Dow], portal: "https://www.pbbpolisur.com.ar/proveedores", origen: directorio}
+  - {nombre: Compañía Mega, alias: [Mega], origen: agregada}
+  - {nombre: Unipar, alias: [Unipar Indupa], origen: agregada}
+
+Energía eléctrica:
+  - {nombre: Edison Energía, alias: [Edison Energia], portal: "https://www.edisonenergia.com.ar", origen: directorio}
+  - {nombre: Genneia, portal: "https://www.genneia.com/proveedores", origen: directorio}
+  - {nombre: Transener, portal: "https://www.transener.com.ar/proveedores", origen: directorio}
+  - {nombre: YPF Luz, portal: "https://www.ypfluz.com/proveedores", origen: directorio}
+  - {nombre: Central Puerto, origen: agregada}
+  - {nombre: AES Argentina, alias: [AES], origen: agregada}
+  - {nombre: MSU Energy, origen: agregada}
+  - {nombre: Albanesi, alias: [Grupo Albanesi], origen: agregada}
+  - {nombre: Edenor, origen: agregada}
+  - {nombre: Edesur, origen: agregada}
+  - {nombre: CAMMESA, origen: agregada}
+  - {nombre: Nucleoeléctrica Argentina, alias: [Nucleoeléctrica, NASA, Nucleoelectrica], origen: agregada}
+  - {nombre: Distrocuyo, origen: agregada}
+  - {nombre: EPEC, origen: agregada}
+  - {nombre: EPEN, origen: agregada}
+
+Minería:
+  - {nombre: Glencore, alias: [El Pachón, MARA], portal: "https://www.glencore.com/suppliers", origen: directorio}
+  - {nombre: McEwen Copper, alias: [McEwen, Los Azules], portal: "https://www.mcewenmining.com", origen: directorio}
+  - {nombre: Eramine, alias: [Eramet], portal: "https://www.eramine.com.ar/proveedores", origen: directorio}
+  - {nombre: Vicuña, alias: [Proyecto Vicuña, Lundin Mining, BHP], portal: "https://www.proyectovicuna.com.ar", origen: directorio}
+  - {nombre: Rio Tinto, alias: [Rincón, Proyecto Fénix, Arcadium], portal: "https://www.riotinto.com/suppliers", origen: directorio}
+  - {nombre: Galan Lithium, alias: [Galán Lithium, Galan, Hombre Muerto Oeste], portal: "https://www.galanlithium.com.au", origen: directorio}
+  - {nombre: Galaxy Lithium, alias: [Sal de Vida], portal: "https://www.galaxyresources.com.au", origen: directorio}
+  - {nombre: Lithium Argentina, alias: [Exar, Minera Exar, Cauchari-Olaroz], portal: "https://www.lithiumargentina.com", origen: directorio}
+  - {nombre: PSJ Cobre Mendocino, alias: [Minera San Jorge, San Jorge], portal: "https://www.minerasanjorge.com.ar", origen: directorio}
+  - {nombre: Ganfeng Lithium, alias: [Ganfeng, LIEX, Mariana], origen: agregada}
+  - {nombre: POSCO Argentina, alias: [POSCO, Sal de Oro], origen: agregada}
+  - {nombre: Barrick, alias: [Veladero], origen: agregada}
+  - {nombre: Pan American Silver, origen: agregada}
+  - {nombre: AngloGold Ashanti, alias: [Cerro Vanguardia], origen: agregada}
+  - {nombre: Abrasilver, alias: [Diablillos], origen: agregada}
+
+Industria:
+  - {nombre: Acindar, origen: agregada}
+  - {nombre: Ternium, origen: agregada}
+  - {nombre: Aluar, origen: agregada}
+  - {nombre: Loma Negra, origen: agregada}
+  - {nombre: Holcim Argentina, alias: [Holcim], origen: agregada}
+  - {nombre: Arsat, alias: [ARSAT], origen: agregada}
