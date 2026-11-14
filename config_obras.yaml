@@ -41,6 +41,71 @@ busquedas:
   - almacenamiento baterías BESS licitación Argentina
   - línea de alta tensión licitación obra Argentina
 
+  # Monitoreo específico de empresas del directorio DEEP.
+  # Son consultas adicionales; no se eliminan las búsquedas existentes.
+  - '"Transener" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Siemens Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Genneia" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Pluspetrol" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Tecpetrol" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edenor" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"EDESA" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"ENERFE" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edesur" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"YPF Luz" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Pampa Energía" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Central Puerto" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"TGS" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"TGN" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Oldelval" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"SACDE" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Techint Ingeniería y Construcción" licitación OR obra OR ampliación OR inversión
+  OR proveedores Argentina'
+  - '"Contreras Hermanos" licitación OR obra OR ampliación OR inversión OR proveedores
+  Argentina'
+  - '"Aluar" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Glencore" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"PCR" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"MSU Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Elecnor" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edison Energía" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Vista Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"YPF" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Raízen" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Axion Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Profertil" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"VMOS" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+
+# Empresas adicionales del directorio energético 2026 (búsquedas públicas).
+# La mención de una empresa no implica obra ni compra confirmada.
+  - "\"Pan American Energy\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Chevron Argentina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"CGC\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"TotalEnergies\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Phoenix Global Resources\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Shell Argentina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"SLB\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Halliburton\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Baker Hughes\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Weatherford\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"San Antonio Internacional\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"El Pachón MARA\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Los Azules\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Eramine Sudamérica\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Proyecto Vicuña\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Rio Tinto Rincón litio\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Galán Lithium\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Sal de Vida\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"EXAR Cauchari Olaroz\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"PSJ Cobre Mendocino\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"OTASA\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Pecom Skanska\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Ingeniería Alsina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Refi Pampa\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Refinor\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"PBB Polisur\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Camuzzi Gas\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+
 # ----------------------------------------------------------------------------
 # Qué cuenta como obra y qué equipos de DEEP podría necesitar.
 # Los equipos son POTENCIALES: se deducen del tipo de obra, no de la nota.
