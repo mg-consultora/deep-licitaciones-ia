@@ -34,7 +34,19 @@ def preparar(proyectos: list[dict], mostrar_propias: bool, ahora: datetime | Non
         if not mostrar_propias:
             p["propias"] = []
         filas.append(p)
-    filas.sort(key=lambda p: (ORDEN.get(p.get("tipo"), 9), not p.get("verificado_manual"), p.get("actualizado", "")), reverse=False)
+        # Prioridad comercial orientativa; no confundir con una compra confirmada.
+        tipo = p.get("tipo", "")
+        if tipo == LIC_ABIERTA and (p.get("fechas") or {}).get("lic_productos"):
+            p["prioridad_comercial"] = "ALTA"
+            p["motivo_prioridad"] = "Licitación de productos identificada; verificar vigencia y alcance en la fuente"
+        elif tipo in (LIC_ABIERTA, LIC_ANUNCIADA, EN_EJECUCION):
+            p["prioridad_comercial"] = "MEDIA"
+            p["motivo_prioridad"] = "Obra o proceso identificado; verificar compras y responsables"
+        else:
+            p["prioridad_comercial"] = "BAJA"
+            p["motivo_prioridad"] = "Seguimiento estratégico; sin compra de equipos confirmada"
+    rango = {"ALTA": 0, "MEDIA": 1, "BAJA": 2}
+    filas.sort(key=lambda p: (rango[p["prioridad_comercial"]], ORDEN.get(p.get("tipo"), 9), not p.get("verificado_manual")))
     return filas
 
 
@@ -74,8 +86,11 @@ body:not(.ver-obras) #obras{display:none}
 #obras .pn{background:var(--o-card);border:1px solid var(--o-ln);border-radius:12px;padding:12px 16px;margin:12px 0}
 #obras .pn h2{font-size:15px;margin:0 0 8px}
 #obras .fl{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;align-items:center}
-#obras .fl input[type=search],#obras .fl select{font:inherit;padding:8px 10px;border:1px solid var(--o-ln);border-radius:8px;background:var(--o-card);color:var(--o-tx)}
+#obras .fl input[type=search],#obras .fl input[type=date],#obras .fl select{font:inherit;padding:8px 10px;border:1px solid var(--o-ln);border-radius:8px;background:var(--o-card);color:var(--o-tx)}
 #obras .fl input[type=search]{flex:1;min-width:200px}
+#obras .fl select{max-width:220px}
+#obras .prioridad{display:inline-block;border-radius:6px;padding:3px 8px;font-weight:700;font-size:12px;margin:4px 6px 0 0}
+#obras .prioridad.ALTA{background:#fce5e3;color:#9b2525}#obras .prioridad.MEDIA{background:#fff0c7;color:#775000}#obras .prioridad.BAJA{background:#edf0f3;color:#52606d}
 #obras .fl label{font-size:13px;color:var(--o-mut);display:flex;gap:4px;align-items:center}
 #obras button.b{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--o-ln);background:var(--o-card);color:var(--o-tx);cursor:pointer}
 #obras .c{background:var(--o-card);border:1px solid var(--o-ln);border-left:6px solid #98a2b3;border-radius:12px;padding:14px 16px;margin:10px 0;overflow-wrap:anywhere}
@@ -110,6 +125,10 @@ body:not(.ver-obras) #obras{display:none}
   <div class="fl">
     <input type="search" id="o-q" placeholder="Buscar: YPF, gasoducto, Neuquén, subestación, litio…">
     <select id="o-sec"></select><select id="o-prov"></select>
+    <select id="o-prio"><option value="">Prioridad: todas</option><option>ALTA</option><option>MEDIA</option><option>BAJA</option></select>
+    <select id="o-oper"></select><select id="o-des"></select><select id="o-ing"></select><select id="o-epc"></select>
+    <select id="o-equipo"></select><select id="o-fecha"><option value="">Fecha: todas</option><option value="lic_productos">Límite licitación productos</option><option value="lic_obra">Límite licitación obra</option><option value="inicio_compras">Inicio compras</option><option value="inicio_obra">Inicio obra</option><option value="fin_obra">Fin obra</option></select>
+    <label>Desde <input type="date" id="o-desde"></label><label>Hasta <input type="date" id="o-hasta"></label>
     <label><input type="checkbox" id="o-man"> Solo verificadas</label>
     <label><input type="checkbox" id="o-pro"> ⭐ Con empresas de mi lista</label>
     <button class="b" id="o-csv">Descargar CSV</button>
@@ -140,11 +159,31 @@ if (D.nota) $("o-nota").innerHTML = `<div class="nota">${D.nota}</div>`;
 function sel(id,campo,rot){ const v=[...new Set(D.proyectos.map(p=>p[campo]).filter(x=>x&&x!=="No informado"))].sort();
   $(id).innerHTML=`<option value="">${rot}: todos</option>`+v.map(x=>`<option>${e(x)}</option>`).join(""); }
 sel("o-sec","sector","Sector"); sel("o-prov","provincia","Provincia");
+sel("o-oper","operadora","Operadora / titular");sel("o-des","desarrolladora","Desarrolladora");
+sel("o-ing","ingenieria","Ingeniería");sel("o-epc","epc","Ejecuta / EPC");
+const equipos=[...new Set(D.proyectos.flatMap(p=>p.equipos||[]))].sort();
+$("o-equipo").innerHTML='<option value="">Productos DEEP: todos</option>'+equipos.map(x=>`<option value="${e(x)}">${e(x)}</option>`).join("");
+function fechaISO(p,campo){const f=(p.fechas||{})[campo];if(!f)return "";
+  const s=(f.texto||"").trim();const iso=s.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);if(iso)return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const lat=s.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/);if(lat)return `${lat[3]}-${lat[2].padStart(2,"0")}-${lat[1].padStart(2,"0")}`;
+  return "";}
+function cumpleFecha(p){const campo=$("o-fecha").value,desde=$("o-desde").value,hasta=$("o-hasta").value;
+  if(!campo)return !(desde||hasta);const fecha=fechaISO(p,campo);
+  if(!desde&&!hasta)return !!(p.fechas||{})[campo];
+  return !!fecha&&(!desde||fecha>=desde)&&(!hasta||fecha<=hasta);}
+
 function kp(){ $("o-kp").innerHTML = T.map((t,i)=>`<div class="k ${on.has(t)?"":"off"}" data-t="${e(t)}"><b>${D.proyectos.filter(p=>p.tipo===t).length}</b><span>${e(t)}</span></div>`).join("");
   document.querySelectorAll("#o-kp .k").forEach(k=>k.onclick=()=>{const t=k.dataset.t; on.has(t)?on.delete(t):on.add(t); pintar();}); }
 function vis(){ const q=sinT($("o-q").value);
   return D.proyectos.filter(p=>on.has(p.tipo) && (!$("o-sec").value||p.sector===$("o-sec").value) && (!$("o-prov").value||p.provincia===$("o-prov").value)
-   && (!$("o-man").checked||p.verificado_manual) && (!$("o-pro").checked||p.propias_n>0)
+   && (!$("o-prio").value||p.prioridad_comercial===$("o-prio").value)
+    && (!$("o-oper").value||p.operadora===$("o-oper").value)
+    && (!$("o-des").value||p.desarrolladora===$("o-des").value)
+    && (!$("o-ing").value||p.ingenieria===$("o-ing").value)
+    && (!$("o-epc").value||p.epc===$("o-epc").value)
+    && (!$("o-equipo").value||(p.equipos||[]).includes($("o-equipo").value))
+    && cumpleFecha(p)
+    && (!$("o-man").checked||p.verificado_manual) && (!$("o-pro").checked||p.propias_n>0)
    && (!q || sinT(JSON.stringify([p.obra,p.operadora,p.epc,p.desarrolladora,p.ingenieria,p.provincia,p.localidad,p.sector,p.empresas,p.subobras,p.tipo_obra])).includes(q))); }
 function fechas(p){ const f=p.fechas||{}; const con=CAMPOS.filter(([k])=>f[k]); const sin=CAMPOS.filter(([k])=>!f[k]&&k!=="aprobacion_rigi");
   return (con.length?`<table>${con.map(([k,l])=>`<tr><td style="width:42%">${l}</td><td>${e(f[k].texto)}<span class="fc ${f[k].tipo}">${f[k].tipo}</span></td></tr>`).join("")}</table>`:"")
@@ -153,7 +192,7 @@ function fechas(p){ const f=p.fechas||{}; const con=CAMPOS.filter(([k])=>f[k]); 
 function pintar(){ kp(); const L=vis();
   $("o-lista").innerHTML = L.length ? L.map(p=>{ const i=T.indexOf(p.tipo); return `<div class="c t${i}">
    <div class="tt">${e(p.obra)}</div>
-   <div><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${p.propias_n?`<span class="bd bp">⭐ ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s) de tu lista"}</span>`:''}</div>
+   <div><span class="prioridad ${e(p.prioridad_comercial)}">PRIORIDAD ${e(p.prioridad_comercial)}</span><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${p.propias_n?`<span class="bd bp">⭐ ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s) de tu lista"}</span>`:''}</div>
    <div class="st">${e(p.estado||"")}</div>
    ${(p.subobras||[]).length?`<div class="st"><b>Subobras:</b> ${e(p.subobras.join(" · "))}</div>`:""}
    <div class="g"><div><span>Operadora / titular</span>${ni(p.operadora)}</div><div><span>Desarrolladora</span>${ni(p.desarrolladora)}</div>
@@ -168,8 +207,8 @@ function pintar(){ kp(); const L=vis();
 $("o-nov").innerHTML = `<h2>Novedades: obras nuevas, licitaciones abiertas y cambios de fecha</h2>` + (D.novedades.length ? D.novedades.map(n=>
   `<div class="nv"><b>${e(n.tipo)}:</b> ${e(n.mensaje)} ${n.link?`<a href="${e(n.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="ni">· ${e((n.fecha||"").slice(0,10))}</span></div>`).join("") : `<div class="ni">Sin novedades todavía.</div>`);
 $("o-fu").innerHTML = `<h2>Fuentes del módulo de obras</h2><div class="ni" style="font-size:13px">Actualizado ${e(D.generado)}</div>` + D.fuentes.map(s=>`<div class="nv"><b>${e(s.nombre)}</b> <span class="${s.estado==="ok"?"ok":"error"}">${s.estado==="ok"?"Funcionando":"Sin respuesta"}</span><br><span class="ni">${e(s.detalle)}</span></div>`).join("");
-["o-q","o-sec","o-prov","o-man","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
-$("o-csv").onclick=()=>{ const cols=["tipo","obra","estado","operadora","desarrolladora","ingenieria","epc","provincia","localidad","sector","presupuesto"];
+["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta","o-man","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
+$("o-csv").onclick=()=>{ const cols=["prioridad_comercial","motivo_prioridad","tipo","obra","estado","operadora","desarrolladora","ingenieria","epc","provincia","localidad","sector","presupuesto"];
   const fl=["lic_productos","lic_obra","inicio_compras","inicio_obra","fin_obra"];
   const q=v=>`"${(v??"").toString().replace(/"/g,'""')}"`;
   const rows=[cols.concat(fl,["equipos","fuente"]).join(";")].concat(vis().map(p=>cols.map(c=>q(p[c])).concat(fl.map(k=>q(p.fechas&&p.fechas[k]?p.fechas[k].texto+" ("+p.fechas[k].tipo+")":"")),[q((p.equipos||[]).join(", ")),q(p.fuentes&&p.fuentes[0]?p.fuentes[0].link:"")]).join(";")));
