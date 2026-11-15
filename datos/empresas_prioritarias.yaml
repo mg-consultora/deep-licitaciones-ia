@@ -98,3 +98,252 @@ Industria:
   - {nombre: Loma Negra, origen: agregada}
   - {nombre: Holcim Argentina, alias: [Holcim], origen: agregada}
   - {nombre: Arsat, alias: [ARSAT], origen: agregada}
+  # AGREGAR AL FINAL de datos/empresas_prioritarias.yaml (NO reemplazar todo el archivo)
+Empresas DEEP:
+- nombre: A3 Servicios Constructivos SRL
+  origen: seleccion_DEEP
+- nombre: ABB SAU
+  origen: seleccion_DEEP
+- nombre: Acindar
+  origen: seleccion_DEEP
+- nombre: Acindar IASA
+  origen: seleccion_DEEP
+- nombre: Acindar Industria Argentina de Aceros S.A
+  origen: seleccion_DEEP
+- nombre: Aggreko Argentina SRL
+  origen: seleccion_DEEP
+- nombre: AGLIETTO INGENIERIA SRL
+  origen: seleccion_DEEP
+- nombre: AIT SA (ARTECHE)
+  origen: seleccion_DEEP
+- nombre: ALPER QUÍMICA SRL
+  origen: seleccion_DEEP
+- nombre: ArcelorMittal Acindar
+  origen: seleccion_DEEP
+- nombre: Artec Ingeniería S.A.
+  origen: seleccion_DEEP
+- nombre: ARTECHE AIT SA
+  origen: seleccion_DEEP
+- nombre: Atlas Copco
+  origen: seleccion_DEEP
+- nombre: Avanz Ingenieria SRL
+  origen: seleccion_DEEP
+- nombre: BATERIAS MOURA DE ARGENTINA S.A.
+  origen: seleccion_DEEP
+- nombre: Benito Roggio e Hijos
+  origen: seleccion_DEEP
+- nombre: BTZ MINERA S.A.
+  origen: seleccion_DEEP
+- nombre: CAELIS ENERGY SA
+  origen: seleccion_DEEP
+- nombre: CCG Electrónica S.A.
+  origen: seleccion_DEEP
+- nombre: Cementos Avellaneda S.A.
+  origen: seleccion_DEEP
+- nombre: Construcciones Electricas Zorzan S.a.
+  origen: seleccion_DEEP
+- nombre: Constructora Sudamericana S.A.C.I.F.I.A.
+  origen: seleccion_DEEP
+- nombre: Contreras SA
+  origen: seleccion_DEEP
+- nombre: Control de Componentes Electrónicos S.A.
+  origen: seleccion_DEEP
+- nombre: Data Oil SRL
+  origen: seleccion_DEEP
+- nombre: DATAOIL SRL
+  origen: seleccion_DEEP
+- nombre: depaoli & trosce constructora srl
+  origen: seleccion_DEEP
+- nombre: DISTROCUYO S.A.
+  origen: seleccion_DEEP
+- nombre: DMD COMPRESORES SAIC
+  origen: seleccion_DEEP
+- nombre: Ebinox Mining
+  origen: seleccion_DEEP
+- nombre: Electro Cordoba SA
+  origen: seleccion_DEEP
+- nombre: ELECTROMAC S.A.
+  origen: seleccion_DEEP
+- nombre: Electromecanica VIC S.A.
+  origen: seleccion_DEEP
+- nombre: Electronic S.A.
+  origen: seleccion_DEEP
+- nombre: EMET INGENIERIA SRL
+  origen: seleccion_DEEP
+- nombre: Emprendimientos Eléctricos del Sur S.A
+  origen: seleccion_DEEP
+- nombre: EPCA INDUSTRIAL SRL
+  origen: seleccion_DEEP
+- nombre: Estudios Integrales Ingeniería y Servicios SA
+  origen: seleccion_DEEP
+- nombre: Fluence Argentina S. A.
+  origen: seleccion_DEEP
+- nombre: Fohama Electromecanica Srl
+  origen: seleccion_DEEP
+- nombre: Hidromaq srl
+  origen: seleccion_DEEP
+- nombre: Hidroper SRL
+  origen: seleccion_DEEP
+- nombre: Holcim Argentina S.A
+  origen: seleccion_DEEP
+- nombre: HSE INGENIERIA SRL
+  origen: seleccion_DEEP
+- nombre: Ifm electronic srl
+  origen: seleccion_DEEP
+- nombre: INDUSTRIA BASICA SA
+  origen: seleccion_DEEP
+- nombre: INDUSTRIAS DE TECNICAS CONSTRUCTIVAS S.A.
+  origen: seleccion_DEEP
+- nombre: Industrias Electromagneticas Voltohm SA
+  origen: seleccion_DEEP
+- nombre: Industrias Juan F Secco
+  origen: seleccion_DEEP
+- nombre: Industrias Químicas DEMS S.A.
+  origen: seleccion_DEEP
+- nombre: INELPA TRANSFORMADORES SA
+  origen: seleccion_DEEP
+- nombre: INGAV Empresa Constructora
+  origen: seleccion_DEEP
+- nombre: INGENIERIA ELECTRICA S.A
+  origen: seleccion_DEEP
+- nombre: Ingenieros Electronicos Asociados SRL
+  origen: seleccion_DEEP
+- nombre: INSA SERVICIOS DE INGENIERIA ARGENTINA
+  origen: seleccion_DEEP
+- nombre: John Crane Argentina SA
+  origen: seleccion_DEEP
+- nombre: José Cartellone Construcciones Civiles S.A.
+  origen: seleccion_DEEP
+- nombre: JS NORTE INGENIERIA SRL
+  origen: seleccion_DEEP
+- nombre: Lasertec Ingenieria SA
+  origen: seleccion_DEEP
+- nombre: LEYDEN S.A.
+  origen: seleccion_DEEP
+- nombre: LEYDEN S.A.I.C. Y F.
+  origen: seleccion_DEEP
+- nombre: LFR CONSTRUCTORA VIAL S.A
+  origen: seleccion_DEEP
+- nombre: LOMA NEGRA C.I.A.S.A.
+  origen: seleccion_DEEP
+- nombre: Loma Negra CIASA
+  origen: seleccion_DEEP
+- nombre: LS ELECTROMECANICA SA
+  origen: seleccion_DEEP
+- nombre: MAQOIL SAIC
+  origen: seleccion_DEEP
+- nombre: MAYO TRANSFORMADORES S.R.L.
+  origen: seleccion_DEEP
+- nombre: MCA INGENIERIA SA
+  origen: seleccion_DEEP
+- nombre: Melectric sa
+  origen: seleccion_DEEP
+- nombre: Metalurgica Del Sur S.A.
+  origen: seleccion_DEEP
+- nombre: MILICIC
+  origen: seleccion_DEEP
+- nombre: Milicic Minería S.A.
+  origen: seleccion_DEEP
+- nombre: More Energy S.A.S.
+  origen: seleccion_DEEP
+- nombre: NEO ENERGY S.A
+  origen: seleccion_DEEP
+- nombre: Nuclearlab SRL
+  origen: seleccion_DEEP
+- nombre: OIL CONTROL S.A
+  origen: seleccion_DEEP
+- nombre: Oilfield & Production Services SRL
+  origen: seleccion_DEEP
+- nombre: Oilfield producción services srl
+  origen: seleccion_DEEP
+- nombre: PARQUE INDUSTRIAL VACA MUERTA
+  origen: seleccion_DEEP
+- nombre: PCR
+  origen: seleccion_DEEP
+- nombre: PECOM Ingeniería y Construcciones SA
+  origen: seleccion_DEEP
+- nombre: Petroandina SRL
+  origen: seleccion_DEEP
+- nombre: PETROQUIMICA CUYO SAIC
+  origen: seleccion_DEEP
+- nombre: Petroquímica Comodoro Rivadavia S.A.
+  origen: seleccion_DEEP
+- nombre: Petroquímica Cuyo S.A.I.C
+  origen: seleccion_DEEP
+- nombre: PH CONSTRUCTORA SRL
+  origen: seleccion_DEEP
+- nombre: Proind Ingeniería SA
+  origen: seleccion_DEEP
+- nombre: Proyeccion Electroluz s.r.l.
+  origen: seleccion_DEEP
+- nombre: prysmian argentina
+  origen: seleccion_DEEP
+- nombre: Prysmian Energía Cables & Sistemas de Argentina S.A.
+  origen: seleccion_DEEP
+- nombre: Prysmian Energía Cables y Sistemas de Argentina SA
+  origen: seleccion_DEEP
+- nombre: Quimica Oeste S.A.
+  origen: seleccion_DEEP
+- nombre: Representaciones Mineras SRL
+  origen: seleccion_DEEP
+- nombre: Rilei Ingenieria SRL
+  origen: seleccion_DEEP
+- nombre: RIZOMA INGENIERA SA
+  origen: seleccion_DEEP
+- nombre: Ruhrpumpen Argentina sa
+  origen: seleccion_DEEP
+- nombre: SAM ENERGY SRL
+  origen: seleccion_DEEP
+- nombre: SAXUM Ingenieria SA
+  origen: seleccion_DEEP
+- nombre: SEMISA INFRAESTRUCTURA S.A.
+  origen: seleccion_DEEP
+- nombre: SEW Eurodrive Argentina SA
+  origen: seleccion_DEEP
+- nombre: SIAL INGENIERIA S.R.L
+  origen: seleccion_DEEP
+- nombre: SICA METALURGICA ARGENTINA SA
+  origen: seleccion_DEEP
+- nombre: SICA SA
+  origen: seleccion_DEEP
+- nombre: SIDERSA SA
+  origen: seleccion_DEEP
+- nombre: sie ingenieria srl
+  origen: seleccion_DEEP
+- nombre: Siemens
+  origen: seleccion_DEEP
+- nombre: Sistemas Energeticos SA
+  origen: seleccion_DEEP
+- nombre: SOLUCIONES CONSTRUCTIVAS SA
+  origen: seleccion_DEEP
+- nombre: Soluciones en Ingeniería de Manufactura SRL
+  origen: seleccion_DEEP
+- nombre: SPARK ENERGY SOLUTIONS SA
+  origen: seleccion_DEEP
+- nombre: Stib Ingeniería SRL
+  origen: seleccion_DEEP
+- nombre: Sullair Argentina S.A.
+  origen: seleccion_DEEP
+- nombre: Talde Energy
+  origen: seleccion_DEEP
+- nombre: Tecnowatt Ingenieria SAS
+  origen: seleccion_DEEP
+- nombre: TUBOS TRANS ELECTRIC S.A
+  origen: seleccion_DEEP
+- nombre: VALBOL - Válvulas Worcester de Argentina S.A.
+  origen: seleccion_DEEP
+- nombre: Valvulas Worcester de Argentina
+  origen: seleccion_DEEP
+- nombre: VENERGY SA
+  origen: seleccion_DEEP
+- nombre: Víctor Contreras SA
+  origen: seleccion_DEEP
+- nombre: WEG Equipamiento Eléctricos
+  origen: seleccion_DEEP
+- nombre: WG Ingeniería Eléctrica S.A.
+  origen: seleccion_DEEP
+- nombre: WINDLAND S.A.
+  origen: seleccion_DEEP
+- nombre: Zenit Ingeniería SAS
+  origen: seleccion_DEEP
+
