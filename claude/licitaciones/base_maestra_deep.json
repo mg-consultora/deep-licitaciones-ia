@@ -1,0 +1,616 @@
+{
+  "origen": "DEEP Base Maestra 2026-2027",
+  "corte": "2026-11-15",
+  "advertencia": "Antecedentes NO verificados en tiempo real. Apertura no equivale a cierre de ofertas.",
+  "empresas": [
+    {
+      "Provincia": "Neuquén",
+      "Empresa": "EPEN",
+      "Denominación": "Ente Provincial de Energía del Neuquén",
+      "Tipo jurídico / clasificación": "Empresa/ente público",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "Subestaciones, CC, rectificadores, baterías",
+      "Portal / URL": "https://www.epen.gov.ar/index.php/licitaciones/",
+      "Observación": "Verificar licitaciones vigentes"
+    },
+    {
+      "Provincia": "Neuquén",
+      "Empresa": "EPAS",
+      "Denominación": "Ente Provincial de Agua y Saneamiento",
+      "Tipo jurídico / clasificación": "Ente público",
+      "Sector": "Agua",
+      "Prioridad": "Media",
+      "Equipos / potencial": "UPS, respaldo de control",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Neuquén",
+      "Empresa": "ADI-NQN",
+      "Denominación": "Agencia de Inversiones del Neuquén",
+      "Tipo jurídico / clasificación": "Agencia pública",
+      "Sector": "Proyectos",
+      "Prioridad": "Media",
+      "Equipos / potencial": "Obras energéticas",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "San Juan",
+      "Empresa": "EPSE",
+      "Denominación": "Energía Provincial Sociedad del Estado",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Energía solar",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "UPS, rectificadores, bancos, inversores",
+      "Portal / URL": "https://www.epse.com.ar/web/licitaciones",
+      "Observación": "Verificar licitaciones vigentes"
+    },
+    {
+      "Provincia": "San Juan",
+      "Empresa": "DECSA",
+      "Denominación": "Distribuidora Eléctrica de Caucete",
+      "Tipo jurídico / clasificación": "Distribuidora",
+      "Sector": "Energía",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Servicios auxiliares y bancos",
+      "Observación": "Verificar carácter societario"
+    },
+    {
+      "Provincia": "San Juan",
+      "Empresa": "OSSE",
+      "Denominación": "Obras Sanitarias Sociedad del Estado",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Agua",
+      "Prioridad": "Media",
+      "Equipos / potencial": "UPS y respaldo",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "San Juan",
+      "Empresa": "IPEEM",
+      "Denominación": "Instituto Provincial de Exploraciones y Explotaciones Mineras",
+      "Tipo jurídico / clasificación": "Organismo público",
+      "Sector": "Minería",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Infraestructura minera",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Catamarca",
+      "Empresa": "EC SAPEM",
+      "Denominación": "Energía de Catamarca SAPEM",
+      "Tipo jurídico / clasificación": "Empresa con participación estatal",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "Rectificadores y bancos",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Catamarca",
+      "Empresa": "CAMYEN SE",
+      "Denominación": "Catamarca Minera y Energética",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Minería",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Sistemas de energía crítica",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Catamarca",
+      "Empresa": "Aguas de Catamarca SAPEM",
+      "Denominación": "Aguas de Catamarca SAPEM",
+      "Tipo jurídico / clasificación": "Empresa con participación estatal",
+      "Sector": "Agua",
+      "Prioridad": "Media",
+      "Equipos / potencial": "UPS y respaldo",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Catamarca",
+      "Empresa": "Ministerio de Minería",
+      "Denominación": "Ministerio de Minería de Catamarca",
+      "Tipo jurídico / clasificación": "Organismo público",
+      "Sector": "Minería",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Obras y contratistas",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Mendoza",
+      "Empresa": "EMESA",
+      "Denominación": "Empresa Mendocina de Energía",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "UPS, baterías y CC",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Mendoza",
+      "Empresa": "AYSAM",
+      "Denominación": "Agua y Saneamiento Mendoza",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Agua",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "UPS, tableros y respaldo",
+      "Portal / URL": "https://aysam.com.ar/pliegosdigitales/licitaciones",
+      "Observación": "Verificar licitaciones vigentes"
+    },
+    {
+      "Provincia": "Mendoza",
+      "Empresa": "Impulsa Mendoza",
+      "Denominación": "Impulsa Mendoza",
+      "Tipo jurídico / clasificación": "Entidad de desarrollo",
+      "Sector": "Minería",
+      "Prioridad": "Media",
+      "Equipos / potencial": "Proyectos mineros",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Mendoza",
+      "Empresa": "Distrocuyo",
+      "Denominación": "Distrocuyo",
+      "Tipo jurídico / clasificación": "Transportista eléctrica; no clasificar como pública",
+      "Sector": "Transmisión",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Servicios auxiliares de ET",
+      "Observación": "Prospección privada"
+    },
+    {
+      "Provincia": "Córdoba",
+      "Empresa": "EPEC",
+      "Denominación": "Empresa Provincial de Energía de Córdoba",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "Rectificadores y bancos",
+      "Portal / URL": "https://www.epec.com.ar/",
+      "Observación": "Antecedentes directos"
+    },
+    {
+      "Provincia": "Santa Fe",
+      "Empresa": "EPESF",
+      "Denominación": "Empresa Provincial de la Energía de Santa Fe",
+      "Tipo jurídico / clasificación": "Empresa pública",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "48/110/220 Vcc, baterías",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "ENARSA",
+      "Denominación": "Energía Argentina",
+      "Tipo jurídico / clasificación": "Empresa estatal",
+      "Sector": "Energía",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "UPS, cargadores y bancos",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "NASA",
+      "Denominación": "Nucleoeléctrica Argentina",
+      "Tipo jurídico / clasificación": "Empresa estatal",
+      "Sector": "Nuclear",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "Energía crítica",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "AySA",
+      "Denominación": "Agua y Saneamientos Argentinos",
+      "Tipo jurídico / clasificación": "Empresa estatal",
+      "Sector": "Agua",
+      "Prioridad": "Media-alta",
+      "Equipos / potencial": "UPS y control",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "AABE",
+      "Denominación": "Agencia de Administración de Bienes del Estado",
+      "Tipo jurídico / clasificación": "Organismo público",
+      "Sector": "Administración",
+      "Prioridad": "Media",
+      "Equipos / potencial": "UPS y bancos",
+      "Portal / URL": "https://comprar.gob.ar/",
+      "Observación": "Licitación identificada"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "INV",
+      "Denominación": "Instituto Nacional de Vitivinicultura",
+      "Tipo jurídico / clasificación": "Organismo público",
+      "Sector": "Laboratorio",
+      "Prioridad": "Baja",
+      "Equipos / potencial": "UPS laboratorio",
+      "Portal / URL": "https://comprar.gob.ar/",
+      "Observación": "Revisar compatibilidad"
+    },
+    {
+      "Provincia": "Misiones",
+      "Empresa": "Energía de Misiones",
+      "Denominación": "Energía de Misiones",
+      "Tipo jurídico / clasificación": "Empresa provincial",
+      "Sector": "Energía",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Bancos y cargadores",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Chaco",
+      "Empresa": "SECHEEP",
+      "Denominación": "Servicios Energéticos del Chaco",
+      "Tipo jurídico / clasificación": "Empresa provincial",
+      "Sector": "Energía",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "CC y respaldo",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Corrientes",
+      "Empresa": "DPEC",
+      "Denominación": "Dirección Provincial de Energía de Corrientes",
+      "Tipo jurídico / clasificación": "Organismo provincial",
+      "Sector": "Energía",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Bancos y rectificadores",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Santiago del Estero",
+      "Empresa": "EDESE",
+      "Denominación": "Empresa Distribuidora de Electricidad de Santiago del Estero",
+      "Tipo jurídico / clasificación": "Distribuidora; verificar titularidad",
+      "Sector": "Energía",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "Servicios auxiliares",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "Transener",
+      "Denominación": "Transener",
+      "Tipo jurídico / clasificación": "Empresa de transporte; no clasificar como pública",
+      "Sector": "Transmisión",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "ET, bancos, cargadores",
+      "Portal / URL": "https://www.transener.com.ar/",
+      "Observación": "Obras/contratistas"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "YPF",
+      "Denominación": "YPF",
+      "Tipo jurídico / clasificación": "Sociedad con participación estatal",
+      "Sector": "Oil & Gas",
+      "Prioridad": "Muy alta",
+      "Equipos / potencial": "UPS y energía crítica",
+      "Observación": "Prospección"
+    },
+    {
+      "Provincia": "Nacional",
+      "Empresa": "YPF Luz",
+      "Denominación": "YPF Luz",
+      "Tipo jurídico / clasificación": "Empresa de participación mixta/privada",
+      "Sector": "Generación",
+      "Prioridad": "Alta",
+      "Equipos / potencial": "UPS, cargadores y baterías",
+      "Observación": "Prospección"
+    }
+  ],
+  "licitaciones": [
+    {
+      "ID": "LIC-001",
+      "Empresa": "AABE",
+      "Provincia": "Nacional",
+      "N.º proceso": "392-0016-LPR26",
+      "Objeto": "UPS y cuatro bancos de baterías",
+      "Categoría": "UPS / baterías",
+      "Apertura (fecha/hora)": "2026-12-02 12:00",
+      "Estado por fecha": "EN PLAZO",
+      "URL / fuente": "https://comprar.gob.ar/",
+      "Validación": "Referencia previa: ficha oficial; verificar número y fecha",
+      "Tipo oportunidad": "Potencial directa",
+      "Prioridad": "Media",
+      "Notas": "UPS informática: verificar compatibilidad"
+    },
+    {
+      "ID": "LIC-002",
+      "Empresa": "INV",
+      "Provincia": "Nacional",
+      "N.º proceso": "49-0002-LPR26",
+      "Objeto": "Adquisición e instalación de UPS para laboratorio",
+      "Categoría": "UPS",
+      "Apertura (fecha/hora)": "2026-11-18 12:00",
+      "Estado por fecha": "POR VENCER",
+      "URL / fuente": "https://comprar.gob.ar/",
+      "Validación": "Referencia previa: confirmar pliego y apertura",
+      "Tipo oportunidad": "Potencial directa",
+      "Prioridad": "Baja",
+      "Notas": "Posible exclusión por UPS no industrial"
+    },
+    {
+      "ID": "LIC-003",
+      "Empresa": "EPEC",
+      "Provincia": "Córdoba",
+      "N.º proceso": "1530",
+      "Objeto": "Rectificador y banco de baterías para SEA Paraguay",
+      "Categoría": "Rectificador / banco",
+      "Apertura (fecha/hora)": "2026-11-11 00:00",
+      "Estado por fecha": "VENCIDA",
+      "URL / fuente": "https://indicadores.ar/contrataciones/llamados/aviso/empresa-provincial-de-energia-de-cordoba-licitacion-publica-electronica-21a7ea",
+      "Validación": "Aviso secundario; contrastar oficial",
+      "Tipo oportunidad": "Directa",
+      "Prioridad": "Muy alta",
+      "Notas": "Presupuesto oficial ARS 29.040.000"
+    },
+    {
+      "ID": "LIC-004",
+      "Empresa": "EPEC",
+      "Provincia": "Córdoba",
+      "N.º proceso": "1534",
+      "Objeto": "Rectificador y banco de baterías de electrolito absorbido",
+      "Categoría": "Rectificador / banco",
+      "Apertura (fecha/hora)": "2026-11-13 00:00",
+      "Estado por fecha": "VENCIDA",
+      "URL / fuente": "https://indicadores.ar/contrataciones/llamados/aviso/empresa-provincial-de-energia-de-cordoba-licitacion-publica-electronica-102857",
+      "Validación": "Aviso secundario; contrastar oficial",
+      "Tipo oportunidad": "Directa",
+      "Prioridad": "Muy alta",
+      "Notas": "Presupuesto oficial ARS 154.880.000"
+    },
+    {
+      "ID": "LIC-005",
+      "Empresa": "EPEN",
+      "Provincia": "Neuquén",
+      "N.º proceso": "40/2026",
+      "Objeto": "Cinco interruptores 132 kV – ET Centenario Oeste",
+      "Categoría": "Obra ET",
+      "Estado por fecha": "SIN FECHA",
+      "URL / fuente": "https://www.epen.gov.ar/index.php/licitaciones/",
+      "Validación": "Fecha y pliego sin corroborar",
+      "Tipo oportunidad": "Indirecta",
+      "Prioridad": "Media",
+      "Notas": "Verificar servicios auxiliares"
+    },
+    {
+      "ID": "LIC-006",
+      "Empresa": "EPEN",
+      "Provincia": "Neuquén",
+      "N.º proceso": "18/2026",
+      "Objeto": "Nuevo campo transformador – ET Pío Protto",
+      "Categoría": "Obra ET",
+      "Estado por fecha": "SIN FECHA",
+      "URL / fuente": "https://www.epen.gov.ar/index.php/licitaciones/",
+      "Validación": "Fecha y pliego sin corroborar",
+      "Tipo oportunidad": "Indirecta",
+      "Prioridad": "Media",
+      "Notas": "Posible proveedor EPC"
+    },
+    {
+      "ID": "LIC-007",
+      "Empresa": "EPSE",
+      "Provincia": "San Juan",
+      "N.º proceso": "01/2026",
+      "Objeto": "Recuperación de equipamiento planta VERSU",
+      "Categoría": "Obra/equipamiento",
+      "Estado por fecha": "SIN FECHA",
+      "URL / fuente": "https://www.epse.com.ar/web/licitaciones",
+      "Validación": "Fecha y alcance sin corroborar",
+      "Tipo oportunidad": "Por evaluar",
+      "Prioridad": "Media",
+      "Notas": "Revisar alcance eléctrico"
+    },
+    {
+      "ID": "LIC-008",
+      "Empresa": "AYSAM",
+      "Provincia": "Mendoza",
+      "N.º proceso": "87/26",
+      "Objeto": "Materiales eléctricos para stock electromecánico",
+      "Categoría": "Materiales eléctricos",
+      "Apertura (fecha/hora)": "2026-11-17 00:00",
+      "Estado por fecha": "POR VENCER",
+      "URL / fuente": "https://aysam.com.ar/pliegosdigitales/licitaciones",
+      "Validación": "Fecha indicada en relevamiento previo; verificar oficial",
+      "Tipo oportunidad": "Por evaluar",
+      "Prioridad": "Media",
+      "Notas": "Verificar ítems compatibles"
+    },
+    {
+      "ID": "LIC-009",
+      "Empresa": "AYSAM",
+      "Provincia": "Mendoza",
+      "N.º proceso": "3/26",
+      "Objeto": "Colector cloacal Colonia Segovia, etapa II",
+      "Categoría": "Obra civil/electromecánica",
+      "Apertura (fecha/hora)": "2026-11-18 10:00",
+      "Estado por fecha": "POR VENCER",
+      "URL / fuente": "https://aysam.com.ar/pliegosdigitales/licitaciones",
+      "Validación": "Fecha indicada en relevamiento previo; verificar oficial",
+      "Tipo oportunidad": "Indirecta",
+      "Prioridad": "Baja",
+      "Notas": "Sin equipo DEEP confirmado"
+    },
+    {
+      "ID": "LIC-010",
+      "Empresa": "Transener",
+      "Provincia": "Nacional",
+      "N.º proceso": "34-003",
+      "Objeto": "AMBA I: estaciones transformadoras y sistemas auxiliares",
+      "Categoría": "Obra ET",
+      "Estado por fecha": "SIN FECHA",
+      "URL / fuente": "https://www.transener.com.ar/",
+      "Validación": "Referencia de seguimiento comercial; sin fecha actual verificada",
+      "Tipo oportunidad": "Potencial directa",
+      "Prioridad": "Muy alta",
+      "Notas": "Verificar proceso y circular"
+    },
+    {
+      "ID": "LIC-011",
+      "Empresa": "Genneia",
+      "Provincia": "Nacional",
+      "N.º proceso": "PABRA / Ariba",
+      "Objeto": "Banco de baterías, cargador rectificador e inversor 5 kVA",
+      "Categoría": "Banco / cargador / inversor",
+      "Apertura (fecha/hora)": "2026-11-17 11:00",
+      "Estado por fecha": "POR VENCER",
+      "Validación": "Referencia comercial previa; contratación privada",
+      "Tipo oportunidad": "Directa",
+      "Prioridad": "Muy alta",
+      "Notas": "Inicio informado 03/11/2026 14:04"
+    }
+  ],
+  "obras": [
+    {
+      "ID": "OBR-001",
+      "Promotor": "Transener",
+      "Obra": "AMBA I",
+      "Provincia": "Buenos Aires",
+      "Descripción": "ET Plomer / Atucha / Ezeiza",
+      "Potencial DEEP": "Bancos, cargadores, inversores",
+      "Condición": "Obra / licitación en seguimiento",
+      "URL": "https://www.transener.com.ar/"
+    },
+    {
+      "ID": "OBR-002",
+      "Promotor": "Transener",
+      "Obra": "Ampliaciones de ET",
+      "Provincia": "Santa Fe / Buenos Aires",
+      "Descripción": "Rosario Oeste, Ramallo, Río Coronda",
+      "Potencial DEEP": "Servicios auxiliares",
+      "Condición": "Proyecto; sin compra confirmada",
+      "URL": "https://www.transener.com.ar/"
+    },
+    {
+      "ID": "OBR-003",
+      "Promotor": "EPEN",
+      "Obra": "ET Centenario Oeste",
+      "Provincia": "Neuquén",
+      "Descripción": "Interruptores 132 kV",
+      "Potencial DEEP": "Servicios auxiliares potenciales",
+      "Condición": "Indirecta; verificar pliego",
+      "URL": "https://www.epen.gov.ar/index.php/licitaciones/"
+    },
+    {
+      "ID": "OBR-004",
+      "Promotor": "EPEN",
+      "Obra": "ET Pío Protto",
+      "Provincia": "Neuquén",
+      "Descripción": "Campo transformador",
+      "Potencial DEEP": "Servicios auxiliares potenciales",
+      "Condición": "Indirecta; verificar pliego",
+      "URL": "https://www.epen.gov.ar/index.php/licitaciones/"
+    },
+    {
+      "ID": "OBR-005",
+      "Promotor": "EPSE",
+      "Obra": "Planta VERSU",
+      "Provincia": "San Juan",
+      "Descripción": "Recuperación equipamiento",
+      "Potencial DEEP": "Equipos eléctricos potenciales",
+      "Condición": "Verificar alcance",
+      "URL": "https://www.epse.com.ar/web/licitaciones"
+    }
+  ],
+  "fuentes": [
+    {
+      "Alcance": "Nacional",
+      "Entidad": "COMPR.AR",
+      "Portal": "Compras y contrataciones públicas",
+      "URL": "https://comprar.gob.ar/",
+      "Tipo de fuente": "Oficial",
+      "Búsqueda sugerida": "UPS, baterías, rectificadores"
+    },
+    {
+      "Alcance": "Nacional",
+      "Entidad": "CONTRAT.AR",
+      "Portal": "Contratación de obra pública",
+      "URL": "https://contratar.gob.ar/",
+      "Tipo de fuente": "Oficial",
+      "Búsqueda sugerida": "Obras y contratistas"
+    },
+    {
+      "Alcance": "Córdoba",
+      "Entidad": "EPEC",
+      "Portal": "Contrataciones EPEC",
+      "URL": "https://www.epec.com.ar/",
+      "Tipo de fuente": "Institucional",
+      "Búsqueda sugerida": "Rectificadores y bancos"
+    },
+    {
+      "Alcance": "Neuquén",
+      "Entidad": "EPEN",
+      "Portal": "Licitaciones EPEN",
+      "URL": "https://www.epen.gov.ar/index.php/licitaciones/",
+      "Tipo de fuente": "Institucional",
+      "Búsqueda sugerida": "ET y servicios auxiliares"
+    },
+    {
+      "Alcance": "San Juan",
+      "Entidad": "EPSE",
+      "Portal": "Licitaciones EPSE",
+      "URL": "https://www.epse.com.ar/web/licitaciones",
+      "Tipo de fuente": "Institucional",
+      "Búsqueda sugerida": "Solar, UPS, bancos"
+    },
+    {
+      "Alcance": "Mendoza",
+      "Entidad": "AYSAM",
+      "Portal": "Pliegos y licitaciones",
+      "URL": "https://aysam.com.ar/pliegosdigitales/licitaciones",
+      "Tipo de fuente": "Institucional",
+      "Búsqueda sugerida": "UPS y electromecánica"
+    },
+    {
+      "Alcance": "Nacional",
+      "Entidad": "Transener",
+      "Portal": "Portal institucional",
+      "URL": "https://www.transener.com.ar/",
+      "Tipo de fuente": "Institucional",
+      "Búsqueda sugerida": "ET y transmisión"
+    },
+    {
+      "Alcance": "Nacional",
+      "Entidad": "DEEP",
+      "Portal": "Catálogo de referencia",
+      "URL": "https://www.deep-ing.com/",
+      "Tipo de fuente": "Empresa",
+      "Búsqueda sugerida": "Compatibilidad técnica"
+    }
+  ],
+  "criterios": [
+    {
+      "Categoría DEEP": "UPS industrial online / trifásica",
+      "Palabras clave": "UPS industrial; SAI; alimentación ininterrumpida",
+      "Reglas / exclusiones": "Excluir UPS doméstica / PC"
+    },
+    {
+      "Categoría DEEP": "Rectificador / cargador",
+      "Palabras clave": "rectificador; cargador de baterías; cargador 110 Vcc",
+      "Reglas / exclusiones": "48 / 110 / 125 / 220 Vcc"
+    },
+    {
+      "Categoría DEEP": "Banco de baterías estacionarias",
+      "Palabras clave": "banco de baterías; Ni-Cd; VRLA; Pb-Ca; AGM",
+      "Reglas / exclusiones": "Excluir baterías automotor"
+    },
+    {
+      "Categoría DEEP": "Inversor industrial",
+      "Palabras clave": "inversor 110 Vcc 230 Vca; inversor 5 kVA",
+      "Reglas / exclusiones": "Distinguir de inversor fotovoltaico"
+    },
+    {
+      "Categoría DEEP": "Servicios",
+      "Palabras clave": "mantenimiento UPS; FAT; repuestos; ingeniería",
+      "Reglas / exclusiones": "Revisar alcance"
+    },
+    {
+      "Categoría DEEP": "Infraestructura",
+      "Palabras clave": "estación transformadora; subestación; parque solar; BESS",
+      "Reglas / exclusiones": "Obra indirecta: verificar partidas"
+    }
+  ]
+}
