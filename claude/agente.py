@@ -123,6 +123,9 @@ def main() -> int:
 
     estado_fuentes = [{"nombre": r.nombre, "estado": r.estado, "detalle": r.detalle} for r in resultados]
     tablero.generar(salida_html, base.procesos(), base.alertas_recientes(), estado_fuentes, filtro, nota=nota)
+    if not args.demo:
+        from licitaciones.base_maestra import anexar_base_maestra
+        anexar_base_maestra(salida_html, RAIZ / "datos" / "base_maestra_deep.json")
     print(f"Tablero: {salida_html}")
     if args.abrir:
         webbrowser.open(salida_html.as_uri())
