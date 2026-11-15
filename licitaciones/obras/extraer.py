@@ -1,3 +1,4 @@
+
 """Convierte una nota en un registro de obra.
 
 Regla central: NO INVENTAR. Cada dato sale escrito en la nota; si no está, queda "No informado".
@@ -120,9 +121,24 @@ class Extractor:
         return puntaje >= self.minimo, {"tipos": tipos, "senales": senales, "prioritarias": prioritarias,
                                         "propias": propias, "puntaje": puntaje}
 
+    # Nombres de proyectos inequívocos. Se aplican únicamente cuando la nota
+    # menciona expresamente el proyecto; nunca se deducen por el sector.
+    _PROYECTOS_NOMBRADOS = (
+        (r"\b(?:vmos|vaca\s+muerta\s+oil\s+sur)\b", "Proyecto VMOS"),
+        (r"\b(?:mara|minera\s+agua\s+rica\s+alumbrera|proyecto\s+agua\s+rica)\b", "Proyecto MARA / Agua Rica"),
+        (r"\b(?:proyecto\s+los\s+azules|mina\s+los\s+azules|los\s+azules)\b", "Proyecto Los Azules"),
+    )
+
     # ------------------------------------------------------------------
     def nombre_obra(self, nota: Nota) -> str:
         """El nombre propio más repetido después de un tipo de obra ("Parque Solar El Quemado")."""
+        # Evita títulos periodísticos distintos para el mismo proyecto.
+        # Para no confundir obras distintas, solo se aplica si hay una única
+        # coincidencia de proyecto conocido en el texto de la noticia.
+        menciones = [nombre for patron, nombre in self._PROYECTOS_NOMBRADOS
+                     if re.search(patron, normalizar(nota.contenido), re.I)]
+        if len(menciones) == 1:
+            return menciones[0]
         conteo: dict[str, int] = {}
         for m in _TIPO_OBRA_NOMBRE.finditer(nota.contenido):
             nombre = _limpiar_nombre(f"{m.group(1)} {m.group(2)}")
