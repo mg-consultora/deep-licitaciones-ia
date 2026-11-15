@@ -106,6 +106,50 @@ busquedas:
   - "\"PBB Polisur\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
   - "\"Camuzzi Gas\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
 
+
+  # Empresas adicionales seleccionadas del Excel de contactos; consultas agrupadas
+  - ("A3 Servicios Constructivos SRL" OR "ABB SAU" OR "Acindar") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Acindar IASA" OR "Acindar Industria Argentina de Aceros S.A" OR "Aggreko Argentina SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("AGLIETTO INGENIERIA SRL" OR "AIT SA (ARTECHE)" OR "ALPER QUÍMICA SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("ArcelorMittal Acindar" OR "Artec Ingeniería S.A." OR "ARTECHE AIT SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Atlas Copco" OR "Avanz Ingenieria SRL" OR "BATERIAS MOURA DE ARGENTINA S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Benito Roggio e Hijos" OR "BTZ MINERA S.A." OR "CAELIS ENERGY SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("CCG Electrónica S.A." OR "Cementos Avellaneda S.A." OR "Construcciones Electricas Zorzan S.a.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Constructora Sudamericana S.A.C.I.F.I.A." OR "Contreras SA" OR "Control de Componentes Electrónicos S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Data Oil SRL" OR "DATAOIL SRL" OR "depaoli & trosce constructora srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("DISTROCUYO S.A." OR "DMD COMPRESORES SAIC" OR "Ebinox Mining") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Electro Cordoba SA" OR "ELECTROMAC S.A." OR "Electromecanica VIC S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Electronic S.A." OR "EMET INGENIERIA SRL" OR "Emprendimientos Eléctricos del Sur S.A") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("EPCA INDUSTRIAL SRL" OR "Estudios Integrales Ingeniería y Servicios SA" OR "Fluence Argentina S. A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Fohama Electromecanica Srl" OR "Hidromaq srl" OR "Hidroper SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Holcim Argentina S.A" OR "HSE INGENIERIA SRL" OR "Ifm electronic srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INDUSTRIA BASICA SA" OR "INDUSTRIAS DE TECNICAS CONSTRUCTIVAS S.A." OR "Industrias Electromagneticas Voltohm SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Industrias Juan F Secco" OR "Industrias Químicas DEMS S.A." OR "INELPA TRANSFORMADORES SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INGAV Empresa Constructora" OR "INGENIERIA ELECTRICA S.A" OR "Ingenieros Electronicos Asociados SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INSA SERVICIOS DE INGENIERIA ARGENTINA" OR "John Crane Argentina SA" OR "José Cartellone Construcciones Civiles S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("JS NORTE INGENIERIA SRL" OR "Lasertec Ingenieria SA" OR "LEYDEN S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("LEYDEN S.A.I.C. Y F." OR "LFR CONSTRUCTORA VIAL S.A" OR "LOMA NEGRA C.I.A.S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Loma Negra CIASA" OR "LS ELECTROMECANICA SA" OR "MAQOIL SAIC") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("MAYO TRANSFORMADORES S.R.L." OR "MCA INGENIERIA SA" OR "Melectric sa") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Metalurgica Del Sur S.A." OR "MILICIC" OR "Milicic Minería S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("More Energy S.A.S." OR "NEO ENERGY S.A" OR "Nuclearlab SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("OIL CONTROL S.A" OR "Oilfield & Production Services SRL" OR "Oilfield producción services srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PARQUE INDUSTRIAL VACA MUERTA" OR "PECOM Ingeniería y Construcciones SA" OR "Petroandina SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PETROQUIMICA CUYO SAIC" OR "Petroquímica Comodoro Rivadavia S.A." OR "Petroquímica Cuyo S.A.I.C") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PH CONSTRUCTORA SRL" OR "Proind Ingeniería SA" OR "Proyeccion Electroluz s.r.l.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("prysmian argentina" OR "Prysmian Energía Cables & Sistemas de Argentina S.A." OR "Prysmian Energía Cables y Sistemas de Argentina SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Quimica Oeste S.A." OR "Representaciones Mineras SRL" OR "Rilei Ingenieria SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("RIZOMA INGENIERA SA" OR "Ruhrpumpen Argentina sa" OR "SAM ENERGY SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SAXUM Ingenieria SA" OR "SEMISA INFRAESTRUCTURA S.A." OR "SEW Eurodrive Argentina SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SIAL INGENIERIA S.R.L" OR "SICA METALURGICA ARGENTINA SA" OR "SICA SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SIDERSA SA" OR "sie ingenieria srl" OR "Sistemas Energeticos SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SOLUCIONES CONSTRUCTIVAS SA" OR "Soluciones en Ingeniería de Manufactura SRL" OR "SPARK ENERGY SOLUTIONS SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Stib Ingeniería SRL" OR "Sullair Argentina S.A." OR "Talde Energy") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Tecnowatt Ingenieria SAS" OR "TUBOS TRANS ELECTRIC S.A" OR "VALBOL - Válvulas Worcester de Argentina S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Valvulas Worcester de Argentina" OR "VENERGY SA" OR "Víctor Contreras SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("WEG Equipamiento Eléctricos" OR "WG Ingeniería Eléctrica S.A." OR "WINDLAND S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Zenit Ingeniería SAS") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+
 # ----------------------------------------------------------------------------
 # Qué cuenta como obra y qué equipos de DEEP podría necesitar.
 # Los equipos son POTENCIALES: se deducen del tipo de obra, no de la nota.
