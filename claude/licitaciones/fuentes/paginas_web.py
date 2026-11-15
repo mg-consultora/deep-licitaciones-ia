@@ -18,6 +18,18 @@ from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
 
 
+def _fecha_valida(fecha):
+    if fecha is None:
+        return None
+    return fecha if 2000 <= fecha.year <= datetime.now().year + 5 else None
+
+
+def _limpiar_titulo(texto):
+    texto = re.sub(r"\s+", " ", texto).strip()
+    texto = re.sub(r"^\d{1,7}\s+\d{1,2}/\d{1,2}/\d{2,4}\s+", "", texto)
+    return re.sub(r"\s+Ver$", "", texto, flags=re.I).strip()
+
+
 def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
     soup = BeautifulSoup(html, "html.parser")
     for basura in soup(["script", "style", "nav", "footer", "header"]):
@@ -33,16 +45,16 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         vistos.add(texto)
         a = b if b.name == "a" else b.find("a", href=True)
         link = urljoin(url_base, a["href"]) if a is not None and a.get("href") else url_base
-        fechas = [f for _, f in buscar_fechas(texto)]
+        fechas = [f for _, f in buscar_fechas(texto) if _fecha_valida(f)]
         norm = normalizar(texto)
         ap = None
         m = re.search(r"apertura[^0-9]{0,40}", norm)
         if m:
-            despues = [f for p, f in buscar_fechas(texto) if p >= m.start()]
+            despues = [f for p, f in buscar_fechas(texto) if p >= m.start() and _fecha_valida(f)]
             ap = despues[0] if despues else None
         items.append(Oportunidad(
             fuente=f"Página: {nombre}",
-            titulo=texto[:220],
+            titulo=_limpiar_titulo(texto)[:220],
             organismo=nombre,
             estado="Circular" if "circular" in norm else "Publicada",
             fecha_publicacion=fechas[0] if fechas and fechas[0] != ap else None,
