@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import traceback
 from datetime import datetime
@@ -82,6 +83,36 @@ def completar_equipos(reg: dict, extractor: Extractor) -> None:
                 reg["equipos"].append(e)
 
 
+def actualizar_cartera_nota(reg: Registro, nota: Nota, catalogo: Catalogo, lector) -> bool:
+    """Reevalúa una nota vista sin reextraer ni alterar fechas, obras o novedades."""
+    fila = reg.con.execute("SELECT clave FROM notas WHERE link=?", (nota.link,)).fetchone()
+    if not fila:
+        return False  # Una nota descartada anteriormente no tiene proyecto asociado.
+    clave = fila[0]
+    if not clave:
+        return False
+    if lector:
+        try:
+            lector.completar_texto(nota)
+        except Exception as exc:
+            print(f"   (No se pudo ampliar nota para cartera: {type(exc).__name__})")
+    propias = catalogo.propias_en(nota.contenido or "")
+    if not propias:
+        return False
+    fila_proyecto = reg.con.execute("SELECT datos FROM proyectos WHERE clave=?", (clave,)).fetchone()
+    if not fila_proyecto:
+        return False
+    datos = json.loads(fila_proyecto[0])
+    previas = datos.get("propias") or []
+    nuevas = sorted(set(previas) | set(propias))
+    if nuevas == sorted(set(previas)):
+        return False
+    datos["propias"] = nuevas
+    reg.con.execute("UPDATE proyectos SET datos=? WHERE clave=?", (json.dumps(datos, ensure_ascii=False), clave))
+    reg.con.commit()
+    return True
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--html", help="tablero al que se agrega la pestaña (por defecto salida/tablero.html)")
@@ -122,10 +153,12 @@ def main() -> int:
         completar_equipos(manual, extractor)
         reg.guardar(manual)
 
-    nuevas = relevantes = con_ia = 0
+    nuevas = relevantes = con_ia = cartera_actualizada = 0
     max_ia = config.get("ia", {}).get("max_notas_por_corrida", 40)
     for nota in notas:
         if reg.nota_vista(nota.link):
+            if actualizar_cartera_nota(reg, nota, catalogo, lector):
+                cartera_actualizada += 1
             continue
         nuevas += 1
         ok, info = extractor.relevante(nota)
@@ -152,6 +185,7 @@ def main() -> int:
                 print(f"   (IA no disponible para una nota: {e.__class__.__name__})")
         reg.guardar(registro, nota.link)
 
+    print(f"{cartera_actualizada} notas existentes con nuevas coincidencias de cartera")
     proyectos = reg.proyectos()
     print(f"{len(notas)} notas leídas · {nuevas} nuevas · {relevantes} con obras · {con_ia} leídas con IA · {len(proyectos)} obras en memoria")
 
