@@ -1,6 +1,4 @@
-# Módulo "Obras futuras y oportunidades privadas".
-# Corre solo, DESPUÉS de "Actualizar tablero" (no lo modifica), y agrega su pestaña al tablero publicado.
-# Funciona con las PC apagadas. También se puede correr a mano: Actions → "Obras futuras" → Run workflow.
+# Obras futuras DEEP: actualiza el tablero sobre la última versión publicada.
 name: Obras futuras
 
 on:
@@ -8,7 +6,7 @@ on:
     workflows: ["Actualizar tablero"]
     types: [completed]
   schedule:
-    - cron: "30 12 * * 1-5"      # respaldo: 9:30 de Argentina, por si el otro flujo tuviera otro nombre
+    - cron: "30 12 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -23,24 +21,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install requests beautifulsoup4 pyyaml
 
-      - name: Buscar obras y agregar la pestaña al tablero
+      - name: Generar y guardar obras sin conflictos de rebase
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
         run: |
-          echo "Tablero: index.html"
-          python obras.py --html index.html
-
-      - name: Guardar tablero y memoria de obras
-        run: |
+          set -euo pipefail
           git config user.name "agente-licitaciones"
           git config user.email "agente-licitaciones@users.noreply.github.com"
-          git add -f index.html salida/obras.db
-          git diff --cached --quiet && exit 0
-          git commit -m "Obras futuras actualizadas $(date -u +%Y-%m-%d)"
-          git pull --rebase
-          git push
+
+          # Si otra automatización publica mientras trabajamos, reconstruimos
+          # desde su última versión en lugar de mezclar dos bases SQLite.
+          for intento in 1 2 3; do
+            echo "Intento $intento: actualizar desde main y generar obras"
+            git fetch origin main
+            git checkout -B main origin/main
+            git reset --hard origin/main
+
+            python obras.py --html index.html
+            git add -f index.html salida/obras.db
+
+            if git diff --cached --quiet; then
+              echo "No hay cambios para publicar"
+              exit 0
+            fi
+
+            git commit -m "Obras futuras actualizadas $(date -u +%Y-%m-%d)"
+            if git push origin HEAD:main; then
+              echo "Tablero y base de obras publicados correctamente"
+              exit 0
+            fi
+
+            echo "Otro proceso actualizó main; se regenerarán las obras desde la última versión"
+            sleep 5
+          done
+          echo "No se pudo publicar tras 3 intentos; no se forzó ningún cambio"
+          exit 1
