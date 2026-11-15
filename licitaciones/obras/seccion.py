@@ -131,7 +131,8 @@ body:not(.ver-obras) #obras{display:none}
     <select id="o-equipo"></select><select id="o-fecha"><option value="">Fecha: todas</option><option value="lic_productos">Límite licitación productos</option><option value="lic_obra">Límite licitación obra</option><option value="inicio_compras">Inicio compras</option><option value="inicio_obra">Inicio obra</option><option value="fin_obra">Fin obra</option></select>
     <label>Desde <input type="date" id="o-desde"></label><label>Hasta <input type="date" id="o-hasta"></label>
     <label><input type="checkbox" id="o-man"> Solo verificadas</label>
-    <label><input type="checkbox" id="o-pro"> ⭐ Con empresas de mi lista</label>
+    <label><input type="checkbox" id="o-prioritarias"> ⭐ Empresas prioritarias DEEP</label>
+    <label><input type="checkbox" id="o-pro"> Empresas de mi cartera (verificadas)</label>
     <button class="b" id="o-csv">Descargar CSV</button>
   </div>
   <div id="o-lista"></div>
@@ -176,7 +177,7 @@ function cumpleFecha(p){const campo=$("o-fecha").value,desde=$("o-desde").value,
 
 function limpiarFiltros(){
   ["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta"].forEach(id=>$(id).value="");
-  ["o-man","o-pro"].forEach(id=>$(id).checked=false);
+  ["o-man","o-prioritarias","o-pro"].forEach(id=>$(id).checked=false);
 }
 function kp(){
   $("o-kp").innerHTML=T.map((t,i)=>`<div class="k ${categoriaActiva===t?"on":categoriaActiva!==null?"off":""}" role="button" tabindex="0" aria-pressed="${categoriaActiva===t}" data-t="${e(t)}"><b>${D.proyectos.filter(p=>p.tipo===t).length}</b><span>${e(t)}</span></div>`).join("");
@@ -196,7 +197,9 @@ function vis(){ const q=sinT($("o-q").value);
     && (!$("o-epc").value||p.epc===$("o-epc").value)
     && (!$("o-equipo").value||(p.equipos||[]).includes($("o-equipo").value))
     && cumpleFecha(p)
-    && (!$("o-man").checked||p.verificado_manual) && (!$("o-pro").checked||p.propias_n>0)
+    && (!$("o-man").checked||p.verificado_manual)
+    && (!$("o-prioritarias").checked||(p.empresas||[]).length>0)
+    && (!$("o-pro").checked||p.propias_n>0)
    && (!q || sinT(JSON.stringify([p.obra,p.operadora,p.epc,p.desarrolladora,p.ingenieria,p.provincia,p.localidad,p.sector,p.empresas,p.subobras,p.tipo_obra])).includes(q))); }
 function fechas(p){ const f=p.fechas||{}; const con=CAMPOS.filter(([k])=>f[k]); const sin=CAMPOS.filter(([k])=>!f[k]&&k!=="aprobacion_rigi");
   return (con.length?`<table>${con.map(([k,l])=>`<tr><td style="width:42%">${l}</td><td>${e(f[k].texto)}<span class="fc ${f[k].tipo}">${f[k].tipo}</span></td></tr>`).join("")}</table>`:"")
@@ -207,7 +210,7 @@ function pintar(){ kp(); const L=vis();
   $("o-resumen").textContent=`Mostrando ${L.length} de ${D.proyectos.length} obras · ${titulo}`;
   $("o-lista").innerHTML = L.length ? L.map(p=>{ const i=T.indexOf(p.tipo); return `<div class="c t${i}">
    <div class="tt">${e(p.obra)}</div>
-   <div><span class="prioridad ${e(p.prioridad_comercial)}">PRIORIDAD ${e(p.prioridad_comercial)}</span><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${p.propias_n?`<span class="bd bp">⭐ ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s) de tu lista"}</span>`:''}</div>
+   <div><span class="prioridad ${e(p.prioridad_comercial)}">PRIORIDAD ${e(p.prioridad_comercial)}</span><span class="bd b${i}">${e(p.tipo)}</span>${p.verificado_manual?'<span class="bd bv">Verificado manualmente</span>':''}${(p.empresas||[]).length?`<span class="bd bp">⭐ Prioritarias DEEP: ${e(p.empresas.join(", "))}</span>`:''}${p.propias_n?`<span class="bd bv">Cartera verificada: ${p.propias.length?e(p.propias.join(", ")):p.propias_n+" empresa(s)"}</span>`:''}</div>
    <div class="st">${e(p.estado||"")}</div>
    ${(p.subobras||[]).length?`<div class="st"><b>Subobras:</b> ${e(p.subobras.join(" · "))}</div>`:""}
    <div class="g"><div><span>Operadora / titular</span>${ni(p.operadora)}</div><div><span>Desarrolladora</span>${ni(p.desarrolladora)}</div>
@@ -222,7 +225,7 @@ function pintar(){ kp(); const L=vis();
 $("o-nov").innerHTML = (D.novedades.length ? D.novedades.map(n=>
   `<div class="nv"><b>${e(n.tipo)}:</b> ${e(n.mensaje)} ${n.link?`<a href="${e(n.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="ni">· ${e((n.fecha||"").slice(0,10))}</span></div>`).join("") : `<div class="ni">Sin novedades todavía.</div>`);
 $("o-fu").innerHTML = `<h2>Fuentes del módulo de obras</h2><div class="ni" style="font-size:13px">Actualizado ${e(D.generado)}</div>` + D.fuentes.map(s=>`<div class="nv"><b>${e(s.nombre)}</b> <span class="${s.estado==="ok"?"ok":"error"}">${s.estado==="ok"?"Funcionando":"Sin respuesta"}</span><br><span class="ni">${e(s.detalle)}</span></div>`).join("");
-["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta","o-man","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
+["o-q","o-sec","o-prov","o-prio","o-oper","o-des","o-ing","o-epc","o-equipo","o-fecha","o-desde","o-hasta","o-man","o-prioritarias","o-pro"].forEach(id=>$(id).addEventListener("input",pintar));
 $("o-csv").onclick=()=>{ const cols=["prioridad_comercial","motivo_prioridad","tipo","obra","estado","operadora","desarrolladora","ingenieria","epc","provincia","localidad","sector","presupuesto"];
   const fl=["lic_productos","lic_obra","inicio_compras","inicio_obra","fin_obra"];
   const q=v=>`"${(v??"").toString().replace(/"/g,'""')}"`;
