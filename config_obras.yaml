@@ -1,0 +1,181 @@
+# ============================================================================
+# Módulo "Obras futuras y oportunidades privadas" — configuración
+# Es independiente de config.yaml (el de licitaciones públicas no se toca).
+# ============================================================================
+
+activo: true
+dias_hacia_atras: 45        # antigüedad máxima de las notas a revisar
+
+# Mostrar en el tablero QUÉ empresa de tu lista aparece en una noticia.
+# Si el tablero es público (GitHub Pages gratis), dejar en false: igual se marca con ⭐
+# que apareció una empresa de tu lista, pero sin decir cuál.
+mostrar_nombres_empresas_propias: false
+
+# Lectura con inteligencia artificial (opcional). Si se carga la clave ANTHROPIC_API_KEY
+# en GitHub (Settings → Secrets), completa mejor obra, contratista, ingeniería y fechas.
+# Sin clave, el agente usa sus reglas propias. En ambos casos solo acepta datos que
+# estén escritos textualmente en la nota.
+ia:
+  modelo: claude-haiku-5-5
+  max_notas_por_corrida: 40
+
+# ----------------------------------------------------------------------------
+# Medios especializados. Para cada medio se prueba primero su canal RSS propio y,
+# además, una búsqueda en Google Noticias limitada a ese sitio.
+# ----------------------------------------------------------------------------
+medios:
+  - {nombre: EconoJournal, sitio: econojournal.com.ar, rss: "https://econojournal.com.ar/feed/"}
+  - {nombre: Energía Estratégica, sitio: energiaestrategica.com, rss: "https://www.energiaestrategica.com/feed/"}
+  - {nombre: Panorama Minero, sitio: panorama-minero.com, rss: "https://www.panorama-minero.com/feed/"}
+  - {nombre: Mining Press, sitio: miningpress.com}
+  - {nombre: Más Energía, sitio: mase.lmneuquen.com}
+  - {nombre: Diario Río Negro – Energía, sitio: rionegro.com.ar/energia}
+
+# Búsquedas generales en Google Noticias (Argentina). Encuentran notas de cualquier medio.
+busquedas:
+  - licitación obra parque solar OR eólico OR subestación Argentina
+  - licitación EPC gasoducto OR oleoducto OR planta compresora Argentina
+  - RIGI aprobado proyecto
+  - adjudicó construcción planta minera litio OR cobre Argentina
+  - registro de proveedores proyecto Vaca Muerta OR minero
+  - almacenamiento baterías BESS licitación Argentina
+  - línea de alta tensión licitación obra Argentina
+
+  # Monitoreo específico de empresas del directorio DEEP.
+  # Son consultas adicionales; no se eliminan las búsquedas existentes.
+  - '"Transener" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Siemens Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Genneia" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Pluspetrol" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Tecpetrol" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edenor" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"EDESA" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"ENERFE" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edesur" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"YPF Luz" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Pampa Energía" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Central Puerto" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"TGS" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"TGN" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Oldelval" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"SACDE" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Techint Ingeniería y Construcción" licitación OR obra OR ampliación OR inversión
+  OR proveedores Argentina'
+  - '"Contreras Hermanos" licitación OR obra OR ampliación OR inversión OR proveedores
+  Argentina'
+  - '"Aluar" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Glencore" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"PCR" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"MSU Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Elecnor" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Edison Energía" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Vista Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"YPF" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Raízen" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Axion Energy" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"Profertil" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+  - '"VMOS" licitación OR obra OR ampliación OR inversión OR proveedores Argentina'
+
+# Empresas adicionales del directorio energético 2026 (búsquedas públicas).
+# La mención de una empresa no implica obra ni compra confirmada.
+  - "\"Pan American Energy\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Chevron Argentina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"CGC\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"TotalEnergies\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Phoenix Global Resources\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Shell Argentina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"SLB\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Halliburton\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Baker Hughes\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Weatherford\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"San Antonio Internacional\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"El Pachón MARA\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Los Azules\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Eramine Sudamérica\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Proyecto Vicuña\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Rio Tinto Rincón litio\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Galán Lithium\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Sal de Vida\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"EXAR Cauchari Olaroz\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"PSJ Cobre Mendocino\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"OTASA\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Pecom Skanska\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Ingeniería Alsina\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Refi Pampa\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Refinor\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"PBB Polisur\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+  - "\"Camuzzi Gas\" obra OR licitación OR ampliación OR contratista OR proveedores Argentina"
+
+
+  # Empresas adicionales seleccionadas del Excel de contactos; consultas agrupadas
+  - ("A3 Servicios Constructivos SRL" OR "ABB SAU" OR "Acindar") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Acindar IASA" OR "Acindar Industria Argentina de Aceros S.A" OR "Aggreko Argentina SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("AGLIETTO INGENIERIA SRL" OR "AIT SA (ARTECHE)" OR "ALPER QUÍMICA SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("ArcelorMittal Acindar" OR "Artec Ingeniería S.A." OR "ARTECHE AIT SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Atlas Copco" OR "Avanz Ingenieria SRL" OR "BATERIAS MOURA DE ARGENTINA S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Benito Roggio e Hijos" OR "BTZ MINERA S.A." OR "CAELIS ENERGY SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("CCG Electrónica S.A." OR "Cementos Avellaneda S.A." OR "Construcciones Electricas Zorzan S.a.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Constructora Sudamericana S.A.C.I.F.I.A." OR "Contreras SA" OR "Control de Componentes Electrónicos S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Data Oil SRL" OR "DATAOIL SRL" OR "depaoli & trosce constructora srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("DISTROCUYO S.A." OR "DMD COMPRESORES SAIC" OR "Ebinox Mining") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Electro Cordoba SA" OR "ELECTROMAC S.A." OR "Electromecanica VIC S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Electronic S.A." OR "EMET INGENIERIA SRL" OR "Emprendimientos Eléctricos del Sur S.A") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("EPCA INDUSTRIAL SRL" OR "Estudios Integrales Ingeniería y Servicios SA" OR "Fluence Argentina S. A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Fohama Electromecanica Srl" OR "Hidromaq srl" OR "Hidroper SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Holcim Argentina S.A" OR "HSE INGENIERIA SRL" OR "Ifm electronic srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INDUSTRIA BASICA SA" OR "INDUSTRIAS DE TECNICAS CONSTRUCTIVAS S.A." OR "Industrias Electromagneticas Voltohm SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Industrias Juan F Secco" OR "Industrias Químicas DEMS S.A." OR "INELPA TRANSFORMADORES SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INGAV Empresa Constructora" OR "INGENIERIA ELECTRICA S.A" OR "Ingenieros Electronicos Asociados SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("INSA SERVICIOS DE INGENIERIA ARGENTINA" OR "John Crane Argentina SA" OR "José Cartellone Construcciones Civiles S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("JS NORTE INGENIERIA SRL" OR "Lasertec Ingenieria SA" OR "LEYDEN S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("LEYDEN S.A.I.C. Y F." OR "LFR CONSTRUCTORA VIAL S.A" OR "LOMA NEGRA C.I.A.S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Loma Negra CIASA" OR "LS ELECTROMECANICA SA" OR "MAQOIL SAIC") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("MAYO TRANSFORMADORES S.R.L." OR "MCA INGENIERIA SA" OR "Melectric sa") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Metalurgica Del Sur S.A." OR "MILICIC" OR "Milicic Minería S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("More Energy S.A.S." OR "NEO ENERGY S.A" OR "Nuclearlab SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("OIL CONTROL S.A" OR "Oilfield & Production Services SRL" OR "Oilfield producción services srl") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PARQUE INDUSTRIAL VACA MUERTA" OR "PECOM Ingeniería y Construcciones SA" OR "Petroandina SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PETROQUIMICA CUYO SAIC" OR "Petroquímica Comodoro Rivadavia S.A." OR "Petroquímica Cuyo S.A.I.C") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("PH CONSTRUCTORA SRL" OR "Proind Ingeniería SA" OR "Proyeccion Electroluz s.r.l.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("prysmian argentina" OR "Prysmian Energía Cables & Sistemas de Argentina S.A." OR "Prysmian Energía Cables y Sistemas de Argentina SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Quimica Oeste S.A." OR "Representaciones Mineras SRL" OR "Rilei Ingenieria SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("RIZOMA INGENIERA SA" OR "Ruhrpumpen Argentina sa" OR "SAM ENERGY SRL") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SAXUM Ingenieria SA" OR "SEMISA INFRAESTRUCTURA S.A." OR "SEW Eurodrive Argentina SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SIAL INGENIERIA S.R.L" OR "SICA METALURGICA ARGENTINA SA" OR "SICA SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SIDERSA SA" OR "sie ingenieria srl" OR "Sistemas Energeticos SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("SOLUCIONES CONSTRUCTIVAS SA" OR "Soluciones en Ingeniería de Manufactura SRL" OR "SPARK ENERGY SOLUTIONS SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Stib Ingeniería SRL" OR "Sullair Argentina S.A." OR "Talde Energy") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Tecnowatt Ingenieria SAS" OR "TUBOS TRANS ELECTRIC S.A" OR "VALBOL - Válvulas Worcester de Argentina S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Valvulas Worcester de Argentina" OR "VENERGY SA" OR "Víctor Contreras SA") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("WEG Equipamiento Eléctricos" OR "WG Ingeniería Eléctrica S.A." OR "WINDLAND S.A.") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+  - ("Zenit Ingeniería SAS") (obra OR proyecto OR licitación OR ampliación OR EPC OR proveedores) Argentina
+
+# ----------------------------------------------------------------------------
+# Qué cuenta como obra y qué equipos de DEEP podría necesitar.
+# Los equipos son POTENCIALES: se deducen del tipo de obra, no de la nota.
+# ----------------------------------------------------------------------------
+tipos_de_obra:
+  Parque solar: {claves: [parque solar, planta solar, fotovoltaic], equipos: [UPS para control y SCADA, Rectificadores y bancos de baterías para servicios auxiliares, Tableros de corriente continua]}
+  Parque eólico: {claves: [parque eolico, parque eólico, aerogenerador], equipos: [UPS para control y SCADA, Rectificadores y bancos de baterías para la subestación, Tableros]}
+  Almacenamiento (BESS): {claves: [almacenamiento, bess, baterias de gran escala], equipos: [Bancos de baterías, Inversores, Rectificadores para servicios auxiliares]}
+  Subestación / transmisión: {claves: [subestacion, estacion transformadora, linea de alta tension, lat 500, lat 132, transmision electrica, ampliacion de transporte], equipos: [Rectificadores-cargadores 110/125 Vcc, Bancos de baterías estacionarias, Tableros de servicios auxiliares cc]}
+  Central térmica / hidro / nuclear: {claves: [central termica, ciclo combinado, central hidroelectrica, represa, central nuclear, aprovechamiento hidroelectrico], equipos: [Sistemas de corriente continua 125/220 Vcc, Bancos de baterías, UPS industriales, Inversores]}
+  Oleoducto / gasoducto: {claves: [oleoducto, gasoducto, poliducto, ducto, estacion de bombeo], equipos: [UPS industriales para control de estaciones, Rectificadores y baterías para protección catódica y telecomando, Cargadores industriales]}
+  Planta compresora / tratamiento: {claves: [planta compresora, planta de tratamiento de gas, planta de procesamiento, planta de gnl, licuefaccion, ngl, planta separadora], equipos: [UPS industriales trifásicas, Rectificadores 110/125 Vcc, Bancos de baterías, Tableros de inversores]}
+  Puerto / terminal: {claves: [terminal portuaria, puerto petrolero, monoboya, terminal de exportacion, tanques de almacenamiento], equipos: [UPS industriales, Rectificadores y baterías, Tableros]}
+  Refinería / petroquímica: {claves: [refineria, petroquimic, planta de urea, planta de fertilizantes, cracker], equipos: [UPS industriales para DCS, Sistemas de corriente continua, Bancos de baterías]}
+  Mina / planta minera: {claves: [mina, minero, planta de litio, carbonato de litio, cobre, concentradora, planta de procesamiento minero, salar], equipos: [UPS industriales para control de planta, Rectificadores y bancos de baterías para subestación de la mina, Cargadores industriales]}
+  Industria / data center: {claves: [planta industrial, acería, aceria, data center, centro de datos, fabrica], equipos: [UPS industriales trifásicas, Bancos de baterías, Tableros de inversores]}
+
+# Palabras que indican movimiento comercial (suman puntos).
+senales:
+  licitacion: [licitacion, licitara, convocatoria, llamado a, pliego, recepcion de ofertas, concurso de precios, rfq, rfp]
+  proveedores: [registro de proveedores, ronda de proveedores, encuentro de proveedores, proveedores locales, compre local, busca proveedores, convocatoria a proveedores, precalificacion de proveedores, licitacion privada]
+  adjudicacion: [adjudico, adjudicacion, adjudicada, contrato epc, firmo el contrato, contratista, contrato de construccion, adjudicataria, selecciono contratista]
+  inversion: [inversion de, invertira, invertiran, inversiones por, rigi, decision final de inversion, fid, aprobo el proyecto, financiamiento para, desembolso para, plan de inversiones, anuncio una inversion]
+  obra: [construccion, construira, construiran, obra, obras, ampliacion, ampliara, montaje, puesta en marcha, inicio de obra, nueva planta, nuevo parque, nueva subestacion, proyecto de expansion, comenzara a construir, desarrollara, ejecutara, instalacion de equipos]
+
+# Notas que no sirven (finanzas, política sin obra, precios).
+excluir: [acciones de, cotizacion, bonos, dolar blue, riesgo pais, tarifa social, paritaria, balance trimestral, resultado trimestral]
+
+puntaje_minimo: 4
