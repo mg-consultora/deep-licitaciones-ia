@@ -8,6 +8,7 @@ import re
 import unicodedata
 from datetime import datetime
 from collections import Counter
+from html import escape as html_escape
 from pathlib import Path
 from .filtros import Filtro
 
@@ -67,11 +68,14 @@ def evaluar(p):
 def _clasificar(procesos, filtro, ahora):
     ahora = (ahora or datetime.now()).replace(tzinfo=None)
     salida, motivos = {}, Counter()
+    ejemplos = {}
     for original in procesos:
         p = dict(original)
         puntos, prioridad = evaluar(p)
         if not puntos:
             motivos["sin_evidencia_o_excluido"] += 1
+            if len(ejemplos) < 8:
+                ejemplos[str(p.get("titulo") or "Sin título")[:95]] = prioridad
             continue
         estado = norm(p.get("estado"))
         if any(x in estado for x in CERRADOS):
@@ -120,6 +124,7 @@ def _clasificar(procesos, filtro, ahora):
         motivos["admitido_" + semaforo] += 1
     orden = {"amarillo": 0, "verde": 1, "gris": 2}
     filas = sorted(salida.values(), key=lambda p: (orden[p["semaforo"]], -p["puntaje"], p["dias"] if p["dias"] is not None else 9999))
+    motivos["ejemplos"] = ejemplos
     return filas, motivos
 
 
@@ -145,17 +150,23 @@ def generar(ruta: Path, procesos: list[dict], alertas: list[dict], fuentes: list
             titulo: str = "Tablero de licitaciones", nota: str = "", ahora: datetime | None = None) -> Path:
     ahora = ahora or datetime.now()
     filas, motivos = _clasificar(procesos, filtro, ahora)
-    # Diagnóstico real de esta etapa: no confundir 0 coincidencias con 0 licitaciones en el país.
-    diagnostico = (f"<b>Control de clasificación:</b> {len(procesos)} registros recibidos; "
-                   f"{len(filas)} oportunidades visibles; "
-                   f"{motivos['sin_evidencia_o_excluido']} sin evidencia industrial suficiente; "
-                   f"{motivos['vencido']} vencidos; "
-                   f"{motivos['apertura_pasada_sin_cierre']} con apertura pasada sin cierre confirmado; "
-                   f"{motivos['sin_evidencia_temporal']} sin evidencia temporal. "
-                   "Las oportunidades grises requieren verificación oficial y no son convocatorias abiertas.")
-    nota = (nota + "<hr>" if nota else "") + diagnostico
+    # Diagnóstico estructurado y visible en una sección independiente.
+    # No mezclarlo con nota: otras integraciones pueden reescribir ese campo.
+    diagnostico = {
+        "recibidos": len(procesos),
+        "visibles": len(filas),
+        "sin_evidencia": motivos["sin_evidencia_o_excluido"],
+        "cerrados": motivos["cerrado_o_adjudicado"],
+        "vencidos": motivos["vencido"],
+        "cierre_invalido": motivos["cierre_invalido"],
+        "apertura_pasada": motivos["apertura_pasada_sin_cierre"],
+        "sin_fecha": motivos["sin_evidencia_temporal"],
+        "publicacion_fuera_periodo": motivos["publicacion_fuera_periodo"],
+        "ejemplos": motivos["ejemplos"],
+    }
+    print("DIAGNOSTICO TABLERO DEEP: " + json.dumps(diagnostico, ensure_ascii=False))
     datos = {"generado": ahora.strftime("%d/%m/%Y %H:%M"), "dias_amarillo": filtro.dias_amarillo,
-             "procesos": filas, "alertas": filtrar_alertas(alertas, filas), "fuentes": fuentes, "nota": nota}
+             "procesos": filas, "alertas": filtrar_alertas(alertas, filas), "fuentes": fuentes, "nota": nota, "diagnostico": diagnostico}
     html = PLANTILLA.replace("__TITULO__", titulo).replace("__DATOS__", json.dumps(datos, ensure_ascii=False).replace("</", "<\\/"))
     ruta.write_text(html, encoding="utf-8")
     return ruta
@@ -215,7 +226,7 @@ a{color:var(--ac)}.mut{color:var(--mut)}
   <div id="control-detalle" style="margin-top:10px">Verificando procesos...</div>
 </details>
 <main>
-<div id="nota"></div><div class="panel"><b>Dos circuitos:</b> verde/amarillo = convocatoria vigente con cierre de ofertas confirmado; gris = oportunidad relevante pendiente de verificar. Las vencidas quedan fuera del listado activo. Las obras privadas mantienen su pestaña independiente.</div>
+<div id="nota"></div><div class="panel" id="diagnostico-deep"><b>Control de clasificación</b><p>Esperando diagnóstico de la ejecución…</p></div><div class="panel"><b>Dos circuitos:</b> verde/amarillo = convocatoria vigente con cierre de ofertas confirmado; gris = oportunidad relevante pendiente de verificar. Las vencidas quedan fuera del listado activo. Las obras privadas mantienen su pestaña independiente.</div>
 <div class="kpis" id="kpis"></div>
 <div class="panel" id="alertas"></div>
 <div class="filtros">
@@ -238,6 +249,16 @@ const f = v => { if(!v) return "—"; const d=new Date(v); const t=d.toLocaleDat
   return (d.getHours()||d.getMinutes()) ? t+" "+d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}) : t; };
 $("sub").textContent = `Actualizado ${D.generado} · amarillo = vence en menos de ${D.dias_amarillo} días`;
 if (D.nota) $("nota").innerHTML = `<div class="nota">${D.nota}</div>`;
+const diag=D.diagnostico||{};
+const n=(k)=>Number(diag[k]||0);
+$("diagnostico-deep").innerHTML=`<b>Control de clasificación DEEP</b>
+ <p><b>${n("recibidos")}</b> registros recibidos; <b>${n("visibles")}</b> oportunidades visibles;
+ <b>${n("sin_evidencia")}</b> sin evidencia industrial suficiente;
+ <b>${n("vencidos")}</b> vencidos; <b>${n("cerrados")}</b> cerrados/adjudicados;
+ <b>${n("apertura_pasada")}</b> con apertura pasada sin cierre confirmado;
+ <b>${n("sin_fecha")}</b> sin fecha verificable.</p>
+ <small>La lectura de fuentes no equivale a encontrar convocatorias abiertas. Los avisos sin evidencia suficiente no se publican como oportunidades vigentes.</small>`;
+
 function opciones(id, campo, rot){ const vals=[...new Set(D.procesos.map(p=>p[campo]).filter(Boolean))].sort();
   $(id).innerHTML = `<option value="">${rot}: todos</option>` + vals.map(v=>`<option>${esc(v)}</option>`).join(""); }
 opciones("sector","sector","Sector"); opciones("prov","provincia","Provincia"); opciones("fuente","fuente","Fuente");
