@@ -1,3 +1,7 @@
+# DEEP — tablero público: versión consolidada (2026–2027).
+# Reemplaza únicamente claude/licitaciones/tablero.py.
+# Conserva historial SQLite y no modifica obras.py ni horarios de GitHub.
+# La ausencia de resultados NO implica ausencia de licitaciones: revisar fuentes con error.
 """Genera el tablero: un único archivo HTML que se abre en cualquier navegador (también en el celular)."""
 from __future__ import annotations
 
@@ -34,11 +38,11 @@ def _normalizar(s):
 EXCLUIR = (
     "aeronautic", "aeronautica", "aeronave", "avion", "helicopter", "fuerza aerea",
     "aeropuerto", "aerolinea", "automotor", "vehiculo", "automovil", "camion",
-    "baterias de 12 v y 8v",
+    "baterias de 12 v y 8v", "baterias de 12v y 8v", "baterias de 12 y 8v",
     "motociclet", "maquinaria vial", "cartucho de bateria", "bateria de recambio en ups",
     "computadora", "notebook", "pc de escritorio", "impresora", "informatica",
     "toner", "telefonia celular", "telefono movil", "materiales de construccion",
-    "fiscalizacion tecnica", "servicio de fiscalizacion", "servicio de limpieza",
+    "fiscalizacion tecnica", "servicio de fiscalizacion", "supervision de obra", "inspeccion de obra", "servicio de limpieza",
     "servicio de vigilancia", "articulos de oficina",
 )
 
@@ -60,7 +64,9 @@ def _relevante(p):
     titulo = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "organismo", "tipo_contratacion")))
     if any(t in titulo for t in EXCLUIR):
         return False
-    detalle = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "terminos", "sector")))
+    # Etiquetas automáticas y el sector NO acreditan que se compren equipos.
+    # Ej.: una fiscalización de subestación puede etiquetarse «rectificador».
+    detalle = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro")))
     return any(t in detalle for t in INDUSTRIALES)
 
 
@@ -98,7 +104,7 @@ def _alertas_relevantes(alertas, procesos):
     titulos = {_normalizar(p.get("titulo")) for p in procesos if p.get("titulo")}
     resultado = []
     for a in alertas:
-        mensaje = _normalizar(a.get("mensaje"))
+        mensaje = _normalizar(" ".join(str(a.get(k) or "") for k in ("mensaje", "titulo", "organismo")))
         if any(x in mensaje for x in EXCLUIR):
             continue
         enlace = str(a.get("link") or "").strip()
@@ -199,24 +205,29 @@ const D = __DATOS__;
 // Defensa adicional en el navegador: evita mostrar avisos antiguos o ajenos
 // aunque otra etapa del proceso haya incorporado datos sin filtrar.
 const sinAcentos = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const noDEEP = /aeronaut|aeronave|avion|helicopter|fuerza aerea|aeropuerto|automotor|vehicul|camion|motocicl|baterias de 12 v y 8v|cartuchos? de bateria|notebook|computadora|informatica|impresora|fiscalizacion tecnica|materiales de construccion/;
+const noDEEP = /aeronaut|aeronave|avion|helicopter|fuerza aerea|aeropuerto|automotor|vehicul|camion|motocicl|baterias de 12\s*v y 8\s*v|cartuchos? de bateria|notebook|computadora|informatica|impresora|fiscalizacion tecnica|fiscalizacion de obra|materiales de construccion/;
 const siDEEP = /ups industrial|ups trifasic|sai industrial|energia critica|rectificador|cargador(?:es)? de bater|banco(?:s)? de bater|baterias? estacionari|ni.cd|plomo.calcio|vrla|inversor industrial|convertidor industrial|(?:48|110|125|220) vcc|alimentacion ininterrumpida industrial/;
 const fechaValida = v => { if (!v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) || ![2026,2027].includes(d.getFullYear()) ? null : d; };
 const esVigenteDEEP = p => {
   const titulo = sinAcentos([p.titulo,p.organismo,p.tipo_contratacion].join(" "));
-  const detalle = sinAcentos([p.titulo,p.terminos,p.sector].join(" "));
+  const detalle = sinAcentos([p.titulo,p.objeto,p.descripcion,p.rubro].join(" "));
   const cierre = fechaValida(p.fecha_presentacion);
   const estado = sinAcentos(p.estado);
   return !noDEEP.test(titulo) && siDEEP.test(detalle) && cierre && cierre.getTime() > Date.now()
     && !/adjudic|preadjudic|desierta|anulad|cancelad|finalizad|cerrad|sin efecto/.test(estado);
 };
-D.procesos = (D.procesos || []).filter(esVigenteDEEP);
+D.procesos = (D.procesos || []).filter(esVigenteDEEP).map(p=>{
+  const cierre = fechaValida(p.fecha_presentacion);
+  const dias = Math.max(0,Math.ceil((cierre.getTime()-Date.now())/86400000));
+  return {...p,dias,semaforo:dias<=Number(D.dias_amarillo||7)?"amarillo":"verde"};
+});
 const titulosValidos = D.procesos.map(p=>sinAcentos(p.titulo)).filter(t=>t.length>=18);
+const numerosValidos = D.procesos.map(p=>sinAcentos(p.numero_proceso)).filter(t=>t.length>=7);
 const linksValidos = new Set(D.procesos.map(p=>p.link).filter(Boolean));
 D.alertas = (D.alertas || []).filter(a => {
   const mensaje = sinAcentos(a.mensaje);
   return !noDEEP.test(mensaje) &&
-    ((a.link && linksValidos.has(a.link)) || titulosValidos.some(t=>mensaje.includes(t)));
+    ((a.link && linksValidos.has(a.link)) || titulosValidos.some(t=>mensaje.includes(t)) || numerosValidos.some(n=>mensaje.includes(n)));
 });
 const COL = {verde:"En plazo",amarillo:"Vence pronto",rojo:"Vencida",gris:"Sin fecha (verificar)"};
 const activos = new Set(["verde","amarillo"]);
@@ -260,6 +271,12 @@ $("alertas").innerHTML = `<h2>Novedades: circulares y cambios de fecha</h2>` + (
   `<div class="alerta"><span class="tag">${esc(a.tipo)}</span>${esc(a.mensaje)} ${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="mut">· ${f(a.fecha)}</span></div>`).join("")
   : `<div class="mut">Sin novedades desde la última revisión.</div>`);
 const EST={ok:"Funcionando",error:"Con error",pendiente_credenciales:"Pendiente de usuario y clave",desactivada:"Desactivada"};
+const fuentesConError=(D.fuentes||[]).filter(s=>s.estado!=="ok" && s.estado!=="desactivada");
+if(fuentesConError.length){
+  const aviso=document.createElement("div"); aviso.className="nota";
+  aviso.textContent="Atención: "+fuentesConError.length+" fuente(s) sin verificación satisfactoria en esta actualización. El tablero puede estar incompleto; controlá los portales oficiales.";
+  $("nota").appendChild(aviso);
+}
 $("fuentes").innerHTML = `<h2>Fuentes</h2>` + D.fuentes.map(s=>`<div class="fuente"><div><b>${esc(s.nombre)}</b><br><span class="mut">${esc(s.detalle)}</span></div>
   <div class="est ${s.estado}">${EST[s.estado]||s.estado}</div></div>`).join("");
 ["q","sector","prov","fuente"].forEach(id=>$(id).addEventListener("input",pintar));
@@ -319,6 +336,7 @@ pintar();
     }
   }
 
+  if(fuentesConError.length){hayError=true;resultados.push(`<div style="padding:6px 0"><b>Fuentes de licitaciones</b>: ${fuentesConError.length} sin verificación satisfactoria</div>`);}
   indicador.textContent = hayError ? "🔴 Control" : "🟢 Control";
   detalle.innerHTML = resultados.join("");
 })();
