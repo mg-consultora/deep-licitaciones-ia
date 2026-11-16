@@ -1,138 +1,124 @@
-# DEEP — tablero público: versión consolidada (2026–2027).
-# Reemplaza únicamente claude/licitaciones/tablero.py.
-# Conserva historial SQLite y no modifica obras.py ni horarios de GitHub.
-# La ausencia de resultados NO implica ausencia de licitaciones: revisar fuentes con error.
-"""Genera el tablero: un único archivo HTML que se abre en cualquier navegador (también en el celular)."""
+# DEEP S.A. — tablero con puntuación comercial P1/P2/P3.
+# ÚNICO ARCHIVO A REEMPLAZAR: claude/licitaciones/tablero.py
+# No altera SQLite, fuentes, workflows, obras.py ni la pestaña de 67 obras.
+"""Genera HTML de licitaciones vigentes y potenciales por verificar."""
 from __future__ import annotations
-
 import json
+import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
-
 from .filtros import Filtro
 
+# Términos y puntuación: la coincidencia genérica nunca equivale a convocatoria abierta.
+P1 = ("ups industrial", "ups trifasica", "sai industrial", "sistema de alimentacion ininterrumpida", "fuente de alimentacion ininterrumpida", "alimentacion ininterrumpida", "rectificador", "cargador de baterias", "cargador rectificador", "banco de baterias", "baterias estacionarias", "baterias industriales", "inversor industrial", "convertidor cc/cc", "convertidor cc/ca", "sistema de corriente continua", "tablero de corriente continua", "sistema de energia segura", "alimentacion de emergencia")
+P2 = ("estacion transformadora", "subestacion electrica", "subestacion", "servicios auxiliares", "ssaa", "proteccion y control", "automatizacion de subestaciones", "central hidroelectrica", "central termoelectrica", "parque solar", "fotovoltaico", "parque eolico", "almacenamiento energetico", "bess", "infraestructura electrica industrial", "distribucion de energia", "transmision electrica")
+P3 = ("planta industrial", "ampliacion de capacidad", "modernizacion electrica", "repotenciacion", "renovacion de equipamiento", "mantenimiento de sistemas electricos", "automatizacion industrial", "infraestructura minera", "proyecto minero", "planta de tratamiento", "gasoducto", "oleoducto", "estacion de bombeo", "estacion compresora", "refineria", "planta petroquimica")
+SECTORES = ("energia", "mineria", "petroleo", "oil & gas", "petroquimica", "siderurgia", "ferrocarril", "transmision electrica", "distribucion electrica")
+TECNICAS = ("24 vcc", "48 vcc", "110 vcc", "125 vcc", "220 vcc", "220 vca", "230 vca", "380 vca", "400 vca", "vrla", "agm", "gel", "pb-ca", "ni-cd", "ni cd", "plomo-acido", "niquel-cadmio", "doble conversion", "redundancia n+1", "cargador dual", "trifasico", "unifilar", "pdtg", "fat", "sat", "retrofit")
+SUMINISTRO = ("suministro", "adquisicion", "provision", "instalacion", "puesta en marcha", "mantenimiento", "reparacion", "reemplazo", "renovacion")
+EXCLUSION = ("uso aeronautico", "aeronautica", "aeronave", "aviones", "helicoptero", "fuerza aerea", "bateria automotriz", "baterias automotrices", "bateria de motocicleta", "arranque vehicular", "baterias para vehiculos", "baterias para camiones", "power bank", "cargador de celular", "pila domestica", "pilas domesticas", "toner", "mobiliario de oficina", "cartuchos de bateria de recambio", "fiscalizacion tecnica", "servicio de fiscalizacion", "inspeccion de obra", "supervision de obra")
+EXCLUSION_INFORMATICA = ("ups para pc", "ups para computadora", "ups informatica", "notebooks", "computadoras personales", "perifericos", "impresoras")
+CERRADOS = ("adjudic", "preadjudic", "desiert", "anulad", "cancelad", "finalizad", "cerrad", "sin efecto", "revocad")
 
-def _dt(v):
-    """Ignora fechas imposibles o fuera del período de seguimiento."""
-    if not v:
-        return None
+def norm(s):
+    s = unicodedata.normalize("NFKD", str(s or "").lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", s)
+
+def contiene(t, term):
+    # Límites de palabra: evita coincidencias parciales absurdas.
+    return re.search(r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", t) is not None
+
+def coincide(t, terminos):
+    return any(contiene(t, x) for x in terminos)
+
+def fecha(v):
+    if not v: return None
     try:
-        fecha = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
-        if fecha.year not in (2026, 2027):
-            return None
-        return fecha.replace(tzinfo=None)
+        d = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        return d.replace(tzinfo=None) if d.year in (2026, 2027) else None
     except (ValueError, TypeError, OverflowError):
         return None
 
-
-def _normalizar(s):
-    import re
-    import unicodedata
-    s = unicodedata.normalize("NFKD", str(s or ""))
-    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
-    return re.sub(r"\s+", " ", s)
-
-
-# Exclusiones específicas: una coincidencia en el título/organismo descarta el aviso.
-EXCLUIR = (
-    "aeronautic", "aeronautica", "aeronave", "avion", "helicopter", "fuerza aerea",
-    "aeropuerto", "aerolinea", "automotor", "vehiculo", "automovil", "camion",
-    "baterias de 12 v y 8v", "baterias de 12v y 8v", "baterias de 12 y 8v",
-    "motociclet", "maquinaria vial", "cartucho de bateria", "bateria de recambio en ups",
-    "computadora", "notebook", "pc de escritorio", "impresora", "informatica",
-    "toner", "telefonia celular", "telefono movil", "materiales de construccion",
-    "fiscalizacion tecnica", "servicio de fiscalizacion", "supervision de obra", "inspeccion de obra", "servicio de limpieza",
-    "servicio de vigilancia", "articulos de oficina",
-)
-
-# Un término genérico como 'batería' o 'subestación' no basta para adjudicar
-# relevancia comercial. Exigimos una descripción industrial reconocible.
-INDUSTRIALES = (
-    "ups industrial", "ups trifasic", "sai industrial", "energia critica",
-    "rectificador", "cargador de bateria", "cargadores de bateria",
-    "banco de bateria", "bancos de bateria", "bateria estacionaria",
-    "baterias estacionarias", "ni-cd", "ni cd", "nicd", "plomo calcio",
-    "plomo-calcio", "vrla", "inversor industrial", "inversores industriales",
-    "convertidor industrial", "convertidores industriales",
-    "110 vcc", "125 vcc", "220 vcc", "48 vcc",
-    "sistema de alimentacion ininterrumpida industrial", "baterias de niquel cadmio",
-)
-
-
-def _relevante(p):
-    titulo = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "organismo", "tipo_contratacion")))
-    if any(t in titulo for t in EXCLUIR):
-        return False
-    # Etiquetas automáticas y el sector NO acreditan que se compren equipos.
-    # Ej.: una fiscalización de subestación puede etiquetarse «rectificador».
-    detalle = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro")))
-    return any(t in detalle for t in INDUSTRIALES)
-
+def evaluar(p):
+    # No usar etiquetas automáticas como prueba de suministro de equipos.
+    texto = norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro", "especificaciones")))
+    contexto = norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro", "especificaciones", "sector", "organismo")))
+    directa = coincide(texto, P1)
+    obra = coincide(texto, P2)
+    indirecta = coincide(texto, P3)
+    tecnica = coincide(texto, TECNICAS)
+    sector = coincide(contexto, SECTORES)
+    suministro = coincide(texto, SUMINISTRO)
+    if coincide(texto, EXCLUSION): return 0, "Excluida"
+    # 'informática' no excluye una UPS industrial de un centro de datos.
+    if coincide(texto, EXCLUSION_INFORMATICA) and not (directa and tecnica): return 0, "Excluida"
+    # Baterías de 12/8 V sin aplicación industrial comprobable no son P1.
+    if re.search(r"baterias? de 12\s*v y 8\s*v", texto) and not (directa or tecnica): return 0, "Excluida"
+    if not (directa or obra or indirecta): return 0, "Fuera de alcance"
+    puntos = min(100, (60 if directa else 0) + (30 if obra else 0) + (15 if indirecta else 0) + (15 if tecnica else 0) + (10 if sector else 0) + (15 if suministro else 0))
+    return puntos, ("Alta" if puntos >= 75 else "Media" if puntos >= 40 else "Potencial")
 
 def preparar(procesos: list[dict], filtro: Filtro, ahora: datetime | None = None) -> list[dict]:
     ahora = (ahora or datetime.now()).replace(tzinfo=None)
-    filas = []
+    salida = {}
     for original in procesos:
         p = dict(original)
-        if not _relevante(p):
-            continue
-        # La fecha de PRESENTACIÓN es el plazo relevante, no la apertura de sobres.
-        cierre = _dt(p.get("fecha_presentacion"))
-        apertura = _dt(p.get("fecha_apertura"))
-        publicacion = _dt(p.get("fecha_publicacion"))
-        if not cierre or cierre <= ahora:
-            continue
-        if publicacion and publicacion > ahora:
-            continue
-        estado = _normalizar(p.get("estado"))
-        if any(x in estado for x in ("adjudic", "preadjudic", "desierta", "anulad", "cancelad", "finalizad", "cerrad", "sin efecto")):
-            continue
-        p["semaforo"] = "amarillo" if (cierre - ahora).total_seconds() <= filtro.dias_amarillo * 86400 else "verde"
-        p["dias"] = (cierre.date() - ahora.date()).days
-        p["circulares"] = [h for h in p.get("historial", []) if "ircular" in _normalizar(h.get("estado"))]
-        filas.append(p)
-    filas.sort(key=lambda f: (0 if f["semaforo"] == "amarillo" else 1, f["dias"]))
-    return filas
+        puntos, prioridad = evaluar(p)
+        if puntos < 15: continue
+        estado = norm(p.get("estado"))
+        if any(x in estado for x in CERRADOS): continue
+        cierre = fecha(p.get("fecha_presentacion"))
+        apertura = fecha(p.get("fecha_apertura"))
+        publicacion = fecha(p.get("fecha_publicacion"))
+        if publicacion and publicacion > ahora: continue
+        # Cierre vencido: nunca revivir por apertura posterior.
+        if cierre and cierre <= ahora: continue
+        # Si no hay cierre, no declarar 'EN PLAZO', aun con apertura futura.
+        if cierre:
+            semaforo = "amarillo" if (cierre - ahora).total_seconds() <= filtro.dias_amarillo * 86400 else "verde"
+            dias = max(0, (cierre.date() - ahora.date()).days)
+        else:
+            # Sin fecha de cierre: solo potenciales de la ventana 2026/27.
+            # Si hay apertura anterior a hoy, no asumir vigencia.
+            if apertura and apertura <= ahora: continue
+            if not (apertura or publicacion): continue
+            semaforo, dias = "gris", None
+        p.update(semaforo=semaforo, dias=dias, puntaje=puntos, prioridad=prioridad)
+        p["circulares"] = [h for h in p.get("historial", []) if "circular" in norm(h.get("estado"))]
+        # Dedupe por organismo + número; sin número, por título y organismo.
+        clave = (norm(p.get("organismo")), norm(p.get("numero_proceso")) or norm(p.get("titulo")))
+        anterior = salida.get(clave)
+        if anterior is None or (puntos, bool(cierre)) > (anterior["puntaje"], anterior["semaforo"] != "gris"):
+            salida[clave] = p
+    orden = {"amarillo": 0, "verde": 1, "gris": 2}
+    return sorted(salida.values(), key=lambda p: (orden[p["semaforo"]], -p["puntaje"], p["dias"] if p["dias"] is not None else 9999))
 
-
-def _alertas_relevantes(alertas, procesos):
-    """Solo noticias asociadas a procesos realmente visibles; sin falsos positivos."""
-    import re
-    ids = {str(p.get("numero_proceso") or "").strip().lower() for p in procesos}
-    enlaces = {str(p.get("link") or "").strip() for p in procesos if p.get("link")}
-    titulos = {_normalizar(p.get("titulo")) for p in procesos if p.get("titulo")}
+def filtrar_alertas(alertas, procesos):
+    # Vincular solo a avisos realmente seleccionados; evitar noticias aeronáuticas.
+    validos = [p for p in procesos if p["semaforo"] in ("verde", "amarillo", "gris")]
+    links = {str(p.get("link") or "").strip() for p in validos if p.get("link")}
+    titulos = {norm(p.get("titulo")) for p in validos if len(norm(p.get("titulo"))) >= 18}
+    numeros = {norm(p.get("numero_proceso")) for p in validos if len(norm(p.get("numero_proceso"))) >= 7}
     resultado = []
     for a in alertas:
-        mensaje = _normalizar(" ".join(str(a.get(k) or "") for k in ("mensaje", "titulo", "organismo")))
-        if any(x in mensaje for x in EXCLUIR):
-            continue
-        enlace = str(a.get("link") or "").strip()
-        coincide = (enlace and enlace in enlaces) or any(len(t) >= 18 and t in mensaje for t in titulos)
-        if not coincide:
-            coincide = any(len(i) >= 7 and re.search(r"(?<!\w)" + re.escape(i) + r"(?!\w)", mensaje) for i in ids if i)
-        if coincide:
+        m = norm(" ".join(str(a.get(k) or "") for k in ("mensaje", "titulo", "organismo")))
+        if coincide(m, EXCLUSION) or coincide(m, EXCLUSION_INFORMATICA): continue
+        link = str(a.get("link") or "").strip()
+        if (link and link in links) or any(t in m for t in titulos) or any(contiene(m, n) for n in numeros):
             resultado.append(a)
     return resultado[:30]
-
 
 def generar(ruta: Path, procesos: list[dict], alertas: list[dict], fuentes: list[dict], filtro: Filtro,
             titulo: str = "Tablero de licitaciones", nota: str = "", ahora: datetime | None = None) -> Path:
     ahora = ahora or datetime.now()
-    vigentes = preparar(procesos, filtro, ahora)
-    datos = {
-        "generado": ahora.strftime("%d/%m/%Y %H:%M"),
-        "dias_amarillo": filtro.dias_amarillo,
-        "procesos": vigentes,
-        "alertas": _alertas_relevantes(alertas, vigentes),
-        "fuentes": fuentes,
-        "nota": nota,
-    }
-    html = PLANTILLA.replace("__TITULO__", titulo).replace(
-        "__DATOS__", json.dumps(datos, ensure_ascii=False).replace("</", "<\\/"))
+    filas = preparar(procesos, filtro, ahora)
+    datos = {"generado": ahora.strftime("%d/%m/%Y %H:%M"), "dias_amarillo": filtro.dias_amarillo,
+             "procesos": filas, "alertas": filtrar_alertas(alertas, filas), "fuentes": fuentes, "nota": nota}
+    html = PLANTILLA.replace("__TITULO__", titulo).replace("__DATOS__", json.dumps(datos, ensure_ascii=False).replace("</", "<\\/"))
     ruta.write_text(html, encoding="utf-8")
     return ruta
-
 
 PLANTILLA = r"""<!DOCTYPE html>
 <html lang="es">
@@ -189,7 +175,7 @@ a{color:var(--ac)}.mut{color:var(--mut)}
   <div id="control-detalle" style="margin-top:10px">Verificando procesos...</div>
 </details>
 <main>
-<div id="nota"></div>
+<div id="nota"></div><div class="panel"><b>Dos circuitos:</b> verde/amarillo = convocatoria vigente con cierre de ofertas confirmado; gris = oportunidad relevante pendiente de verificar. Las vencidas quedan fuera del listado activo. Las obras privadas mantienen su pestaña independiente.</div>
 <div class="kpis" id="kpis"></div>
 <div class="panel" id="alertas"></div>
 <div class="filtros">
@@ -202,35 +188,10 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 </main>
 <script>
 const D = __DATOS__;
-// Defensa adicional en el navegador: evita mostrar avisos antiguos o ajenos
-// aunque otra etapa del proceso haya incorporado datos sin filtrar.
-const sinAcentos = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const noDEEP = /aeronaut|aeronave|avion|helicopter|fuerza aerea|aeropuerto|automotor|vehicul|camion|motocicl|baterias de 12\s*v y 8\s*v|cartuchos? de bateria|notebook|computadora|informatica|impresora|fiscalizacion tecnica|fiscalizacion de obra|materiales de construccion/;
-const siDEEP = /ups industrial|ups trifasic|sai industrial|energia critica|rectificador|cargador(?:es)? de bater|banco(?:s)? de bater|baterias? estacionari|ni.cd|plomo.calcio|vrla|inversor industrial|convertidor industrial|(?:48|110|125|220) vcc|alimentacion ininterrumpida industrial/;
-const fechaValida = v => { if (!v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) || ![2026,2027].includes(d.getFullYear()) ? null : d; };
-const esVigenteDEEP = p => {
-  const titulo = sinAcentos([p.titulo,p.organismo,p.tipo_contratacion].join(" "));
-  const detalle = sinAcentos([p.titulo,p.objeto,p.descripcion,p.rubro].join(" "));
-  const cierre = fechaValida(p.fecha_presentacion);
-  const estado = sinAcentos(p.estado);
-  return !noDEEP.test(titulo) && siDEEP.test(detalle) && cierre && cierre.getTime() > Date.now()
-    && !/adjudic|preadjudic|desierta|anulad|cancelad|finalizad|cerrad|sin efecto/.test(estado);
-};
-D.procesos = (D.procesos || []).filter(esVigenteDEEP).map(p=>{
-  const cierre = fechaValida(p.fecha_presentacion);
-  const dias = Math.max(0,Math.ceil((cierre.getTime()-Date.now())/86400000));
-  return {...p,dias,semaforo:dias<=Number(D.dias_amarillo||7)?"amarillo":"verde"};
-});
-const titulosValidos = D.procesos.map(p=>sinAcentos(p.titulo)).filter(t=>t.length>=18);
-const numerosValidos = D.procesos.map(p=>sinAcentos(p.numero_proceso)).filter(t=>t.length>=7);
-const linksValidos = new Set(D.procesos.map(p=>p.link).filter(Boolean));
-D.alertas = (D.alertas || []).filter(a => {
-  const mensaje = sinAcentos(a.mensaje);
-  return !noDEEP.test(mensaje) &&
-    ((a.link && linksValidos.has(a.link)) || titulosValidos.some(t=>mensaje.includes(t)) || numerosValidos.some(n=>mensaje.includes(n)));
-});
-const COL = {verde:"En plazo",amarillo:"Vence pronto",rojo:"Vencida",gris:"Sin fecha (verificar)"};
-const activos = new Set(["verde","amarillo"]);
+// Los registros ya fueron clasificados en Python. No descartar oportunidades
+// potenciales por ausencia de cierre: se presentan en gris, NO como abiertas.
+const COL = {verde:"En plazo",amarillo:"Vence pronto",rojo:"Vencida",gris:"Potencial / verificar"};
+const activos = new Set(["verde","amarillo","gris"]);
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f = v => { if(!v) return "—"; const d=new Date(v); const t=d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -243,16 +204,16 @@ opciones("sector","sector","Sector"); opciones("prov","provincia","Provincia"); 
 function kpis(){ $("kpis").innerHTML = ["verde","amarillo","rojo","gris"].map(c=>{
   const n=D.procesos.filter(p=>p.semaforo===c).length;
   return `<div class="kpi ${activos.has(c)?"":"off"}" data-c="${c}"><b>${n}</b><span><i style="background:var(--${c})"></i>${COL[c]}</span></div>`}).join("");
-  document.querySelectorAll(".kpi").forEach(k=>k.onclick=()=>{const c=k.dataset.c; if(c==="verde"||c==="amarillo"){activos.has(c)?activos.delete(c):activos.add(c); pintar();}}); }
+  document.querySelectorAll(".kpi").forEach(k=>k.onclick=()=>{const c=k.dataset.c; if(c!=="rojo"){activos.has(c)?activos.delete(c):activos.add(c); pintar();}}); }
 function visibles(){ const q=$("q").value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
   return D.procesos.filter(p=>activos.has(p.semaforo) && (!$("sector").value||p.sector===$("sector").value)
     && (!$("prov").value||p.provincia===$("prov").value) && (!$("fuente").value||p.fuente===$("fuente").value)
     && (!q || JSON.stringify([p.titulo,p.organismo,p.numero_proceso,p.provincia,p.sector,p.terminos]).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q))); }
-function diasTxt(p){ if(p.dias===null) return "Verificar"; if(p.dias<0) return "Vencida"; if(p.dias===0) return "Hoy"; return p.dias===1?"Mañana":`${p.dias} días`; }
+function diasTxt(p){ if(p.dias===null) return "Por verificar"; if(p.dias<0) return "Vencida"; if(p.dias===0) return "Hoy"; return p.dias===1?"Mañana":`${p.dias} días`; }
 function pintar(){ kpis(); const L=visibles();
   $("lista").innerHTML = L.length ? L.map(p=>`<div class="item ${p.semaforo}">
    <div class="top"><div><div class="tit">${esc(p.titulo)}</div>
-   <div class="org">${esc(p.organismo)}${p.numero_proceso?" · "+esc(p.numero_proceso):""}</div></div>
+   <div class="org">${esc(p.organismo)} · ${esc(p.prioridad||"Potencial")} (${Number(p.puntaje||0)} puntos)${p.numero_proceso?" · "+esc(p.numero_proceso):""}</div></div>
    <div class="dias">${diasTxt(p)}</div></div>
    <div class="grid">
     <div><span>Apertura de sobres</span><b>${f(p.fecha_apertura)}</b></div>
