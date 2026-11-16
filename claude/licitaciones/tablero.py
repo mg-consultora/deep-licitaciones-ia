@@ -10,34 +10,111 @@ from .filtros import Filtro
 
 
 def _dt(v):
-    return datetime.fromisoformat(v) if v else None
+    """Ignora fechas imposibles o fuera del período de seguimiento."""
+    if not v:
+        return None
+    try:
+        fecha = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        if fecha.year not in (2026, 2027):
+            return None
+        return fecha.replace(tzinfo=None)
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def _normalizar(s):
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or ""))
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    return re.sub(r"\s+", " ", s)
+
+
+# Exclusiones específicas: una coincidencia en el título/organismo descarta el aviso.
+EXCLUIR = (
+    "aeronautic", "aeronautica", "aeronave", "avion", "helicopter", "fuerza aerea",
+    "aeropuerto", "aerolinea", "automotor", "vehiculo", "automovil", "camion",
+    "motociclet", "maquinaria vial", "cartucho de bateria", "bateria de recambio en ups",
+    "computadora", "notebook", "pc de escritorio", "impresora", "informatica",
+    "toner", "telefonia celular", "telefono movil", "materiales de construccion",
+    "fiscalizacion tecnica", "servicio de fiscalizacion", "servicio de limpieza",
+    "servicio de vigilancia", "articulos de oficina",
+)
+
+# Un término genérico como 'batería' o 'subestación' no basta para adjudicar
+# relevancia comercial. Exigimos una descripción industrial reconocible.
+INDUSTRIALES = (
+    "ups industrial", "ups trifasic", "sai industrial", "energia critica",
+    "rectificador", "cargador de bateria", "cargadores de bateria",
+    "banco de bateria", "bancos de bateria", "bateria estacionaria",
+    "baterias estacionarias", "ni-cd", "ni cd", "nicd", "plomo calcio",
+    "plomo-calcio", "vrla", "inversor industrial", "inversores industriales",
+    "convertidor industrial", "convertidores industriales",
+    "110 vcc", "125 vcc", "220 vcc", "48 vcc",
+)
+
+
+def _relevante(p):
+    titulo = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "organismo", "tipo_contratacion")))
+    if any(t in titulo for t in EXCLUIR):
+        return False
+    detalle = _normalizar(" ".join(str(p.get(k) or "") for k in ("titulo", "terminos", "sector")))
+    return any(t in detalle for t in INDUSTRIALES)
 
 
 def preparar(procesos: list[dict], filtro: Filtro, ahora: datetime | None = None) -> list[dict]:
-    ahora = ahora or datetime.now()
+    ahora = (ahora or datetime.now()).replace(tzinfo=None)
     filas = []
-    for p in procesos:
-        ns = SimpleNamespace(estado=p.get("estado", ""), fecha_apertura=_dt(p.get("fecha_apertura")),
-                             fecha_presentacion=_dt(p.get("fecha_presentacion")))
-        p = dict(p)
-        p["semaforo"] = filtro.semaforo(ns, ahora)
-        limite = ns.fecha_apertura or ns.fecha_presentacion
-        p["dias"] = (limite.date() - ahora.date()).days if limite else None
-        p["circulares"] = [h for h in p.get("historial", []) if "ircular" in (h.get("estado") or "")]
+    for original in procesos:
+        p = dict(original)
+        if not _relevante(p):
+            continue
+        # La fecha de PRESENTACIÓN es el plazo relevante, no la apertura de sobres.
+        cierre = _dt(p.get("fecha_presentacion"))
+        apertura = _dt(p.get("fecha_apertura"))
+        publicacion = _dt(p.get("fecha_publicacion"))
+        if not cierre or cierre <= ahora:
+            continue
+        if publicacion and publicacion > ahora:
+            continue
+        estado = _normalizar(p.get("estado"))
+        if any(x in estado for x in ("adjudic", "preadjudic", "desierta", "anulad", "cancelad", "finalizad", "cerrad", "sin efecto")):
+            continue
+        p["semaforo"] = "amarillo" if (cierre - ahora).total_seconds() <= filtro.dias_amarillo * 86400 else "verde"
+        p["dias"] = (cierre.date() - ahora.date()).days
+        p["circulares"] = [h for h in p.get("historial", []) if "ircular" in _normalizar(h.get("estado"))]
         filas.append(p)
-    orden = {"amarillo": 0, "verde": 1, "gris": 2, "rojo": 3}
-    filas.sort(key=lambda f: (orden[f["semaforo"]], f["dias"] if f["dias"] is not None else 9999))
+    filas.sort(key=lambda f: (0 if f["semaforo"] == "amarillo" else 1, f["dias"]))
     return filas
+
+
+def _alertas_relevantes(alertas, procesos):
+    """Solo noticias asociadas a procesos realmente visibles; sin falsos positivos."""
+    import re
+    ids = {str(p.get("numero_proceso") or "").strip().lower() for p in procesos}
+    enlaces = {str(p.get("link") or "").strip() for p in procesos if p.get("link")}
+    titulos = {_normalizar(p.get("titulo")) for p in procesos if p.get("titulo")}
+    resultado = []
+    for a in alertas:
+        mensaje = _normalizar(a.get("mensaje"))
+        enlace = str(a.get("link") or "").strip()
+        coincide = (enlace and enlace in enlaces) or any(len(t) >= 18 and t in mensaje for t in titulos)
+        if not coincide:
+            coincide = any(len(i) >= 7 and re.search(r"(?<!\w)" + re.escape(i) + r"(?!\w)", mensaje) for i in ids if i)
+        if coincide:
+            resultado.append(a)
+    return resultado[:30]
 
 
 def generar(ruta: Path, procesos: list[dict], alertas: list[dict], fuentes: list[dict], filtro: Filtro,
             titulo: str = "Tablero de licitaciones", nota: str = "", ahora: datetime | None = None) -> Path:
     ahora = ahora or datetime.now()
+    vigentes = preparar(procesos, filtro, ahora)
     datos = {
         "generado": ahora.strftime("%d/%m/%Y %H:%M"),
         "dias_amarillo": filtro.dias_amarillo,
-        "procesos": preparar(procesos, filtro, ahora),
-        "alertas": alertas[:30],
+        "procesos": vigentes,
+        "alertas": _alertas_relevantes(alertas, vigentes),
         "fuentes": fuentes,
         "nota": nota,
     }
@@ -116,7 +193,7 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 <script>
 const D = __DATOS__;
 const COL = {verde:"En plazo",amarillo:"Vence pronto",rojo:"Vencida",gris:"Sin fecha (verificar)"};
-const activos = new Set(["verde","amarillo","gris"]);
+const activos = new Set(["verde","amarillo"]);
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f = v => { if(!v) return "—"; const d=new Date(v); const t=d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -129,7 +206,7 @@ opciones("sector","sector","Sector"); opciones("prov","provincia","Provincia"); 
 function kpis(){ $("kpis").innerHTML = ["verde","amarillo","rojo","gris"].map(c=>{
   const n=D.procesos.filter(p=>p.semaforo===c).length;
   return `<div class="kpi ${activos.has(c)?"":"off"}" data-c="${c}"><b>${n}</b><span><i style="background:var(--${c})"></i>${COL[c]}</span></div>`}).join("");
-  document.querySelectorAll(".kpi").forEach(k=>k.onclick=()=>{const c=k.dataset.c; activos.has(c)?activos.delete(c):activos.add(c); pintar();}); }
+  document.querySelectorAll(".kpi").forEach(k=>k.onclick=()=>{const c=k.dataset.c; if(c==="verde"||c==="amarillo"){activos.has(c)?activos.delete(c):activos.add(c); pintar();}}); }
 function visibles(){ const q=$("q").value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
   return D.procesos.filter(p=>activos.has(p.semaforo) && (!$("sector").value||p.sector===$("sector").value)
     && (!$("prov").value||p.provincia===$("prov").value) && (!$("fuente").value||p.fuente===$("fuente").value)
