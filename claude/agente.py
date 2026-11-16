@@ -133,6 +133,139 @@ def _anexar_maestra_si_existe(ruta_html: Path) -> None:
             return
     print("AVISO: base maestra JSON no encontrada; se conserva el tablero sin el anexo")
 
+
+
+# --- Seguimiento verificable de la base maestra y fuentes oficiales ---
+def seguimiento_fuentes_maestras() -> dict:
+    """Releva páginas HTML públicas; NO equipara mención a convocatoria abierta.
+
+    No descarga pliegos, no altera la base SQLite y no inventa cierres.
+    """
+    import json
+    from urllib.parse import urljoin, urlparse
+    import requests
+    from bs4 import BeautifulSoup
+
+    rutas = (RAIZ / "licitaciones" / "base_maestra_deep.json",
+             RAIZ / "datos" / "base_maestra_deep.json")
+    ruta = next((r for r in rutas if r.is_file()), None)
+    if ruta is None:
+        return {"estado": "base_maestra_no_encontrada", "fuentes": [], "referencias": [], "hallazgos": []}
+    maestro = json.loads(ruta.read_text(encoding="utf-8"))
+    referencias = maestro.get("licitaciones", [])
+    fuentes = maestro.get("fuentes", [])
+    empresas = maestro.get("empresas", [])
+    urls = {}
+    for item in fuentes + empresas:
+        url = item.get("URL") or item.get("Portal / URL")
+        if url and url.startswith("https://"):
+            urls.setdefault(url, item.get("Entidad") or item.get("Empresa") or "Fuente oficial")
+    # Limitar volumen y tiempo de cada ejecución diaria; las URLs sin consulta se declaran pendientes.
+    max_fuentes = int(os.getenv("DEEP_MAX_FUENTES", "18"))
+    session = requests.Session()
+    session.headers.update({"User-Agent": "DEEP-Seguimiento-Comercial/1.0 (+consulta de fuentes publicas)"})
+    revisadas, hallazgos, textos = [], [], []
+    p1 = ("ups industrial", "ups trifas", "rectificador", "cargador de bater", "banco de bater",
+          "baterias estacionarias", "baterias industriales", "inversor industrial", "convertidor cc")
+    p2 = ("subestacion", "estacion transformadora", "servicios auxiliares", "parque solar",
+          "parque eolico", "bess", "central hidroelectrica", "central termoelectrica")
+    excluir = ("aeronautic", "automotriz", "motociclet", "bateria para vehicul",
+               "cartucho de toner", "articulos de limpieza")
+    for url, nombre in list(urls.items())[:max_fuentes]:
+        info = {"nombre": nombre, "url": url, "estado": "error", "detalle": "No consultada"}
+        try:
+            r = session.get(url, timeout=(5, 9), allow_redirects=True)
+            r.raise_for_status()
+            if "html" not in r.headers.get("Content-Type", "").lower():
+                info.update(estado="no_html", detalle="Requiere otro método de consulta")
+                revisadas.append(info)
+                continue
+            soup = BeautifulSoup(r.text[:700000], "html.parser")
+            for tag in soup(["script", "style", "nav", "footer"]):
+                tag.decompose()
+            contenido = _sin_acentos(soup.get_text(" ", strip=True))[:120000]
+            textos.append((url, nombre, contenido))
+            info.update(estado="consultada", detalle="HTML leído; convocatoria no confirmada")
+            # Solo enlaces HTML explícitos de la página; NO rastrear sitios enteros ni PDF.
+            vistos = set()
+            for a in soup.find_all("a", href=True):
+                etiqueta = a.get_text(" ", strip=True)[:220]
+                destino = urljoin(r.url, a.get("href", ""))
+                u = urlparse(destino)
+                if u.scheme != "https" or not u.netloc or destino in vistos:
+                    continue
+                vistos.add(destino)
+                normal = _sin_acentos(etiqueta)
+                if not normal or any(x in normal for x in excluir):
+                    continue
+                prioridad = "P1" if any(x in normal for x in p1) else ("P2" if any(x in normal for x in p2) else "")
+                if not prioridad:
+                    continue
+                hallazgos.append({"fuente": nombre, "titulo": etiqueta, "url": destino,
+                                  "prioridad": prioridad, "estado": "PENDIENTE DE VERIFICAR",
+                                  "cierre": "NO INFORMADA", "circular": "NO VERIFICADA"})
+                if len(hallazgos) >= 100:
+                    break
+        except requests.RequestException as exc:
+            info["detalle"] = type(exc).__name__
+        revisadas.append(info)
+    comprobaciones = []
+    for lic in referencias:
+        numero = str(lic.get("N.º proceso", "")).strip()
+        organismo = str(lic.get("Empresa", "")).strip()
+        # Solo coincidencia textual exacta de identificador, nunca confirma vigencia.
+        encontrados = [u for u, n, t in textos if numero and len(numero) >= 5
+                       and _sin_acentos(numero) in t]
+        comprobaciones.append({"organismo": organismo, "proceso": numero,
+                               "objeto": lic.get("Objeto", ""),
+                               "estado": "REFERENCIA LOCALIZADA; VALIDAR CONVOCATORIA" if encontrados else "NO VERIFICADA",
+                               "enlaces": encontrados[:2],
+                               "cierre": "NO INFORMADA", "circulares": "NO VERIFICADAS"})
+    # Deduplicación por enlace, sin crear ni actualizar convocatorias en SQLite.
+    unicos = {h["url"]: h for h in hallazgos}
+    resultado = {"estado": "relevamiento_preliminar", "fecha": datetime.now().isoformat(timespec="seconds"),
+                 "fuentes": revisadas, "referencias": comprobaciones,
+                 "hallazgos": list(unicos.values())[:100], "fuentes_configuradas": len(urls)}
+    (SALIDA / "seguimiento_fuentes_deep.json").write_text(
+        json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
+    return resultado
+
+
+def anexar_seguimiento_html(ruta_html: Path, resultado: dict) -> None:
+    """Anexa una sección separada, sin alterar el tablero de licitaciones ni obras."""
+    from html import escape
+    if not ruta_html.is_file():
+        return
+    refs = resultado.get("referencias", [])
+    fuentes = resultado.get("fuentes", [])
+    hallazgos = resultado.get("hallazgos", [])
+    ok = sum(f["estado"] == "consultada" for f in fuentes)
+    contenido = ['<section id="deep-seguimiento-fuentes" style="margin:24px auto;max-width:1400px;padding:20px;background:white;border:1px solid #ddd;border-radius:12px">',
+                 '<h2>Seguimiento de fuentes y procesos DEEP</h2>',
+                 '<p><b>Relevamiento preliminar:</b> ninguna coincidencia textual acredita una convocatoria vigente. '
+                 'Los cierres y las circulares requieren comprobación en la ficha oficial. '
+                 'No se descargaron pliegos.</p>',
+                 f'<p>Fuentes HTML consultadas: {ok}/{len(fuentes)}; referencias maestras: {len(refs)}; enlaces candidatos: {len(hallazgos)}.</p>',
+                 '<details open><summary><b>Procesos de la base maestra</b></summary><div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Organismo</th><th>Proceso</th><th>Objeto</th><th>Verificación</th><th>Fuente</th></tr></thead><tbody>']
+    for x in refs:
+        enlaces = " ".join(f'<a href="{escape(u, quote=True)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>' for u in x["enlaces"])
+        contenido.append('<tr>' + ''.join(f'<td style="padding:7px;border-top:1px solid #eee">{escape(str(v))}</td>' for v in
+                          (x["organismo"], x["proceso"], x["objeto"], x["estado"])) + f'<td>{enlaces or "Sin coincidencia verificada"}</td></tr>')
+    contenido += ['</tbody></table></div></details>', '<details><summary><b>Enlaces candidatos detectados en portales</b></summary><ul>']
+    for x in hallazgos:
+        contenido.append(f'<li>{escape(x["prioridad"])} · <a href="{escape(x["url"], quote=True)}" target="_blank" rel="noopener noreferrer">{escape(x["titulo"])}</a> · {escape(x["fuente"])} · POR VERIFICAR</li>')
+    contenido += ['</ul></details>', '<details><summary><b>Estado de consulta por fuente</b></summary><ul>']
+    for f in fuentes:
+        contenido.append(f'<li>{escape(f["nombre"])}: {escape(f["estado"])} ({escape(f["detalle"])})</li>')
+    contenido += ['</ul></details></section>']
+    html = ruta_html.read_text(encoding="utf-8")
+    bloque = "\n".join(contenido)
+    if "</body>" in html:
+        html = html.replace("</body>", bloque + "\n</body>", 1)
+    else:
+        html += bloque
+    ruta_html.write_text(html, encoding="utf-8")
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dias", type=int, help="días hacia atrás en el Boletín Oficial")
@@ -195,6 +328,15 @@ def main() -> int:
     tablero.generar(salida_html, candidatos, base.alertas_recientes(), estado_fuentes, filtro, nota=nota)
     if not args.demo:
         _anexar_maestra_si_existe(salida_html)
+        try:
+            seguimiento = seguimiento_fuentes_maestras()
+            anexar_seguimiento_html(salida_html, seguimiento)
+            print(f"Seguimiento DEEP: {len(seguimiento.get('referencias', []))} procesos de base maestra; "
+                  f"{len(seguimiento.get('hallazgos', []))} enlaces candidatos; "
+                  f"{sum(f['estado'] == 'consultada' for f in seguimiento.get('fuentes', []))} fuentes HTML consultadas")
+        except Exception as exc:
+            print(f"AVISO: seguimiento de fuentes no completado ({type(exc).__name__}: {exc}); "
+                  "el tablero principal permanece disponible")
     print(f"Tablero: {salida_html}")
     if args.abrir:
         webbrowser.open(salida_html.as_uri())
