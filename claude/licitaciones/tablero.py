@@ -7,6 +7,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime
+from collections import Counter
 from pathlib import Path
 from .filtros import Filtro
 
@@ -56,44 +57,74 @@ def evaluar(p):
     if coincide(texto, EXCLUSION_INFORMATICA) and not (directa and tecnica): return 0, "Excluida"
     # Baterías de 12/8 V sin aplicación industrial comprobable no son P1.
     if re.search(r"baterias? de 12\s*v y 8\s*v", texto) and not (directa or tecnica): return 0, "Excluida"
-    if not (directa or obra or indirecta): return 0, "Fuera de alcance"
+    # Coincidencia secundaria: algunos extractores sólo guardan título,
+    # organismo y etiquetas. Una etiqueta aislada nunca prueba suministro.
+    if not (directa or obra or indirecta):
+        return 0, "Sin evidencia técnica suficiente"
     puntos = min(100, (60 if directa else 0) + (30 if obra else 0) + (15 if indirecta else 0) + (15 if tecnica else 0) + (10 if sector else 0) + (15 if suministro else 0))
     return puntos, ("Alta" if puntos >= 75 else "Media" if puntos >= 40 else "Potencial")
 
-def preparar(procesos: list[dict], filtro: Filtro, ahora: datetime | None = None) -> list[dict]:
+def _clasificar(procesos, filtro, ahora):
     ahora = (ahora or datetime.now()).replace(tzinfo=None)
-    salida = {}
+    salida, motivos = {}, Counter()
     for original in procesos:
         p = dict(original)
         puntos, prioridad = evaluar(p)
-        if puntos < 15: continue
+        if not puntos:
+            motivos["sin_evidencia_o_excluido"] += 1
+            continue
         estado = norm(p.get("estado"))
-        if any(x in estado for x in CERRADOS): continue
-        cierre = fecha(p.get("fecha_presentacion"))
-        apertura = fecha(p.get("fecha_apertura"))
-        publicacion = fecha(p.get("fecha_publicacion"))
-        if publicacion and publicacion > ahora: continue
-        # Cierre vencido: nunca revivir por apertura posterior.
-        if cierre and cierre <= ahora: continue
-        # Si no hay cierre, no declarar 'EN PLAZO', aun con apertura futura.
+        if any(x in estado for x in CERRADOS):
+            motivos["cerrado_o_adjudicado"] += 1
+            continue
+        raw_pub = p.get("fecha_publicacion")
+        raw_cierre = p.get("fecha_presentacion")
+        raw_apertura = p.get("fecha_apertura")
+        publicacion = fecha(raw_pub)
+        cierre = fecha(raw_cierre)
+        apertura = fecha(raw_apertura)
+        # Una fecha explícita de presentación inválida no puede acreditarse
+        # como cierre vigente, ni convertirse en convocatoria abierta.
+        if raw_cierre and cierre is None:
+            motivos["cierre_invalido"] += 1
+            continue
+        if cierre and cierre <= ahora:
+            motivos["vencido"] += 1
+            continue
+        if publicacion and publicacion > ahora:
+            motivos["publicacion_futura"] += 1
+            continue
         if cierre:
             semaforo = "amarillo" if (cierre - ahora).total_seconds() <= filtro.dias_amarillo * 86400 else "verde"
             dias = max(0, (cierre.date() - ahora.date()).days)
         else:
-            # Sin fecha de cierre: solo potenciales de la ventana 2026/27.
-            # Si hay apertura anterior a hoy, no asumir vigencia.
-            if apertura and apertura <= ahora: continue
-            if not (apertura or publicacion): continue
+            # No declarar abierta una convocatoria sin cierre oficial.
+            # Tampoco mostrar una apertura pasada como potencial vigente.
+            if apertura and apertura <= ahora:
+                motivos["apertura_pasada_sin_cierre"] += 1
+                continue
+            if not (publicacion or apertura):
+                motivos["sin_evidencia_temporal"] += 1
+                continue
+            # Fecha antigua explícita: no inferir una convocatoria nueva.
+            if raw_pub and not publicacion and not apertura:
+                motivos["publicacion_fuera_periodo"] += 1
+                continue
             semaforo, dias = "gris", None
         p.update(semaforo=semaforo, dias=dias, puntaje=puntos, prioridad=prioridad)
         p["circulares"] = [h for h in p.get("historial", []) if "circular" in norm(h.get("estado"))]
-        # Dedupe por organismo + número; sin número, por título y organismo.
         clave = (norm(p.get("organismo")), norm(p.get("numero_proceso")) or norm(p.get("titulo")))
         anterior = salida.get(clave)
-        if anterior is None or (puntos, bool(cierre)) > (anterior["puntaje"], anterior["semaforo"] != "gris"):
+        if anterior is None or (bool(cierre), puntos) > (anterior["semaforo"] != "gris", anterior["puntaje"]):
             salida[clave] = p
+        motivos["admitido_" + semaforo] += 1
     orden = {"amarillo": 0, "verde": 1, "gris": 2}
-    return sorted(salida.values(), key=lambda p: (orden[p["semaforo"]], -p["puntaje"], p["dias"] if p["dias"] is not None else 9999))
+    filas = sorted(salida.values(), key=lambda p: (orden[p["semaforo"]], -p["puntaje"], p["dias"] if p["dias"] is not None else 9999))
+    return filas, motivos
+
+
+def preparar(procesos: list[dict], filtro: Filtro, ahora: datetime | None = None) -> list[dict]:
+    return _clasificar(procesos, filtro, ahora)[0]
 
 def filtrar_alertas(alertas, procesos):
     # Vincular solo a avisos realmente seleccionados; evitar noticias aeronáuticas.
@@ -113,7 +144,16 @@ def filtrar_alertas(alertas, procesos):
 def generar(ruta: Path, procesos: list[dict], alertas: list[dict], fuentes: list[dict], filtro: Filtro,
             titulo: str = "Tablero de licitaciones", nota: str = "", ahora: datetime | None = None) -> Path:
     ahora = ahora or datetime.now()
-    filas = preparar(procesos, filtro, ahora)
+    filas, motivos = _clasificar(procesos, filtro, ahora)
+    # Diagnóstico real de esta etapa: no confundir 0 coincidencias con 0 licitaciones en el país.
+    diagnostico = (f"<b>Control de clasificación:</b> {len(procesos)} registros recibidos; "
+                   f"{len(filas)} oportunidades visibles; "
+                   f"{motivos['sin_evidencia_o_excluido']} sin evidencia industrial suficiente; "
+                   f"{motivos['vencido']} vencidos; "
+                   f"{motivos['apertura_pasada_sin_cierre']} con apertura pasada sin cierre confirmado; "
+                   f"{motivos['sin_evidencia_temporal']} sin evidencia temporal. "
+                   "Las oportunidades grises requieren verificación oficial y no son convocatorias abiertas.")
+    nota = (nota + "<hr>" if nota else "") + diagnostico
     datos = {"generado": ahora.strftime("%d/%m/%Y %H:%M"), "dias_amarillo": filtro.dias_amarillo,
              "procesos": filas, "alertas": filtrar_alertas(alertas, filas), "fuentes": fuentes, "nota": nota}
     html = PLANTILLA.replace("__TITULO__", titulo).replace("__DATOS__", json.dumps(datos, ensure_ascii=False).replace("</", "<\\/"))
