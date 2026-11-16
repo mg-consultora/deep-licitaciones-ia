@@ -171,56 +171,132 @@ def seguimiento_fuentes_maestras() -> dict:
           "parque eolico", "bess", "central hidroelectrica", "central termoelectrica")
     excluir = ("aeronautic", "automotriz", "motociclet", "bateria para vehicul",
                "cartucho de toner", "articulos de limpieza")
+    # Buscar identificadores exactos en páginas institucionales y fichas HTML
+    # enlazadas. Nunca interpretar fechas de la base maestra como verificadas.
+    from collections import deque
+    from urllib.parse import urldefrag
+    def numero_en_texto(numero, texto):
+        n = _sin_acentos(numero).strip()
+        if not n or n == "pabra / ariba":
+            return False
+        # El identificador no debe formar parte de otro número.
+        patron = r"(?<![a-z0-9])" + re.escape(n).replace(r"\-", r"[\s\-–]+").replace(r"\/", r"\s*/\s*") + r"(?![a-z0-9])"
+        return re.search(patron, _sin_acentos(texto)) is not None
+
+    # Priorizar el portal indicado en cada referencia; excluir enlaces
+    # secundarios como indicadores.ar de la condición "oficial".
+    for lic in referencias:
+        url = lic.get("URL / fuente", "")
+        if isinstance(url, str) and url.startswith("https://"):
+            host = urlparse(url).hostname or ""
+            if host and not host.endswith("indicadores.ar"):
+                urls.setdefault(url, lic.get("Empresa", "Organismo"))
+
+    coincidencias = {}
+    total_paginas = 0
+    max_paginas = max(1, min(12, int(os.getenv("DEEP_PAGINAS_POR_FUENTE", "6"))))
     for url, nombre in list(urls.items())[:max_fuentes]:
-        info = {"nombre": nombre, "url": url, "estado": "error", "detalle": "No consultada"}
-        try:
-            r = session.get(url, timeout=(5, 9), allow_redirects=True)
-            r.raise_for_status()
-            if "html" not in r.headers.get("Content-Type", "").lower():
-                info.update(estado="no_html", detalle="Requiere otro método de consulta")
-                revisadas.append(info)
+        info = {"nombre": nombre, "url": url, "estado": "error",
+                "detalle": "No consultada", "paginas_html": 0}
+        host_raiz = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        cola = deque([(url, 0)])
+        visitadas = set()
+        errores = []
+        while cola and info["paginas_html"] < max_paginas:
+            pagina, profundidad = cola.popleft()
+            pagina = urldefrag(pagina)[0]
+            if pagina in visitadas:
                 continue
-            soup = BeautifulSoup(r.text[:700000], "html.parser")
-            for tag in soup(["script", "style", "nav", "footer"]):
-                tag.decompose()
-            contenido = _sin_acentos(soup.get_text(" ", strip=True))[:120000]
-            textos.append((url, nombre, contenido))
-            info.update(estado="consultada", detalle="HTML leído; convocatoria no confirmada")
-            # Solo enlaces HTML explícitos de la página; NO rastrear sitios enteros ni PDF.
-            vistos = set()
-            for a in soup.find_all("a", href=True):
-                etiqueta = a.get_text(" ", strip=True)[:220]
-                destino = urljoin(r.url, a.get("href", ""))
-                u = urlparse(destino)
-                if u.scheme != "https" or not u.netloc or destino in vistos:
+            visitadas.add(pagina)
+            try:
+                r = session.get(pagina, timeout=(5, 12), allow_redirects=True)
+                r.raise_for_status()
+                host_final = (urlparse(r.url).hostname or "").lower().removeprefix("www.")
+                if host_final != host_raiz:
                     continue
-                vistos.add(destino)
-                normal = _sin_acentos(etiqueta)
-                if not normal or any(x in normal for x in excluir):
+                if "html" not in r.headers.get("Content-Type", "").lower():
                     continue
-                prioridad = "P1" if any(x in normal for x in p1) else ("P2" if any(x in normal for x in p2) else "")
-                if not prioridad:
-                    continue
-                hallazgos.append({"fuente": nombre, "titulo": etiqueta, "url": destino,
-                                  "prioridad": prioridad, "estado": "PENDIENTE DE VERIFICAR",
-                                  "cierre": "NO INFORMADA", "circular": "NO VERIFICADA"})
-                if len(hallazgos) >= 100:
-                    break
-        except requests.RequestException as exc:
-            info["detalle"] = type(exc).__name__
+                soup = BeautifulSoup(r.text[:850000], "html.parser")
+                for tag in soup(["script", "style", "nav", "footer"]):
+                    tag.decompose()
+                contenido = _sin_acentos(soup.get_text(" ", strip=True))[:140000]
+                info["paginas_html"] += 1
+                total_paginas += 1
+                textos.append((r.url, nombre, contenido))
+                # Coincidencia exacta en página del organismo, sin inferir vigencia.
+                for lic in referencias:
+                    numero = str(lic.get("N.º proceso", "")).strip()
+                    empresa = str(lic.get("Empresa", "")).strip()
+                    # El contexto institucional debe ser el organismo o el
+                    # portal explícitamente declarado en la referencia.
+                    portal_lic = lic.get("URL / fuente", "")
+                    host_lic = (urlparse(portal_lic).hostname or "").lower().removeprefix("www.")
+                    pertenece = (host_lic == host_raiz and bool(host_lic)) or (
+                        _sin_acentos(empresa) == _sin_acentos(nombre))
+                    if pertenece and numero_en_texto(numero, contenido):
+                        clave = (empresa, numero)
+                        coincidencias.setdefault(clave, set()).add(r.url)
+                # Enlaces: seguir páginas de licitaciones y fichas del mismo
+                # dominio, no descargar PDFs ni rastrear sitios completos.
+                enlaces = []
+                for a in soup.find_all("a", href=True):
+                    etiqueta = a.get_text(" ", strip=True)[:220]
+                    destino = urldefrag(urljoin(r.url, a.get("href", "")))[0]
+                    u = urlparse(destino)
+                    if u.scheme != "https" or not u.hostname:
+                        continue
+                    if u.hostname.lower().removeprefix("www.") != host_raiz:
+                        continue
+                    if re.search(r"\.(pdf|zip|rar|docx?|xlsx?)(?:$|\?)", u.path, re.I):
+                        continue
+                    normal = _sin_acentos(etiqueta + " " + u.path)
+                    if any(x in normal for x in excluir):
+                        continue
+                    prioridad = "P1" if any(x in normal for x in p1) else (
+                        "P2" if any(x in normal for x in p2) else "")
+                    coincide_proceso = any(
+                        numero_en_texto(str(lic.get("N.º proceso", "")), normal)
+                        for lic in referencias)
+                    if prioridad or coincide_proceso:
+                        hallazgos.append({
+                            "fuente": nombre, "titulo": etiqueta or destino,
+                            "url": destino, "prioridad": prioridad or "REFERENCIA",
+                            "estado": "PENDIENTE DE VERIFICAR",
+                            "cierre": "NO INFORMADA", "circular": "NO VERIFICADA"})
+                    # Fichas candidatas, paginación y secciones de licitaciones.
+                    if profundidad < 2 and (
+                        prioridad or coincide_proceso or
+                        any(k in normal for k in (
+                            "licitacion", "contratacion", "convocatoria",
+                            "procesos", "publicaciones", "compras",
+                            "pliegos", "ver detalle", "detalle",
+                            "siguiente", "pagina"))):
+                        enlaces.append(destino)
+                for destino in enlaces[:25]:
+                    if destino not in visitadas:
+                        cola.append((destino, profundidad + 1))
+                info.update(estado="consultada",
+                            detalle="HTML institucional leído; vigencia no acreditada")
+            except requests.RequestException as exc:
+                errores.append(type(exc).__name__)
+        if not info["paginas_html"]:
+            info["detalle"] = ", ".join(errores[:3]) or "Sin HTML público accesible"
         revisadas.append(info)
     comprobaciones = []
     for lic in referencias:
         numero = str(lic.get("N.º proceso", "")).strip()
         organismo = str(lic.get("Empresa", "")).strip()
-        # Solo coincidencia textual exacta de identificador, nunca confirma vigencia.
-        encontrados = [u for u, n, t in textos if numero and len(numero) >= 5
-                       and _sin_acentos(numero) in t]
-        comprobaciones.append({"organismo": organismo, "proceso": numero,
-                               "objeto": lic.get("Objeto", ""),
-                               "estado": "REFERENCIA LOCALIZADA; VALIDAR CONVOCATORIA" if encontrados else "NO VERIFICADA",
-                               "enlaces": encontrados[:2],
-                               "cierre": "NO INFORMADA", "circulares": "NO VERIFICADAS"})
+        encontrados = sorted(coincidencias.get((organismo, numero), set()))
+        comprobaciones.append({
+            "organismo": organismo, "proceso": numero,
+            "objeto": lic.get("Objeto", ""),
+            "estado": "REFERENCIA EN PORTAL; VALIDAR FICHA Y PLAZO"
+                      if encontrados else "NO VERIFICADA",
+            "enlaces": encontrados[:3],
+            "cierre": "NO INFORMADA", "circulares": "NO VERIFICADAS"})
+    print(f"Consulta institucional: {total_paginas} páginas HTML leídas; "
+          f"{sum(bool(x['enlaces']) for x in comprobaciones)} referencias con coincidencia "
+          f"(sin validar cierres ni circulares)")
     # Deduplicación por enlace, sin crear ni actualizar convocatorias en SQLite.
     unicos = {h["url"]: h for h in hallazgos}
     resultado = {"estado": "relevamiento_preliminar", "fecha": datetime.now().isoformat(timespec="seconds"),
