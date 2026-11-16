@@ -9,6 +9,9 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import re
+import unicodedata
+from datetime import timedelta
 import os
 import sys
 import webbrowser
@@ -70,6 +73,84 @@ def procesar(resultados: list[ResultadoFuente], config: dict, base: Base, filtro
     return len(ops), relevantes, alertas
 
 
+
+def _sin_acentos(valor: object) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", str(valor or "").lower()) if not unicodedata.combining(c))
+
+
+def _fecha_segura(valor: object):
+    if not valor:
+        return None
+    try:
+        fecha = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
+        if fecha.year not in (2026, 2027):
+            return None
+        return fecha.replace(tzinfo=None)
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def _publicables(procesos: list[dict]) -> list[dict]:
+    """Filtra SOLO la vista pública; no borra SQLite ni el historial de circulares."""
+    hoy = datetime.now()
+    salida = []
+    descartes = {"fuera_de_rubro": 0, "sin_plazo_verificable": 0, "vencidas": 0}
+    prohibidos = (
+        r"\baeronautic", r"\bavion(?:es)?\b", r"\baeronave", r"\baeroespacial",
+        r"\bhelicopter", r"\bautomotor", r"\bvehicul", r"\bmotocicl",
+        r"\bcamion(?:es)?\b", r"\bpatruller", r"\bmoviles policial",
+        r"\bcartuchos? de bateria", r"\bups informatic", r"\bcomputador",
+        r"\bnotebook", r"\bimpresora", r"\btelefonos? celulares?",
+    )
+    for p in procesos:
+        texto = _sin_acentos(" ".join(str(p.get(k) or "") for k in
+                            ("titulo", "organismo", "rubro", "tipo_contratacion")))
+        if any(re.search(patron, texto) for patron in prohibidos):
+            descartes["fuera_de_rubro"] += 1
+            continue
+        estado = _sin_acentos(p.get("estado"))
+        if any(t in estado for t in ("adjudic", "preadjudic", "finaliz", "desiert", "anulad", "cancelad", "cerrad")):
+            descartes["vencidas"] += 1
+            continue
+        # El cierre de PRESENTACION tiene prioridad sobre apertura de sobres.
+        presentacion = _fecha_segura(p.get("fecha_presentacion"))
+        apertura = _fecha_segura(p.get("fecha_apertura"))
+        limite = presentacion or apertura
+        if not limite:
+            descartes["sin_plazo_verificable"] += 1
+            continue
+        if limite < hoy:
+            descartes["vencidas"] += 1
+            continue
+        limpio = dict(p)
+        # La plantilla antigua prioriza apertura; unificamos el plazo de referencia
+        # sin alterar los datos persistidos en SQLite.
+        limpio["fecha_apertura"] = limite.isoformat(timespec="minutes")
+        if not presentacion:
+            limpio["fecha_presentacion"] = None
+        # No mostrar una fecha de publicación imposible o anterior a 2026.
+        if not _fecha_segura(p.get("fecha_publicacion")):
+            limpio["fecha_publicacion"] = None
+        salida.append(limpio)
+    print(f"Vista pública: {len(salida)} vigentes; descartes: {descartes}")
+    return salida
+
+
+def _anexar_maestra_si_existe(ruta_html: Path) -> None:
+    # Compatibilidad con la ubicación indicada inicialmente y con la del ZIP.
+    rutas = (RAIZ / "datos" / "base_maestra_deep.json",
+             RAIZ / "licitaciones" / "base_maestra_deep.json")
+    for ruta in rutas:
+        if ruta.is_file():
+            try:
+                from licitaciones.base_maestra import anexar_base_maestra
+                anexar_base_maestra(ruta_html, ruta)
+                print(f"Base maestra de referencia cargada: {ruta}")
+            except Exception as exc:
+                print(f"AVISO: no se pudo anexar la base maestra: {exc}")
+            return
+    print("AVISO: base maestra JSON no encontrada; se conserva el tablero sin el anexo")
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dias", type=int, help="días hacia atrás en el Boletín Oficial")
@@ -122,10 +203,10 @@ def main() -> int:
             print(f"No se pudieron mandar los avisos: {e}")
 
     estado_fuentes = [{"nombre": r.nombre, "estado": r.estado, "detalle": r.detalle} for r in resultados]
-    tablero.generar(salida_html, base.procesos(), base.alertas_recientes(), estado_fuentes, filtro, nota=nota)
+    tablero.generar(salida_html, _publicables(base.procesos()) if not args.demo else base.procesos(),
+                   base.alertas_recientes(), estado_fuentes, filtro, nota=nota)
     if not args.demo:
-        from licitaciones.base_maestra import anexar_base_maestra
-        anexar_base_maestra(salida_html, RAIZ / "datos" / "base_maestra_deep.json")
+        _anexar_maestra_si_existe(salida_html)
     print(f"Tablero: {salida_html}")
     if args.abrir:
         webbrowser.open(salida_html.as_uri())
