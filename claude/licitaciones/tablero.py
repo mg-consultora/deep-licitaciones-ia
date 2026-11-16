@@ -34,6 +34,7 @@ def _normalizar(s):
 EXCLUIR = (
     "aeronautic", "aeronautica", "aeronave", "avion", "helicopter", "fuerza aerea",
     "aeropuerto", "aerolinea", "automotor", "vehiculo", "automovil", "camion",
+    "baterias de 12 v y 8v",
     "motociclet", "maquinaria vial", "cartucho de bateria", "bateria de recambio en ups",
     "computadora", "notebook", "pc de escritorio", "impresora", "informatica",
     "toner", "telefonia celular", "telefono movil", "materiales de construccion",
@@ -51,6 +52,7 @@ INDUSTRIALES = (
     "plomo-calcio", "vrla", "inversor industrial", "inversores industriales",
     "convertidor industrial", "convertidores industriales",
     "110 vcc", "125 vcc", "220 vcc", "48 vcc",
+    "sistema de alimentacion ininterrumpida industrial", "baterias de niquel cadmio",
 )
 
 
@@ -97,6 +99,8 @@ def _alertas_relevantes(alertas, procesos):
     resultado = []
     for a in alertas:
         mensaje = _normalizar(a.get("mensaje"))
+        if any(x in mensaje for x in EXCLUIR):
+            continue
         enlace = str(a.get("link") or "").strip()
         coincide = (enlace and enlace in enlaces) or any(len(t) >= 18 and t in mensaje for t in titulos)
         if not coincide:
@@ -192,6 +196,28 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 </main>
 <script>
 const D = __DATOS__;
+// Defensa adicional en el navegador: evita mostrar avisos antiguos o ajenos
+// aunque otra etapa del proceso haya incorporado datos sin filtrar.
+const sinAcentos = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const noDEEP = /aeronaut|aeronave|avion|helicopter|fuerza aerea|aeropuerto|automotor|vehicul|camion|motocicl|baterias de 12 v y 8v|cartuchos? de bateria|notebook|computadora|informatica|impresora|fiscalizacion tecnica|materiales de construccion/;
+const siDEEP = /ups industrial|ups trifasic|sai industrial|energia critica|rectificador|cargador(?:es)? de bater|banco(?:s)? de bater|baterias? estacionari|ni.cd|plomo.calcio|vrla|inversor industrial|convertidor industrial|(?:48|110|125|220) vcc|alimentacion ininterrumpida industrial/;
+const fechaValida = v => { if (!v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) || ![2026,2027].includes(d.getFullYear()) ? null : d; };
+const esVigenteDEEP = p => {
+  const titulo = sinAcentos([p.titulo,p.organismo,p.tipo_contratacion].join(" "));
+  const detalle = sinAcentos([p.titulo,p.terminos,p.sector].join(" "));
+  const cierre = fechaValida(p.fecha_presentacion);
+  const estado = sinAcentos(p.estado);
+  return !noDEEP.test(titulo) && siDEEP.test(detalle) && cierre && cierre.getTime() > Date.now()
+    && !/adjudic|preadjudic|desierta|anulad|cancelad|finalizad|cerrad|sin efecto/.test(estado);
+};
+D.procesos = (D.procesos || []).filter(esVigenteDEEP);
+const titulosValidos = D.procesos.map(p=>sinAcentos(p.titulo)).filter(t=>t.length>=18);
+const linksValidos = new Set(D.procesos.map(p=>p.link).filter(Boolean));
+D.alertas = (D.alertas || []).filter(a => {
+  const mensaje = sinAcentos(a.mensaje);
+  return !noDEEP.test(mensaje) &&
+    ((a.link && linksValidos.has(a.link)) || titulosValidos.some(t=>mensaje.includes(t)));
+});
 const COL = {verde:"En plazo",amarillo:"Vence pronto",rojo:"Vencida",gris:"Sin fecha (verificar)"};
 const activos = new Set(["verde","amarillo"]);
 const $ = id => document.getElementById(id);
