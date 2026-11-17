@@ -346,6 +346,63 @@ def anexar_seguimiento_html(ruta_html: Path, resultado: dict) -> None:
         html += bloque
     ruta_html.write_text(html, encoding="utf-8")
 
+
+def anexar_obras_para_revision(ruta_html: Path, resultados: list[ResultadoFuente]) -> None:
+    """Obras con potencial de equipos DEEP que exigen revisar renglones/pliegos.
+    No se publican como licitaciones de suministro confirmadas.
+    """
+    from html import escape
+    from licitaciones.tablero import evaluar, norm, EXCLUSION_INFORMATICA, coincide
+    from datetime import datetime
+    claves = ("subestacion", "estacion transformadora", "sistema de transporte de energia",
+              "central hidroelectrica", "central termoelectrica", "planta minera",
+              "parque solar", "parque eolico", "servicios auxiliares", "bess",
+              "ampliacion electrica", "planta industrial", "refineria")
+    vistos, candidatos = set(), []
+    for r in resultados:
+        for op in r.oportunidades:
+            texto = norm(" ".join((op.titulo or "", op.texto or "")))
+            if not any(x in texto for x in claves):
+                continue
+            if coincide(texto, EXCLUSION_INFORMATICA):
+                continue
+            if evaluar({"titulo": op.titulo, "texto": op.texto})[0]:
+                continue
+            if op.fecha_apertura and op.fecha_apertura < datetime.now():
+                continue
+            clave = (op.numero_proceso or op.titulo or "").strip().lower()
+            if not clave or clave in vistos:
+                continue
+            vistos.add(clave)
+            candidatos.append(op)
+    candidatos = candidatos[:35]
+    if not candidatos:
+        return
+    filas = []
+    for op in candidatos:
+        titulo = escape((op.titulo or "Obra sin título")[:180])
+        numero = escape(op.numero_proceso or "Número no informado")
+        fuente = escape(op.fuente or "")
+        fecha = op.fecha_apertura.strftime("%d/%m/%Y") if op.fecha_apertura else "No informada"
+        enlace = (f'<a href="{escape(op.link, quote=True)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>'
+                  if op.link and op.link.startswith(("https://", "http://")) else "Sin enlace")
+        filas.append(f"<tr><td>{numero}</td><td>{titulo}</td><td>{fecha}</td><td>{fuente}</td><td>{enlace}</td></tr>")
+    bloque = ('<section class="panel" id="obras-revision-tecnica">'
+              '<details><summary><b>Obras para revisión técnica de equipos DEEP '
+              f'({len(candidatos)})</b></summary>'
+              '<p>Son obras de infraestructura detectadas automáticamente. '
+              '<b>No hay evidencia confirmada de suministro DEEP:</b> revisar renglones '
+              'y documentación técnica antes de cotizar. La fecha mostrada es apertura, '
+              'no cierre de ofertas.</p>'
+              '<div style="overflow-x:auto"><table><thead><tr><th>Proceso</th>'
+              '<th>Obra</th><th>Apertura</th><th>Fuente</th><th>Enlace</th></tr></thead>'
+              '<tbody>' + "".join(filas) + '</tbody></table></div></details></section>')
+    html = ruta_html.read_text(encoding="utf-8")
+    if "</main>" in html:
+        ruta_html.write_text(html.replace("</main>", bloque + "\\n</main>", 1), encoding="utf-8")
+    print(f"Obras para revisión técnica: {len(candidatos)} (sin suministro confirmado)")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dias", type=int, help="días hacia atrás en el Boletín Oficial")
@@ -407,6 +464,7 @@ def main() -> int:
         (("verde", "en_plazo"), ("amarillo", "por_vencer"), ("gris", "por_verificar"))))
     tablero.generar(salida_html, candidatos, base.alertas_recientes(), estado_fuentes, filtro, nota=nota)
     if not args.demo:
+        anexar_obras_para_revision(salida_html, resultados)
         _anexar_maestra_si_existe(salida_html)
         try:
             seguimiento = seguimiento_fuentes_maestras()
