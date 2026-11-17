@@ -3,7 +3,7 @@ name: Actualizar tablero Claude DEEP
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"  # 03:00 Argentina, todos los dias
+    - cron: "*/30 * * * *"  # monitoreo cada 30 minutos (UTC)
 
 permissions:
   contents: write
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   actualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
