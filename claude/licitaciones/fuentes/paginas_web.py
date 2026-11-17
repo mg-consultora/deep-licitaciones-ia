@@ -79,7 +79,9 @@ class PaginasWeb(Fuente):
         s.headers["User-Agent"] = USER_AGENT
         for p in paginas:
             try:
-                r = s.get(p["url"], timeout=45)
+                # Evitar que un portal inaccesible bloquee la actualización diaria.
+                # Tiempo de conexión corto y lectura acotada por fuente.
+                r = s.get(p["url"], timeout=(8, 20))
                 r.raise_for_status()
                 items = extraer_items(r.text, p["url"], p["nombre"])
                 ops += items
