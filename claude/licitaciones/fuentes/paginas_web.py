@@ -58,7 +58,8 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             organismo=nombre,
             estado="Circular" if "circular" in norm else "Publicada",
             fecha_publicacion=fechas[0] if fechas and fechas[0] != ap else None,
-            fecha_apertura=ap or (fechas[-1] if len(fechas) > 1 else None),
+            # Nunca inferir apertura desde una fecha arbitraria del aviso.
+            fecha_apertura=ap,
             link=link,
             texto=texto,
             es_circular="circular" in norm,
@@ -73,17 +74,21 @@ class PaginasWeb(Fuente):
         paginas = [p for p in self.config.get("paginas_publicas", []) if p.get("activa", True)]
         if not paginas:
             return ResultadoFuente(self.nombre, "desactivada", "No hay páginas cargadas en config.yaml")
-        ops, errores = [], []
+        ops, errores, detalle_fuentes = [], [], []
         s = requests.Session()
         s.headers["User-Agent"] = USER_AGENT
         for p in paginas:
             try:
                 r = s.get(p["url"], timeout=45)
                 r.raise_for_status()
-                ops += extraer_items(r.text, p["url"], p["nombre"])
+                items = extraer_items(r.text, p["url"], p["nombre"])
+                ops += items
+                detalle_fuentes.append(f"{p['nombre']}: {len(items)} registros HTML (sin validar vigencia)")
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
         detalle = f"{len(paginas) - len(errores)}/{len(paginas)} páginas leídas"
+        if detalle_fuentes:
+            detalle += " — " + "; ".join(detalle_fuentes)
         if errores:
             detalle += " — fallaron: " + "; ".join(errores)
         return ResultadoFuente(self.nombre, "ok" if len(errores) < len(paginas) else "error", detalle, ops)
