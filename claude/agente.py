@@ -167,8 +167,8 @@ def seguimiento_fuentes_maestras() -> dict:
     revisadas, hallazgos, textos = [], [], []
     p1 = ("ups industrial", "ups trifas", "rectificador", "cargador de bater", "banco de bater",
           "baterias estacionarias", "baterias industriales", "inversor industrial", "convertidor cc")
-    p2 = ("subestacion", "estacion transformadora", "servicios auxiliares", "parque solar",
-          "parque eolico", "bess", "central hidroelectrica", "central termoelectrica")
+    # Una obra no prueba suministro de equipos DEEP; excluir candidatos por sector solamente.
+    p2 = ()
     excluir = ("aeronautic", "automotriz", "motociclet", "bateria para vehicul",
                "cartucho de toner", "articulos de limpieza")
     # Buscar identificadores exactos en páginas institucionales y fichas HTML
