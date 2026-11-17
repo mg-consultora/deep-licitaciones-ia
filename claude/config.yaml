@@ -26,7 +26,6 @@ rubros:
     tablero de inversor: 3
     tableros de inversores: 3
     energia critica: 3
-    servicios auxiliares: 2
     sala de baterias: 3
     opzs: 3
     opzv: 3
@@ -40,8 +39,6 @@ rubros:
     baterias: 1
     bateria: 1
     cargador: 1
-    subestacion: 1
-    puesta en marcha: 1
   excluir_titulo:
   - bateria de uso aeronautico
   - baterias de uso aeronautico
