@@ -233,6 +233,13 @@ def _armar_aviso(buffer, rubro, estado_seccion, fin, url_pdf, fecha_edicion) -> 
         numero, tipo, pos_proc = "", "", 0
 
     titulo = _objeto(texto, pos_proc)
+    # En algunos avisos el objeto aparece como "Objeto de la contratación",
+    # "Objeto del llamado" o "Descripción" y no como "Objeto:".
+    # Extraerlo sin usar el rubro genérico como sustituto del producto.
+    if not titulo or len(titulo) < 12:
+        m_obj = re.search(r"(?:objeto\s+(?:de\s+la\s+)?(?:contratacion|licitacion|compra|convocatoria|llamado)|descripcion\s+del\s+(?:objeto|servicio)|objeto)\s*[:\-]\s*(.{12,300})", normalizar(texto), re.I)
+        if m_obj:
+            titulo = re.split(r"\b(?:apertura|presentacion de ofertas|consultas|expediente|presupuesto oficial|pliego)\s*:", m_obj.group(1), maxsplit=1, flags=re.I)[0].strip()[:220]
     norm = normalizar(texto)
     es_circular = estado_seccion == "Circular" or bool(_RE_CIRCULAR.search(norm))
     estado = "Circular" if es_circular and estado_seccion == "Convocatoria" else estado_seccion
