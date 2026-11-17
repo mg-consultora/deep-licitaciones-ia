@@ -45,6 +45,12 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         vistos.add(texto)
         a = b if b.name == "a" else b.find("a", href=True)
         link = urljoin(url_base, a["href"]) if a is not None and a.get("href") else url_base
+        # COMPR.AR: las filas del inicio incluyen el identificador del proceso
+        # y la fecha de apertura; no confundirlas con publicaciones.
+        es_comprar = "comprar.gob.ar" in url_base.lower()
+        numero = re.search(r"\\b\\d{2,3}(?:/\\d+)?-\\d{4}-[A-Z]{3}\\d{2}\\b", texto, re.I)
+        if es_comprar and (b.name != "tr" or not numero):
+            continue
         fechas = [f for _, f in buscar_fechas(texto) if _fecha_valida(f)]
         norm = normalizar(texto)
         ap = None
@@ -52,12 +58,17 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         if m:
             despues = [f for p, f in buscar_fechas(texto) if p >= m.start() and _fecha_valida(f)]
             ap = despues[0] if despues else None
+        if es_comprar:
+            # La tabla oficial rotula la columna como Fecha de Apertura.
+            # No asignar una fecha de publicación inexistente.
+            ap = fechas[0] if fechas else None
         items.append(Oportunidad(
+            numero_proceso=numero.group(0) if es_comprar and numero else "",
             fuente=f"Página: {nombre}",
             titulo=_limpiar_titulo(texto)[:220],
             organismo=nombre,
             estado="Circular" if "circular" in norm else "Publicada",
-            fecha_publicacion=fechas[0] if fechas and fechas[0] != ap else None,
+            fecha_publicacion=None if es_comprar else (fechas[0] if fechas and fechas[0] != ap else None),
             # Nunca inferir apertura desde una fecha arbitraria del aviso.
             fecha_apertura=ap,
             link=link,
