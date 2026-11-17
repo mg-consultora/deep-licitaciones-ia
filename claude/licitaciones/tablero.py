@@ -325,8 +325,9 @@ $("diagnostico-deep").innerHTML=`<b>Control de clasificación DEEP</b>
  <b>${n("sin_fecha")}</b> sin fecha verificable.</p>
  <small>La lectura de fuentes no equivale a encontrar convocatorias abiertas. Los avisos sin evidencia suficiente no se publican como oportunidades vigentes.</small>`;
 
-function opciones(id, campo, rot){ const vals=[...new Set(D.procesos.map(p=>p[campo]).filter(Boolean))].sort();
-  $(id).innerHTML = `<option value="">${rot}: todos</option>` + vals.map(v=>`<option>${esc(v)}</option>`).join(""); }
+const catalogos={sector:["Energía eléctrica","Minería","Oil & Gas","Industria","Telecom y datos","Transporte","Salud","Gobierno y educación"],prov:["Buenos Aires","CABA","Catamarca","Chubut","Córdoba","Corrientes","Entre Ríos","Jujuy","La Pampa","La Rioja","Mendoza","Misiones","Neuquén","Río Negro","Salta","San Juan","San Luis","Santa Cruz","Santa Fe","Santiago del Estero","Tierra del Fuego","Tucumán","Chaco","Formosa"]};
+function opciones(id, campo, rot){ const vals=[...new Set([...(catalogos[id]||[]),...D.procesos.map(p=>p[campo]).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"es"));
+  $(id).innerHTML = `<option value="">${rot}: todos</option>` + vals.map(v=>`<option value="${esc(v)}">${esc(v)} (${D.procesos.filter(p=>p[campo]===v).length})</option>`).join(""); }
 opciones("sector","sector","Sector"); opciones("prov","provincia","Provincia"); opciones("fuente","fuente","Fuente");
 function kpis(){ $("kpis").innerHTML = ["verde","amarillo","rojo","gris"].map(c=>{
   const n=D.procesos.filter(p=>p.semaforo===c).length;
@@ -354,7 +355,7 @@ function pintar(){ kpis(); const L=visibles();
     ${p.circulares.map((c,i)=>`<a href="${esc(c.link)}" target="_blank" rel="noopener">Circular ${i+1} (${f(c.fecha)}) ↗</a>`).join("")}
     <span class="mut">${esc(p.fuente)}</span>
     ${(p.terminos||[]).slice(0,5).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
-  </div>`).join("") : `<div class="vacio">No hay oportunidades con estos filtros.</div>`; }
+  </div>`).join("") : `<div class="vacio">${D.procesos.length===0?"No hay licitaciones DEEP verificadas para mostrar. Los filtros están disponibles, pero esta actualización no contiene oportunidades. Revisá las fuentes y el seguimiento de procesos más abajo.":"Ninguna oportunidad coincide con los filtros seleccionados. Elegí Todos para ampliar la búsqueda."}</div>`; }
 $("alertas").innerHTML = `<h2>Novedades: circulares y cambios de fecha</h2>` + (D.alertas.length ? D.alertas.map(a=>
   `<div class="alerta"><span class="tag">${esc(a.tipo)}</span>${esc(a.mensaje)} ${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="mut">· ${f(a.fecha)}</span></div>`).join("")
   : `<div class="mut">Sin novedades desde la última revisión.</div>`);
