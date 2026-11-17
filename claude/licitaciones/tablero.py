@@ -104,8 +104,10 @@ EXCLUSIONES_CATALOGO = (
 )
 def evaluar(p):
     # Solo datos del objeto contractual; organismo/sector/tags no prueban producto.
+    # Evaluar el alcance completo del aviso, no únicamente el título.
+    # Si menciona un equipo industrial en una obra grande, también cuenta.
     texto = norm(" ".join(str(p.get(k) or "") for k in (
-        "titulo", "objeto", "descripcion", "especificaciones")))
+        "titulo", "objeto", "descripcion", "especificaciones", "texto")))
     # El Boletín conserva el texto completo en el registro original, pero
     # SQLite guarda solo el título: no inferir productos desde el organismo.
     # Los términos de sector y ubicación nunca bastan como evidencia.
