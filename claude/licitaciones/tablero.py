@@ -106,6 +106,9 @@ def evaluar(p):
     # Solo datos del objeto contractual; organismo/sector/tags no prueban producto.
     texto = norm(" ".join(str(p.get(k) or "") for k in (
         "titulo", "objeto", "descripcion", "especificaciones")))
+    # El Boletín conserva el texto completo en el registro original, pero
+    # SQLite guarda solo el título: no inferir productos desde el organismo.
+    # Los términos de sector y ubicación nunca bastan como evidencia.
     # Normalizar grafías para reconocer Plomo-Ácido y DC/DC sin aceptar
     # coincidencias parciales en palabras ajenas.
     canon = texto.replace("-", " ")
