@@ -348,59 +348,75 @@ def anexar_seguimiento_html(ruta_html: Path, resultado: dict) -> None:
 
 
 def anexar_obras_para_revision(ruta_html: Path, resultados: list[ResultadoFuente]) -> None:
-    """Obras con potencial de equipos DEEP que exigen revisar renglones/pliegos.
-    No se publican como licitaciones de suministro confirmadas.
+    """Detecta obras potenciales sin afirmar que contienen equipos DEEP.
+
+    Solo utiliza objeto y texto de cada aviso. Nunca convierte una apertura
+    en fecha de cierre ni declara una obra como suministro confirmado.
     """
     from html import escape
     from licitaciones.tablero import evaluar, norm, EXCLUSION_INFORMATICA, coincide
+    import re
     from datetime import datetime
-    claves = ("subestacion", "estacion transformadora", "sistema de transporte de energia",
-              "central hidroelectrica", "central termoelectrica", "planta minera",
-              "parque solar", "parque eolico", "servicios auxiliares", "bess",
-              "ampliacion electrica", "planta industrial", "refineria")
+    claves = (
+        "subestacion", "estacion transformadora", "sistema de transporte de energia",
+        "central hidroelectrica", "central termoelectrica", "planta minera",
+        "parque solar", "parque eolico", "servicios auxiliares", "bess",
+        "ampliacion electrica", "planta industrial", "refineria",
+        "linea de alta tension", "transmision electrica", "planta de tratamiento",
+        "central de generacion", "estacion de bombeo", "distribucion electrica"
+    )
     vistos, candidatos = set(), []
+    ahora = datetime.now()
     for r in resultados:
         for op in r.oportunidades:
             texto = norm(" ".join((op.titulo or "", op.texto or "")))
-            if not any(x in texto for x in claves):
+            # Los avisos largos pueden contener productos informáticos accesorios;
+            # la exclusión se aplica al objeto/título, no a toda la obra.
+            if coincide(norm(op.titulo or ""), EXCLUSION_INFORMATICA):
                 continue
-            if coincide(texto, EXCLUSION_INFORMATICA):
+            razones = [x for x in claves if re.search(r"(?<!\\w)" + re.escape(x) + r"(?!\\w)", texto)]
+            if not razones:
                 continue
             if evaluar({"titulo": op.titulo, "texto": op.texto})[0]:
                 continue
-            if op.fecha_apertura and op.fecha_apertura < datetime.now():
+            if op.fecha_apertura and op.fecha_apertura < ahora:
                 continue
             clave = (op.numero_proceso or op.titulo or "").strip().lower()
             if not clave or clave in vistos:
                 continue
             vistos.add(clave)
-            candidatos.append(op)
-    candidatos = candidatos[:35]
-    if not candidatos:
-        return
+            candidatos.append((op, razones))
+    candidatos.sort(key=lambda item: (item[0].fecha_apertura is None,
+                                      item[0].fecha_apertura or datetime.max))
+    total = len(candidatos)
     filas = []
-    for op in candidatos:
+    for op, razones in candidatos[:100]:
         titulo = escape((op.titulo or "Obra sin título")[:180])
         numero = escape(op.numero_proceso or "Número no informado")
         fuente = escape(op.fuente or "")
         fecha = op.fecha_apertura.strftime("%d/%m/%Y") if op.fecha_apertura else "No informada"
+        evidencia = escape(", ".join(razones[:3]))
         enlace = (f'<a href="{escape(op.link, quote=True)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>'
                   if op.link and op.link.startswith(("https://", "http://")) else "Sin enlace")
-        filas.append(f"<tr><td>{numero}</td><td>{titulo}</td><td>{fecha}</td><td>{fuente}</td><td>{enlace}</td></tr>")
+        filas.append(f"<tr><td>{numero}</td><td>{titulo}</td><td>{evidencia}</td>"
+                    f"<td>{fecha}</td><td>{fuente}</td><td>{enlace}</td></tr>")
     bloque = ('<section class="panel" id="obras-revision-tecnica">'
-              '<details><summary><b>Obras para revisión técnica de equipos DEEP '
-              f'({len(candidatos)})</b></summary>'
-              '<p>Son obras de infraestructura detectadas automáticamente. '
-              '<b>No hay evidencia confirmada de suministro DEEP:</b> revisar renglones '
-              'y documentación técnica antes de cotizar. La fecha mostrada es apertura, '
-              'no cierre de ofertas.</p>'
+              '<details open><summary><b>Oportunidades potenciales DEEP '
+              f'({total})</b></summary>'
+              '<p>Detección automática de obras de infraestructura que podrían requerir '
+              'UPS industriales, cargadores, rectificadores o bancos de baterías. '
+              '<b>Potencial no equivale a producto confirmado.</b> '
+              'La fecha indicada es de apertura, no cierre de ofertas. '
+              'Se muestran hasta 100 procesos, ordenados por apertura.</p>'
               '<div style="overflow-x:auto"><table><thead><tr><th>Proceso</th>'
-              '<th>Obra</th><th>Apertura</th><th>Fuente</th><th>Enlace</th></tr></thead>'
+              '<th>Obra</th><th>Motivo detectado</th><th>Apertura</th>'
+              '<th>Fuente</th><th>Enlace</th></tr></thead>'
               '<tbody>' + "".join(filas) + '</tbody></table></div></details></section>')
     html = ruta_html.read_text(encoding="utf-8")
     if "</main>" in html:
         ruta_html.write_text(html.replace("</main>", bloque + "\\n</main>", 1), encoding="utf-8")
-    print(f"Obras para revisión técnica: {len(candidatos)} (sin suministro confirmado)")
+    print(f"Oportunidades potenciales DEEP: {total}; mostradas {len(filas)}")
+
 
 
 def main() -> int:
