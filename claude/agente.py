@@ -336,7 +336,11 @@ def anexar_seguimiento_html(ruta_html: Path, resultado: dict) -> None:
     contenido += ['</ul></details></section>']
     html = ruta_html.read_text(encoding="utf-8")
     bloque = "\n".join(contenido)
-    if "</body>" in html:
+    # Mostrar el seguimiento dentro del tablero, antes del cierre de <main>.
+    # Sigue siendo una sección separada: NO altera el semáforo de convocatorias.
+    if "</main>" in html:
+        html = html.replace("</main>", bloque + "\n</main>", 1)
+    elif "</body>" in html:
         html = html.replace("</body>", bloque + "\n</body>", 1)
     else:
         html += bloque
