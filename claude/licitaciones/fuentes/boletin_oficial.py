@@ -233,6 +233,11 @@ def _armar_aviso(buffer, rubro, estado_seccion, fin, url_pdf, fecha_edicion) -> 
         numero, tipo, pos_proc = "", "", 0
 
     titulo = _objeto(texto, pos_proc)
+    # Priorizar el objeto contractual explícito sobre el texto libre de
+    # encabezados, para que el filtro DEEP vea el producto real solicitado.
+    objeto_etiquetado = re.search(r"\b(?:objeto(?:\s+de\s+la\s+(?:licitacion|contratacion|compra))?|descripcion\s+del\s+objeto)\s*:\s*(.{12,300})", normalizar(texto), re.I)
+    if objeto_etiquetado:
+        titulo = re.split(r"\b(?:apertura|presentacion de ofertas|consultas|expediente|presupuesto oficial|pliego)\s*:", objeto_etiquetado.group(1), maxsplit=1, flags=re.I)[0].strip()[:220]
     # En algunos avisos el objeto aparece como "Objeto de la contratación",
     # "Objeto del llamado" o "Descripción" y no como "Objeto:".
     # Extraerlo sin usar el rubro genérico como sustituto del producto.
