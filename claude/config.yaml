@@ -178,6 +178,8 @@ sectores:
   - fuerza aerea
   - policia
 paginas_publicas:
+- nombre: COMPR.AR – procesos recientes (portal oficial)
+  url: https://comprar.gob.ar/Compras.aspx
 - nombre: Chubut – licitaciones provinciales
   url: https://licitaciones.chubut.gov.ar/
 - nombre: EANA
