@@ -61,7 +61,9 @@ class Base:
             return []          # el mismo aviso republicado otro día: ya lo procesamos
         ahora = datetime.now().isoformat(timespec="minutes")
         nuevo = op.como_dict()
-        nuevo.pop("texto", None)
+        # Conservar el aviso oficial para revisar equipos en el alcance,
+        # aunque el título sea una obra general. Límite para SQLite/HTML.
+        nuevo["texto"] = (op.texto or "")[:12000]
         clave = op.clave
         alertas: list[dict] = []
         hito = {"fecha": nuevo["fecha_publicacion"] or ahora, "estado": op.estado, "link": op.link}
