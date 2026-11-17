@@ -116,7 +116,7 @@ def evaluar(p):
     canon = texto.replace("-", " ")
     canon = re.sub(r"\s*/\s*", "/", canon)
     # Rechazo absoluto de UPS informáticas aunque el aviso mencione bancos de baterías.
-    if coincide(texto, EXCLUSION_INFORMATICA):
+    if coincide(norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto"))), EXCLUSION_INFORMATICA):
         return 0, "UPS/equipamiento informático fuera del catálogo DEEP"
     exclusion = coincide(texto, EXCLUSION)
     exclusion = exclusion or coincide(texto, EXCLUSIONES_CATALOGO)
