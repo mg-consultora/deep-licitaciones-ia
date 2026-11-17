@@ -43,27 +43,93 @@ def fecha(v):
     except (ValueError, TypeError, OverflowError):
         return None
 
+# Catálogo DEEP R4: solo productos y servicios concretos de electrónica de potencia.
+# Las obras, industrias y ubicaciones NO son criterios de admisión.
+PRODUCTOS_EXACTOS = (
+    "ups industrial", "ups de grado industrial", "ups trifasica",
+    "sai industrial", "sistema de alimentacion ininterrumpida industrial",
+    "rectificador", "rectificadores", "cargador rectificador",
+    "cargador de baterias", "cargadores de baterias",
+    "banco de baterias", "bancos de baterias",
+    "bateria estacionaria", "baterias estacionarias",
+    "bateria industrial", "baterias industriales",
+    "celda plomo acido", "celdas plomo acido",
+    "celda niquel cadmio", "celdas niquel cadmio",
+    "inversor industrial", "inversor de tension", "inversores de tension",
+    "convertidor dc/dc", "convertidores dc/dc", "convertidor cc/cc",
+    "convertidores cc/cc", "convertidor dc/ac", "convertidores dc/ac",
+    "convertidor cc/ca", "convertidor de frecuencia",
+    "convertidores de frecuencia", "llave estatica", "llaves estaticas",
+    "tablero de distribucion de cc", "tableros de distribucion de cc",
+    "tablero de distribucion de ca", "tableros de distribucion de ca",
+    "rectificador de traccion", "inversor traccionario",
+    "convertidor ferroviario", "cargador ferroviario",
+    "revamping de rectificadores", "revamping de ups",
+    "revamping de inversores", "revamping de convertidores",
+    "tiristores", "fusibles ur", "fusibles ultrarrapidos",
+    "igbt", "columna de potencia", "columnas de potencia",
+    "diodos de potencia", "capacitores de potencia",
+)
+# Términos genéricos que solo se admiten con evidencia industrial explícita.
+PRODUCTOS_CON_CONTEXTO = (
+    "ups", "sai", "inversor", "inversores", "convertidor", "convertidores",
+    "cargador", "cargadores", "baterias", "bateria",
+    "monoblock", "monoblocks", "tablero", "tableros",
+    "capacitores", "diodos", "fusibles", "microswitch",
+)
+CONTEXTO_INDUSTRIAL = (
+    "industrial", "estacionaria", "estacionarias", "trifasico",
+    "trifasica", "110 vcc", "125 vcc", "220 vcc",
+    "48 vcc", "ni-cd", "ni cd", "niquel cadmio",
+    "plomo acido", "plomo-acido", "vrla", "agm",
+    "electroobtencion", "galvanoplastia", "anodizado",
+    "traccion ferroviaria", "material rodante", "electroquimico",
+    "electronica de potencia", "corriente continua industrial",
+)
+EXCLUSIONES_CATALOGO = (
+    "cable", "cables", "terminal", "terminales", "termocontraible",
+    "termocontraibles", "conductor electrico", "conductores electricos",
+    "bateria para movil", "baterias para moviles", "baterias para vehiculos",
+    "baterias para motocicletas", "bateria para motocicleta",
+    "bateria automotriz", "baterias automotrices",
+    "bateria de celular", "baterias de celular",
+    "bateria para notebook", "baterias para notebook",
+    "bateria para pc", "baterias para pc", "bateria de litio para herramientas",
+    "pilas", "pila", "power bank", "baterias para radio",
+    "baterias para equipos portatiles", "baterias para alarmas",
+    "baterias para juguetes", "bateria para ups informatica",
+    "baterias para ups informaticas", "bateria de respaldo para pc",
+    "cubiertas", "camara para motovehiculos", "camara para motocicletas",
+    "articulos de limpieza", "mobiliario", "toner",
+)
 def evaluar(p):
-    # No usar etiquetas automáticas como prueba de suministro de equipos.
-    texto = norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro", "especificaciones")))
-    contexto = norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto", "descripcion", "rubro", "especificaciones", "sector", "organismo")))
-    directa = coincide(texto, P1)
-    obra = coincide(texto, P2)
-    indirecta = coincide(texto, P3)
-    tecnica = coincide(texto, TECNICAS)
-    sector = coincide(contexto, SECTORES)
-    suministro = coincide(texto, SUMINISTRO)
-    if coincide(texto, EXCLUSION): return 0, "Excluida"
-    # 'informática' no excluye una UPS industrial de un centro de datos.
-    if coincide(texto, EXCLUSION_INFORMATICA) and not (directa and tecnica): return 0, "Excluida"
-    # Baterías de 12/8 V sin aplicación industrial comprobable no son P1.
-    if re.search(r"baterias? de 12\s*v y 8\s*v", texto) and not (directa or tecnica): return 0, "Excluida"
-    # Coincidencia secundaria: algunos extractores sólo guardan título,
-    # organismo y etiquetas. Una etiqueta aislada nunca prueba suministro.
-    if not (directa or obra or indirecta):
-        return 0, "Sin evidencia técnica suficiente"
-    puntos = min(100, (60 if directa else 0) + (30 if obra else 0) + (15 if indirecta else 0) + (15 if tecnica else 0) + (10 if sector else 0) + (15 if suministro else 0))
-    return puntos, ("Alta" if puntos >= 75 else "Media" if puntos >= 40 else "Potencial")
+    # Solo datos del objeto contractual; organismo/sector/tags no prueban producto.
+    texto = norm(" ".join(str(p.get(k) or "") for k in (
+        "titulo", "objeto", "descripcion", "especificaciones")))
+    # Normalizar grafías para reconocer Plomo-Ácido y DC/DC sin aceptar
+    # coincidencias parciales en palabras ajenas.
+    canon = texto.replace("-", " ")
+    canon = re.sub(r"\s*/\s*", "/", canon)
+    exclusion = coincide(texto, EXCLUSION) or coincide(texto, EXCLUSION_INFORMATICA)
+    exclusion = exclusion or coincide(texto, EXCLUSIONES_CATALOGO)
+    # En avisos mixtos, una exclusión no debe ocultar un equipo DEEP
+    # explícitamente identificado (p.ej. UPS industrial con cables incluidos).
+    exactos = [t for t in PRODUCTOS_EXACTOS if contiene(texto, t) or contiene(canon, t)]
+    genericos = [t for t in PRODUCTOS_CON_CONTEXTO if contiene(texto, t)]
+    industrial = coincide(texto, CONTEXTO_INDUSTRIAL)
+    # "Baterías" a secas o "UPS" sin grado industrial nunca son suficientes.
+    valido = bool(exactos) or (bool(genericos) and industrial)
+    if not valido:
+        return 0, "Sin producto DEEP explícito"
+    if exclusion and not exactos:
+        return 0, "Excluida por catálogo"
+    # Componentes genéricos requieren especificación de potencia.
+    if not exactos and genericos and not industrial:
+        return 0, "Sin especificación industrial"
+    puntos = min(100, (75 if exactos else 45) +
+                 (15 if industrial else 0) +
+                 (10 if coincide(texto, SUMINISTRO) else 0))
+    return puntos, ("Alta" if puntos >= 75 else "Media")
 
 def _clasificar(procesos, filtro, ahora):
     ahora = (ahora or datetime.now()).replace(tzinfo=None)
