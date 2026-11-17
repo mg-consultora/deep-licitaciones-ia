@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: obras-futuras
@@ -57,6 +58,7 @@ jobs:
             git commit -m "Obras futuras actualizadas $(date -u +%Y-%m-%d)"
             if git push origin HEAD:main; then
               echo "Tablero y base de obras publicados correctamente"
+              GH_TOKEN="${{ github.token }}" gh workflow run static.yml --ref main
               exit 0
             fi
 
