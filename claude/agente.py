@@ -290,9 +290,10 @@ def seguimiento_fuentes_maestras() -> dict:
         comprobaciones.append({
             "organismo": organismo, "proceso": numero,
             "objeto": lic.get("Objeto", ""),
-            "estado": "REFERENCIA EN PORTAL; VALIDAR FICHA Y PLAZO"
-                      if encontrados else "NO VERIFICADA",
+            "estado": "IDENTIFICADOR EN PORTAL (VIGENCIA SIN COMPROBAR)"
+                      if encontrados else "PENDIENTE DE COMPROBACIÓN",
             "enlaces": encontrados[:3],
+            "url_referencia": lic.get("URL / fuente", ""),
             "cierre": "NO INFORMADA", "circulares": "NO VERIFICADAS"})
     print(f"Consulta institucional: {total_paginas} páginas HTML leídas; "
           f"{sum(bool(x['enlaces']) for x in comprobaciones)} referencias con coincidencia "
@@ -318,15 +319,30 @@ def anexar_seguimiento_html(ruta_html: Path, resultado: dict) -> None:
     ok = sum(f["estado"] == "consultada" for f in fuentes)
     contenido = ['<section id="deep-seguimiento-fuentes" style="margin:24px auto;max-width:1400px;padding:20px;background:white;border:1px solid #ddd;border-radius:12px">',
                  '<h2>Seguimiento de fuentes y procesos DEEP</h2>',
-                 '<p><b>Relevamiento preliminar:</b> ninguna coincidencia textual acredita una convocatoria vigente. '
+                 '<p><b>Registro de referencias, NO lista de licitaciones activas:</b> ninguna coincidencia textual acredita una convocatoria vigente. '
                  'Los cierres y las circulares requieren comprobación en la ficha oficial. '
                  'No se descargaron pliegos.</p>',
                  f'<p>Fuentes HTML consultadas: {ok}/{len(fuentes)}; referencias maestras: {len(refs)}; enlaces candidatos: {len(hallazgos)}.</p>',
-                 '<details open><summary><b>Procesos de la base maestra</b></summary><div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Organismo</th><th>Proceso</th><th>Objeto</th><th>Verificación</th><th>Fuente</th></tr></thead><tbody>']
+                 '<details><summary><b>Referencias históricas / pendientes de comprobación (no son licitaciones activas)</b></summary><div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Organismo</th><th>Proceso</th><th>Objeto</th><th>Compatibilidad preliminar</th><th>Verificación de existencia</th><th>Fuente</th></tr></thead><tbody>']
     for x in refs:
-        enlaces = " ".join(f'<a href="{escape(u, quote=True)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>' for u in x["enlaces"])
-        contenido.append('<tr>' + ''.join(f'<td style="padding:7px;border-top:1px solid #eee">{escape(str(v))}</td>' for v in
-                          (x["organismo"], x["proceso"], x["objeto"], x["estado"])) + f'<td>{enlaces or "Sin coincidencia verificada"}</td></tr>')
+        from licitaciones.tablero import evaluar, norm
+        objeto = str(x.get("objeto") or "")
+        puntaje, _ = evaluar({"titulo": objeto})
+        # El objeto de una referencia maestra permite estimar compatibilidad,
+        # pero NO acredita existencia ni vigencia oficial.
+        compatible = ("PRODUCTO DEEP MENCIONADO (SIN VALIDAR)" if puntaje
+                      else "POSIBLE OBRA / FUERA DE CATÁLOGO (REVISAR)")
+        enlaces = " ".join(
+            f'<a href="{escape(u, quote=True)}" target="_blank" rel="noopener noreferrer">Coincidencia institucional</a>'
+            for u in x["enlaces"])
+        url_ref = str(x.get("url_referencia") or "")
+        if url_ref.startswith("https://"):
+            enlaces += (' <a href="' + escape(url_ref, quote=True) +
+                        '" target="_blank" rel="noopener noreferrer">Portal de referencia (no verificado)</a>')
+        contenido.append('<tr>' + ''.join(
+            f'<td style="padding:7px;border-top:1px solid #eee">{escape(str(v))}</td>'
+            for v in (x["organismo"], x["proceso"], x["objeto"], compatible, x["estado"])) +
+            f'<td>{enlaces or "Sin enlace oficial comprobado"}</td></tr>')
     contenido += ['</tbody></table></div></details>', '<details><summary><b>Enlaces candidatos detectados en portales</b></summary><ul>']
     for x in hallazgos:
         contenido.append(f'<li>{escape(x["prioridad"])} · <a href="{escape(x["url"], quote=True)}" target="_blank" rel="noopener noreferrer">{escape(x["titulo"])}</a> · {escape(x["fuente"])} · POR VERIFICAR</li>')
