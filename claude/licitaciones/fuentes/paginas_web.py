@@ -48,7 +48,7 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         # COMPR.AR: las filas del inicio incluyen el identificador del proceso
         # y la fecha de apertura; no confundirlas con publicaciones.
         es_comprar = "comprar.gob.ar" in url_base.lower()
-        numero = re.search(r"\\b\\d{2,3}(?:/\\d+)?-\\d{4}-[A-Z]{3}\\d{2}\\b", texto, re.I)
+        numero = re.search(r"\b\d{2,3}(?:/\d+)?-\d{4}-[A-Z]{3}\d{2}\b", texto, re.I)
         if es_comprar and (b.name != "tr" or not numero):
             continue
         fechas = [f for _, f in buscar_fechas(texto) if _fecha_valida(f)]
