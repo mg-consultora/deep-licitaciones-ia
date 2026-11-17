@@ -20,7 +20,7 @@ SECTORES = ("energia", "mineria", "petroleo", "oil & gas", "petroquimica", "side
 TECNICAS = ("24 vcc", "48 vcc", "110 vcc", "125 vcc", "220 vcc", "220 vca", "230 vca", "380 vca", "400 vca", "vrla", "agm", "gel", "pb-ca", "ni-cd", "ni cd", "plomo-acido", "niquel-cadmio", "doble conversion", "redundancia n+1", "cargador dual", "trifasico", "unifilar", "pdtg", "fat", "sat", "retrofit")
 SUMINISTRO = ("suministro", "adquisicion", "provision", "instalacion", "puesta en marcha", "mantenimiento", "reparacion", "reemplazo", "renovacion")
 EXCLUSION = ("uso aeronautico", "aeronautica", "aeronave", "aviones", "helicoptero", "fuerza aerea", "bateria automotriz", "baterias automotrices", "bateria de motocicleta", "arranque vehicular", "baterias para vehiculos", "baterias para camiones", "power bank", "cargador de celular", "pila domestica", "pilas domesticas", "toner", "mobiliario de oficina", "cartuchos de bateria de recambio", "fiscalizacion tecnica", "servicio de fiscalizacion", "inspeccion de obra", "supervision de obra")
-EXCLUSION_INFORMATICA = ("ups para pc", "ups para computadora", "ups informatica", "notebooks", "computadoras personales", "perifericos", "impresoras")
+EXCLUSION_INFORMATICA = ("ups para pc", "ups para computadora", "ups informatica", "ups de uso informatico", "ups uso informatico", "ups informatico", "ups de escritorio", "ups para servidores", "ups para rack informatico", "ups para data center", "ups para centro de computos", "sai informatico", "sai para pc", "notebooks", "computadoras personales", "perifericos", "impresoras")
 CERRADOS = ("adjudic", "preadjudic", "desiert", "anulad", "cancelad", "finalizad", "cerrad", "sin efecto", "revocad")
 
 def norm(s):
@@ -110,7 +110,10 @@ def evaluar(p):
     # coincidencias parciales en palabras ajenas.
     canon = texto.replace("-", " ")
     canon = re.sub(r"\s*/\s*", "/", canon)
-    exclusion = coincide(texto, EXCLUSION) or coincide(texto, EXCLUSION_INFORMATICA)
+    # Rechazo absoluto de UPS informáticas aunque el aviso mencione bancos de baterías.
+    if coincide(texto, EXCLUSION_INFORMATICA):
+        return 0, "UPS/equipamiento informático fuera del catálogo DEEP"
+    exclusion = coincide(texto, EXCLUSION)
     exclusion = exclusion or coincide(texto, EXCLUSIONES_CATALOGO)
     # En avisos mixtos, una exclusión no debe ocultar un equipo DEEP
     # explícitamente identificado (p.ej. UPS industrial con cables incluidos).
