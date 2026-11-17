@@ -55,3 +55,10 @@ jobs:
             git commit -m "Actualizar tablero Claude DEEP con obras y filtros"
             git push origin HEAD:main
           fi
+      - name: Solicitar despliegue de GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Los pushes con GITHUB_TOKEN no disparan el workflow de Pages.
+          # workflow_dispatch sí lo hace; static.yml toma la última main.
+          gh workflow run static.yml --ref main
