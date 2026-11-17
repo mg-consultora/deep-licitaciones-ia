@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 # Comparte el bloqueo con "Obras futuras" para que ambos no escriban
 # index.html y salida/obras.db al mismo tiempo.
