@@ -83,7 +83,7 @@ def _fecha_segura(valor: object):
         return None
     try:
         fecha = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
-        if fecha.year not in (2026, 2027):
+        if not (datetime.now().year - 1 <= fecha.year <= datetime.now().year + 2):
             return None
         return fecha.replace(tzinfo=None)
     except (ValueError, TypeError, OverflowError):
@@ -113,7 +113,7 @@ def _candidatos_para_tablero(procesos: list[dict]) -> list[dict]:
         # No usar apertura como cierre ni inventar fecha de presentación.
         candidatos.append(p)
     print(f"Entrada a clasificador P1/P2/P3: {len(candidatos)} registros; "
-          f"publicaciones fuera de 2026-2027 o inválidas: {anteriores}; "
+          f"publicaciones fuera de ventana temporal móvil o inválidas: {anteriores}; "
           f"publicaciones futuras: {futuros}")
     return candidatos
 
