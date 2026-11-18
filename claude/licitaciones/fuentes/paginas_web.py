@@ -61,6 +61,7 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         fechas = [f for _, f in buscar_fechas(texto) if _fecha_valida(f)]
         norm = normalizar(texto)
         ap = None
+        cierre = None
         m = re.search(r"apertura[^0-9]{0,40}", norm)
         if m:
             despues = [f for p, f in buscar_fechas(texto) if p >= m.start() and _fecha_valida(f)]
@@ -75,6 +76,13 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             apertura = next((celda for titulo, celda in columnas.items() if "apertura" in titulo), None)
             fechas_apertura = [f for _, f in buscar_fechas(apertura.get_text(" ", strip=True)) if _fecha_valida(f)] if apertura else []
             ap = fechas_apertura[0] if fechas_apertura else None
+            # Cierre/presentación es diferente de apertura: no inferir fechas.
+            celda_cierre = next((celda for titulo, celda in columnas.items()
+                                 if "presentacion" in titulo or "cierre" in titulo
+                                 or "recepcion de ofertas" in titulo), None)
+            fechas_cierre = [f for _, f in buscar_fechas(celda_cierre.get_text(" ", strip=True))
+                             if _fecha_valida(f)] if celda_cierre else []
+            cierre = fechas_cierre[0] if fechas_cierre else None
         items.append(Oportunidad(
             numero_proceso=numero.group(0) if es_comprar and numero else "",
             fuente=f"Página: {nombre}",
@@ -84,6 +92,7 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             fecha_publicacion=None if es_comprar else (fechas[0] if fechas and fechas[0] != ap else None),
             # Nunca inferir apertura desde una fecha arbitraria del aviso.
             fecha_apertura=ap,
+            fecha_presentacion=cierre,
             link=link,
             texto=texto,
             es_circular="circular" in norm,
