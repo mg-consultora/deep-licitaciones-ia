@@ -1,64 +1,95 @@
-"""Actualiza la base maestra del tablero a partir de registros del agente diario.
-Mantiene antecedentes como pendientes; nunca infiere una convocatoria abierta.
+"""Base maestra DEEP dinámica: solo registros reales del agente, sin filas precargadas.
+La fecha de actualización del tablero NO acredita vigencia de cada convocatoria.
 """
 import argparse
 import html
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-BASE = "<section class=\"panel\" id=\"base-maestra-deep\"><h2>Base maestra DEEP — referencias pendientes de verificación</h2><p><b>29 empresas · 11 licitaciones · 5 obras · 8 fuentes.</b> Estos registros son antecedentes y <b>no se consideran convocatorias abiertas</b> sin confirmar cierre y circulares oficiales. Las fechas de apertura del Excel no se usan para calcular el semáforo.</p><details><summary>Consultar las licitaciones de la base maestra</summary><div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:13px\"><thead><tr><th>Empresa</th><th>Proceso</th><th>Objeto</th><th>Validación pendiente</th><th>Referencia</th></tr></thead><tbody><tr><td>AABE</td><td>392-0016-LPR26</td><td>UPS y cuatro bancos de baterías</td><td>Referencia previa: ficha oficial; verificar número y fecha</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://comprar.gob.ar/\">Fuente de referencia</a></td></tr><tr><td>INV</td><td>49-0002-LPR26</td><td>Adquisición e instalación de UPS para laboratorio</td><td>Referencia previa: confirmar pliego y apertura</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://comprar.gob.ar/\">Fuente de referencia</a></td></tr><tr><td>EPEC</td><td>1530</td><td>Rectificador y banco de baterías para SEA Paraguay</td><td>Aviso secundario; contrastar oficial</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://indicadores.ar/contrataciones/llamados/aviso/empresa-provincial-de-energia-de-cordoba-licitacion-publica-electronica-21a7ea\">Fuente de referencia</a></td></tr><tr><td>EPEC</td><td>1534</td><td>Rectificador y banco de baterías de electrolito absorbido</td><td>Aviso secundario; contrastar oficial</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://indicadores.ar/contrataciones/llamados/aviso/empresa-provincial-de-energia-de-cordoba-licitacion-publica-electronica-102857\">Fuente de referencia</a></td></tr><tr><td>EPEN</td><td>40/2026</td><td>Cinco interruptores 132 kV – ET Centenario Oeste</td><td>Fecha y pliego sin corroborar</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://www.epen.gov.ar/index.php/licitaciones/\">Fuente de referencia</a></td></tr><tr><td>EPEN</td><td>18/2026</td><td>Nuevo campo transformador – ET Pío Protto</td><td>Fecha y pliego sin corroborar</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://www.epen.gov.ar/index.php/licitaciones/\">Fuente de referencia</a></td></tr><tr><td>EPSE</td><td>01/2026</td><td>Recuperación de equipamiento planta VERSU</td><td>Fecha y alcance sin corroborar</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://www.epse.com.ar/web/licitaciones\">Fuente de referencia</a></td></tr><tr><td>AYSAM</td><td>87/26</td><td>Materiales eléctricos para stock electromecánico</td><td>Fecha indicada en relevamiento previo; verificar oficial</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://aysam.com.ar/pliegosdigitales/licitaciones\">Fuente de referencia</a></td></tr><tr><td>AYSAM</td><td>3/26</td><td>Colector cloacal Colonia Segovia, etapa II</td><td>Fecha indicada en relevamiento previo; verificar oficial</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://aysam.com.ar/pliegosdigitales/licitaciones\">Fuente de referencia</a></td></tr><tr><td>Transener</td><td>34-003</td><td>AMBA I: estaciones transformadoras y sistemas auxiliares</td><td>Referencia de seguimiento comercial; sin fecha actual verificada</td><td><a target=\"_blank\" rel=\"noopener\" href=\"https://www.transener.com.ar/\">Fuente de referencia</a></td></tr><tr><td>Genneia</td><td>PABRA / Ariba</td><td>Banco de baterías, cargador rectificador e inversor 5 kVA</td><td>Referencia comercial previa; contratación privada</td><td>Sin enlace</td></tr></tbody></table></div></details></section>"
+DATA_RE = re.compile(r"const D\s*=\s*(\{.*?\});\s*\n", re.S)
+SECTION_RE = re.compile(r'<section\s+class="panel"\s+id="base-maestra-deep">.*?</section>', re.S)
+HISTORY = Path("base_maestra_registros.json")
+
+def esc(value):
+    return html.escape(str(value if value is not None else ""), quote=True)
+
+def key(p):
+    return (str(p.get("numero_proceso") or "").strip().casefold(),
+            str(p.get("organismo") or "").strip().casefold())
+
 def actualizar(path):
-    contenido = path.read_text(encoding="utf-8")
-    m = re.search(r"const D\s*=\s*(\{.*?\});\s*\n", contenido, re.S)
-    procesos = []
-    if m:
-        try:
-            procesos = json.loads(m.group(1)).get("procesos", [])
-        except (ValueError, TypeError):
-            pass
-    iniciales = re.findall(r"<tr>(.*?)</tr>", BASE, re.S)[1:]
-    filas = list(iniciales)
-    claves = set()
-    for fila in iniciales:
-        celdas = re.findall(r"<td[^>]*>(.*?)</td>", fila, re.S)
-        if len(celdas) > 1:
-            claves.add(re.sub(r"<[^>]+>", "", celdas[1]).strip().lower())
-    historico = Path("base_maestra_registros.json")
-    previos = json.loads(historico.read_text(encoding="utf-8")) if historico.exists() else []
-    for p in previos:
-        numero = str(p.get("numero_proceso") or "").strip()
-        if numero and numero.lower() not in claves:
-            procesos.append(p)
-    nuevos = 0
-    persistidos = list(previos)
-    for p in procesos:
-        numero = str(p.get("numero_proceso") or "").strip()
-        if not numero or numero.lower() in claves:
+    page = path.read_text(encoding="utf-8")
+    match = DATA_RE.search(page)
+    if not match:
+        raise RuntimeError("No se encontraron los datos D del agente: se cancela para evitar publicar información engañosa")
+    data = json.loads(match.group(1))
+    actuales = data.get("procesos", [])
+    if not isinstance(actuales, list):
+        raise ValueError("D.procesos debe ser una lista")
+    ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    previo = json.loads(HISTORY.read_text(encoding="utf-8")) if HISTORY.exists() else []
+    if not isinstance(previo, list):
+        raise ValueError("Historial inválido")
+    registros = {key(p): dict(p) for p in previo if isinstance(p, dict) and key(p)[0]}
+    detectados = 0
+    for p in actuales:
+        if not isinstance(p, dict) or not key(p)[0]:
             continue
-        claves.add(numero.lower())
-        nombre = html.escape(str(p.get("organismo") or "No informado"))
-        objeto = html.escape(str(p.get("titulo") or "No informado"))
-        estado = html.escape(str(p.get("estado") or "Pendiente de verificar"))
-        fecha = html.escape(str(p.get("fecha_presentacion") or "No informada"))
-        link = str(p.get("link") or "")
-        enlace = '<a href="' + html.escape(link, quote=True) + '" target="_blank" rel="noopener">Aviso registrado</a>' if link.startswith(("https://","http://")) else "Sin enlace"
-        filas.append("<tr><td>" + nombre + "</td><td>" + html.escape(numero) + "</td><td>" + objeto + "</td><td>Agente: " + estado + " · Presentación: " + fecha + " (verificar fuente oficial)</td><td>" + enlace + "</td></tr>")
-        nuevos += 1
-        persistidos.append(p)
-    historico.write_text(json.dumps(persistidos, ensure_ascii=False, indent=2), encoding="utf-8")
-    fecha_revision = datetime.now().strftime("%d/%m/%Y %H:%M")
-    tabla = re.search(r"<table.*?</table>", BASE, re.S).group(0)
-    tabla = re.sub(r"<tbody>.*?</tbody>", "<tbody>" + "".join(filas) + "</tbody>", tabla, flags=re.S)
-    seccion = '<section class="panel" id="base-maestra-deep"><h2>Base maestra DEEP — antecedentes y seguimiento automático</h2>'
-    seccion += '<p><b>' + str(len(filas)) + ' procesos registrados</b> · Revisión automática: ' + fecha_revision + '. Se incorporan registros detectados por el agente; <b>no se consideran abiertos sin validar fechas, pliegos y circulares oficiales</b>. Los antecedentes no verificados permanecen identificados como tales.</p>'
-    seccion += '<details><summary>Consultar procesos de la base maestra</summary><div style="overflow-x:auto">' + tabla + '</div></details></section>'
-    contenido = re.sub(r'<section class="panel" id="base-maestra-deep">.*?</section>', '', contenido, flags=re.S)
-    contenido = contenido.replace('<div id="lista"></div>', '<div id="lista"></div>\n' + seccion, 1)
-    path.write_text(contenido, encoding="utf-8")
-    print(f"Base maestra: {len(filas)} registros ({nuevos} nuevos del agente).")
+        k = key(p)
+        anterior = registros.get(k, {})
+        nuevo = dict(anterior)
+        nuevo.update(p)
+        nuevo["primera_deteccion_utc"] = anterior.get("primera_deteccion_utc", ahora)
+        nuevo["ultima_deteccion_utc"] = ahora
+        registros[k] = nuevo
+        detectados += 1
+    filas = []
+    for p in sorted(registros.values(), key=lambda x: x.get("ultima_deteccion_utc", ""), reverse=True):
+        reciente = p.get("ultima_deteccion_utc") == ahora
+        # Una convocatoria histórica nunca se presenta como abierta sin nueva verificación.
+        estado = (p.get("estado") or "Sin estado oficial") if reciente else "Histórico: no detectado en la última ejecución"
+        vigencia = p.get("semaforo", "gris") if reciente else "gris"
+        etiqueta = "Verde/amarillo: verificar cierre oficial" if vigencia in ("verde", "amarillo") else "Vigencia no confirmada"
+        enlace = p.get("link") or ""
+        link_html = ('<a href="' + esc(enlace) + '" target="_blank" rel="noopener noreferrer">Abrir aviso detectado</a>'
+                     if isinstance(enlace, str) and enlace.startswith(("https://", "http://")) else "Sin enlace verificable")
+        filas.append("<tr><td>" + esc(p.get("organismo") or "No informado") +
+                     "</td><td>" + esc(p.get("numero_proceso")) +
+                     "</td><td>" + esc(p.get("titulo") or "No informado") +
+                     "</td><td>" + esc(estado) + " · " + etiqueta +
+                     "</td><td>" + esc(p.get("fecha_presentacion") or "No informada") +
+                     "</td><td>" + esc(p.get("ultima_deteccion_utc") or "No informada") +
+                     "</td><td>" + link_html + "</td></tr>")
+    if filas:
+        tabla = ('<div style="overflow-x:auto"><table><thead><tr><th>Organismo</th><th>Proceso</th>'
+                 '<th>Objeto</th><th>Estado / verificación</th><th>Presentación</th>'
+                 '<th>Última detección (UTC)</th><th>Fuente</th></tr></thead><tbody>' +
+                 "".join(filas) + '</tbody></table></div>')
+    else:
+        tabla = ('<p>No hay procesos con identificador detectados por el agente. '
+                 'Esta sección se completará cuando se incorporen resultados reales. '
+                 'No se muestran antecedentes fijos como si fueran convocatorias actuales.</p>')
+    section = ('<section class="panel" id="base-maestra-deep">'
+               '<h2>Base maestra DEEP — seguimiento automático</h2>'
+               '<p><b>' + str(len(registros)) + ' procesos registrados · ' +
+               str(detectados) + ' detectados en esta ejecución.</b> '
+               'Generación: ' + esc(ahora) + '. '
+               'La detección no confirma vigencia: consultar fechas, circulares y pliegos oficiales. '
+               'Los procesos no detectados nuevamente se identifican como históricos.</p>' +
+               '<details open><summary>Consultar procesos detectados</summary>' + tabla +
+               '</details></section>')
+    page = SECTION_RE.sub("", page)
+    anchor = '<div id="lista"></div>'
+    if anchor not in page:
+        raise RuntimeError("No se encontró el lugar de inserción de la base maestra")
+    page = page.replace(anchor, anchor + "\n" + section, 1)
+    path.write_text(page, encoding="utf-8")
+    HISTORY.write_text(json.dumps(list(registros.values()), ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Base maestra dinámica: {len(registros)} registros, {detectados} detectados en esta ejecución")
+
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--html", required=True)
-    actualizar(Path(p.parse_args().html))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--html", required=True)
+    actualizar(Path(parser.parse_args().html))
