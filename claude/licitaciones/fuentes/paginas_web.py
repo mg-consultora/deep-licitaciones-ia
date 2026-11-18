@@ -47,7 +47,10 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         # Priorizar enlace a detalle del proceso frente a enlaces genéricos de navegación.
         a = next((x for x in enlaces if re.search(r"detalle|proceso|licitacion|convocatoria|expediente|ver", (x.get("href") or "") + " " + x.get_text(" ", strip=True), re.I)), None)
         a = a or (enlaces[0] if enlaces else None)
-        link = urljoin(url_base, a["href"]) if a is not None and a.get("href") else url_base
+        href = a.get("href", "") if a is not None else ""
+        # Nunca publicar javascript:__doPostBack como enlace al proceso.
+        # El enlace a la página oficial de origen es una referencia, no una ficha verificada.
+        link = urljoin(url_base, href) if href and urlparse(urljoin(url_base, href)).scheme in ("https", "http") else url_base
         # COMPR.AR: las filas del inicio incluyen el identificador del proceso
         # y la fecha de apertura; no confundirlas con publicaciones.
         es_comprar = "comprar.gob.ar" in url_base.lower()
