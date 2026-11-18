@@ -450,7 +450,7 @@ $("q").addEventListener("keydown",e=>{if(e.key==="Enter")buscarDEEP();});
 $("csv").onclick=()=>{ const cols=["semaforo","titulo","organismo","numero_proceso","tipo_contratacion","estado","provincia","sector","fecha_publicacion","fecha_limite_consultas","fecha_presentacion","fecha_apertura","link","fuente"];
   const rows=[cols.join(";")].concat(visibles().map(p=>cols.map(c=>`"${(p[c]??"").toString().replace(/"/g,'""')}"`).join(";")));
   const b=new Blob(["﻿"+rows.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="licitaciones.csv"; a.click(); };
-pintar();
+buscarDEEP();
 // CONTROL DEEP: estado real de los agentes en GitHub
 (async function verificarControlDEEP() {
   const repo = "mg-consultora/deep-licitaciones-ia";
