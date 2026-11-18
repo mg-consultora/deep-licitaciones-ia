@@ -139,6 +139,37 @@ def evaluar(p):
                  (10 if coincide(texto, SUMINISTRO) else 0))
     return puntos, ("Alta" if puntos >= 75 else "Media")
 
+def ficha_comercial(p):
+    """Evidencia comercial derivada del texto del aviso, sin inventar datos."""
+    texto = norm(" ".join(str(p.get(k) or "") for k in
+                     ("titulo", "objeto", "descripcion", "especificaciones", "texto")))
+    canon = texto.replace("-", " ")
+    productos = list(dict.fromkeys(
+        x for x in PRODUCTOS_EXACTOS if contiene(texto, x) or contiene(canon, x)
+    ))
+    if not productos:
+        productos = list(dict.fromkeys(
+            x for x in PRODUCTOS_CON_CONTEXTO if contiene(texto, x)
+        ))
+    fragmento = ""
+    for termino in productos[:1]:
+        pos = canon.find(termino)
+        if pos >= 0:
+            fragmento = texto[max(0, pos - 90):pos + len(termino) + 110].strip()
+    return {
+        "cliente": p.get("organismo") or "No informado",
+        "provincia": p.get("provincia") or "No informada",
+        "productos_detectados": productos[:8],
+        "evidencia": fragmento or "No hay fragmento técnico verificable",
+        "motivo": ("Producto industrial mencionado en el aviso" if productos
+                   else "Requiere revisión técnica"),
+        "fecha_limite": p.get("fecha_presentacion") or "",
+        "enlace_oficial": p.get("link") or "",
+        "vigencia": ("Plazo de presentación informado" if p.get("fecha_presentacion")
+                    else "Plazo de presentación sin confirmar"),
+    }
+
+
 def _clasificar(procesos, filtro, ahora):
     ahora = (ahora or datetime.now()).replace(tzinfo=None)
     salida, motivos = {}, Counter()
@@ -190,6 +221,7 @@ def _clasificar(procesos, filtro, ahora):
                 continue
             semaforo, dias = "gris", None
         p.update(semaforo=semaforo, dias=dias, puntaje=puntos, prioridad=prioridad)
+        p["ficha_comercial"] = ficha_comercial(p)
         p["circulares"] = [h for h in p.get("historial", []) if "circular" in norm(h.get("estado"))]
         clave = (norm(p.get("organismo")), norm(p.get("numero_proceso")) or norm(p.get("titulo")))
         anterior = salida.get(clave)
@@ -359,6 +391,18 @@ function pintar(){ kpis(); const L=visibles();
     <div><span>Provincia</span>${esc(p.provincia)}</div><div><span>Sector</span>${esc(p.sector)}</div>
     <div><span>Tipo</span>${esc(p.tipo_contratacion)||"—"}</div><div><span>Estado</span>${esc(p.estado)}</div>
    </div>
+   <details style="margin-top:12px;padding:9px;border:1px solid var(--ln);border-radius:8px">
+    <summary><b>Ficha comercial DEEP</b></summary>
+    <div class="grid">
+      <div><span>Cliente</span>${esc(p.ficha_comercial?.cliente||"No informado")}</div>
+      <div><span>Provincia</span>${esc(p.ficha_comercial?.provincia||"No informada")}</div>
+      <div><span>Producto detectado</span>${esc((p.ficha_comercial?.productos_detectados||[]).join(", ")||"Por revisar")}</div>
+      <div><span>Vigencia</span>${esc(p.ficha_comercial?.vigencia||"Sin confirmar")}</div>
+    </div>
+    <p><b>Motivo:</b> ${esc(p.ficha_comercial?.motivo||"Sin clasificar")}</p>
+    <p><b>Evidencia textual:</b> ${esc(p.ficha_comercial?.evidencia||"No disponible")}</p>
+    <p><b>Presentación:</b> ${f(p.ficha_comercial?.fecha_limite)} · ${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener">Consultar fuente</a>`:"Sin enlace"}</p>
+   </details>
    <div class="pie">${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener">Ver aviso ↗</a>`:""}
     ${p.circulares.map((c,i)=>`<a href="${esc(c.link)}" target="_blank" rel="noopener">Circular ${i+1} (${f(c.fecha)}) ↗</a>`).join("")}
     <span class="mut">${esc(p.fuente)}</span>
@@ -385,7 +429,7 @@ pintar();
 (async function verificarControlDEEP() {
   const repo = "mg-consultora/deep-licitaciones-ia";
   const procesos = [
-    { nombre: "Tablero Claude", archivo: "actualizar-claude.yml", maxHoras: 36 },
+    { nombre: "Tablero Claude", archivo: "actualizar-claude.yml", maxHoras: 3 },
     { nombre: "Licitaciones (control estricto)", archivo: "actualizar-licitaciones.yml", maxHoras: 36 },
     { nombre: "Obras futuras", archivo: "obras.yml", maxHoras: 72 }
   ];
