@@ -217,6 +217,55 @@ def diagnosticar():
                     salida["busqueda_procesos"] = {"error": type(exc).__name__ + ": " + str(exc)[:200]}
         else:
             salida["busqueda_procesos"] = {"error": "No se encontro el evento de busqueda en el HTML"}
+        # Paso 3: ejecutar el formulario de búsqueda avanzada, no la portada.
+        # Una página con HTTP 200 pero PantallaError.aspx NO es un resultado.
+        if salida.get("busqueda_procesos", {}).get("resultado_valido") and "rr" in locals():
+            try:
+                avanzado = campos_formulario(rr.text)
+                if not avanzado or "__VIEWSTATE" not in avanzado:
+                    raise ValueError("Búsqueda avanzada sin VIEWSTATE")
+                bs_form = BeautifulSoup(rr.text, "html.parser").find("form")
+                control = BeautifulSoup(rr.text, "html.parser").find(
+                    id="ctl00_CPH1_btnListarPliegoAvanzado")
+                if control is None:
+                    control = BeautifulSoup(rr.text, "html.parser").find(
+                        attrs={"name": "ctl00$CPH1$btnListarPliegoAvanzado"})
+                if control is None:
+                    raise ValueError("Botón de búsqueda avanzada no encontrado")
+                evento = POSTBACK.search((control.get("href") or "") + " " +
+                                        (control.get("onclick") or ""))
+                if evento:
+                    avanzado["__EVENTTARGET"], avanzado["__EVENTARGUMENT"] = evento.groups()
+                else:
+                    avanzado["__EVENTTARGET"] = "ctl00$CPH1$btnListarPliegoAvanzado"
+                    avanzado["__EVENTARGUMENT"] = ""
+                destino = urljoin(rr.url, bs_form.get("action", "") if bs_form else "")
+                resultado = sesion.post(destino, data=avanzado, timeout=(12, 45),
+                                        headers={"Referer": rr.url})
+                resultado.raise_for_status()
+                error = es_pantalla_error(resultado.url, resultado.text)
+                primera = set(procesos(resultado.text))
+                adicionales, diagnostico = ([], "Error ASP.NET; sin paginación") if error else paginas_postback(
+                    sesion, resultado.url, resultado.text, max_paginas=5)
+                vistos = set(primera)
+                detalle_paginas = []
+                for indice, (u, h) in enumerate(adicionales, 2):
+                    nuevos = set(procesos(h)) - vistos
+                    detalle_paginas.append({"pagina": indice, "nuevos": sorted(nuevos)[:12],
+                                           "cantidad_nuevos": len(nuevos)})
+                    vistos.update(procesos(h))
+                salida["busqueda_avanzada_ejecutada"] = {
+                    "http": resultado.status_code, "url": resultado.url,
+                    "error_funcional_aspnet": error, "procesos_primera_pagina": len(primera),
+                    "ejemplos": sorted(primera)[:12],
+                    "paginacion": diagnostico, "paginas_adicionales": detalle_paginas,
+                    "segunda_pagina_distinta_verificada": any(
+                        x["cantidad_nuevos"] > 0 for x in detalle_paginas),
+                    "cobertura_total_acreditada": False}
+            except Exception as exc:
+                salida["busqueda_avanzada_ejecutada"] = {
+                    "error": type(exc).__name__ + ": " + str(exc)[:200],
+                    "cobertura_total_acreditada": False}
         if not acciones:
             salida["hipotesis"] = "No hay Page$Next visible en la portada; investigar formulario de búsqueda y postbacks numéricos"
     except Exception as e:
