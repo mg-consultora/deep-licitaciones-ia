@@ -43,7 +43,10 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
         if len(texto) < 15 or texto in vistos:
             continue
         vistos.add(texto)
-        a = b if b.name == "a" else b.find("a", href=True)
+        enlaces = [b] if b.name == "a" and b.get("href") else b.find_all("a", href=True)
+        # Priorizar enlace a detalle del proceso frente a enlaces genéricos de navegación.
+        a = next((x for x in enlaces if re.search(r"detalle|proceso|licitacion|convocatoria|expediente|ver", (x.get("href") or "") + " " + x.get_text(" ", strip=True), re.I)), None)
+        a = a or (enlaces[0] if enlaces else None)
         link = urljoin(url_base, a["href"]) if a is not None and a.get("href") else url_base
         # COMPR.AR: las filas del inicio incluyen el identificador del proceso
         # y la fecha de apertura; no confundirlas con publicaciones.
@@ -59,9 +62,15 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             despues = [f for p, f in buscar_fechas(texto) if p >= m.start() and _fecha_valida(f)]
             ap = despues[0] if despues else None
         if es_comprar:
-            # La tabla oficial rotula la columna como Fecha de Apertura.
-            # No asignar una fecha de publicación inexistente.
-            ap = fechas[0] if fechas else None
+            # No asignar fechas sin cabecera de columna verificable: una fila
+            # puede incluir publicación, consulta, cierre y apertura.
+            tabla = b.find_parent("table")
+            cabeceras = [normalizar(x.get_text(" ", strip=True)) for x in tabla.find_all("th")] if tabla else []
+            celdas = b.find_all("td", recursive=False)
+            columnas = dict(zip(cabeceras, celdas)) if len(cabeceras) == len(celdas) else {}
+            apertura = next((celda for titulo, celda in columnas.items() if "apertura" in titulo), None)
+            fechas_apertura = [f for _, f in buscar_fechas(apertura.get_text(" ", strip=True)) if _fecha_valida(f)] if apertura else []
+            ap = fechas_apertura[0] if fechas_apertura else None
         items.append(Oportunidad(
             numero_proceso=numero.group(0) if es_comprar and numero else "",
             fuente=f"Página: {nombre}",
