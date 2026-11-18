@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from licitaciones.fuentes.comprar_webforms import (
-    acciones_paginacion, campos_formulario, paginas_postback
+    acciones_paginacion, campos_formulario, paginas_postback, es_pantalla_error
 )
 from licitaciones.fuentes.paginas_web import extraer_items
 
@@ -99,6 +99,8 @@ def diagnosticar():
                         vistos.update(procesos(pagina_html))
                     salida["consulta_apertura_proxima"] = {
                         "http": rf.status_code, "url": rf.url,
+                        "error_funcional_aspnet": es_pantalla_error(rf.url, rf.text),
+                        "resultado_valido": not es_pantalla_error(rf.url, rf.text),
                         "titulo": sf.title.get_text(" ", strip=True)[:120] if sf.title else "",
                         "procesos_primera_pagina": len(iniciales),
                         "ejemplos": sorted(iniciales)[:8],
@@ -142,6 +144,8 @@ def diagnosticar():
                     bs = BeautifulSoup(rr.text, "html.parser")
                     salida["busqueda_procesos"] = {
                         "http": rr.status_code, "url": rr.url,
+                        "error_funcional_aspnet": es_pantalla_error(rr.url, rr.text),
+                        "resultado_valido": not es_pantalla_error(rr.url, rr.text),
                         "titulo": bs.title.get_text(" ", strip=True)[:120] if bs.title else "",
                         "formularios": len(bs.select("form")),
                         "procesos_visibles": procesos(rr.text)[:100],
