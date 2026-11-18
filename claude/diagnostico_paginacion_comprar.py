@@ -103,6 +103,30 @@ def diagnosticar():
                             if x.get("type", "").lower() != "hidden"
                         ]
                     }
+                    # Detectar controles de búsqueda reales, sin disparar postbacks
+                    # de autenticación ni ejecutar una consulta de forma especulativa.
+                    controles = []
+                    for tag in bs.select("input,button,a[href],a[onclick]"):
+                        texto = tag.get_text(" ", strip=True)
+                        nombre = tag.get("name", "") or tag.get("id", "")
+                        if re.search(r"buscar|consultar|filtrar|resultado", texto + " " + nombre, re.I):
+                            href = (tag.get("href") or "") + " " + (tag.get("onclick") or "")
+                            m = POSTBACK.search(href)
+                            controles.append({
+                                "etiqueta": tag.name,
+                                "texto": texto[:100],
+                                "nombre": nombre[:130],
+                                "tipo": tag.get("type", ""),
+                                "evento": {"target": m.group(1), "argument": m.group(2)} if m else None
+                            })
+                    salida["busqueda_procesos"]["controles_accion_busqueda"] = controles[:30]
+                    salida["busqueda_procesos"]["selectores"] = [
+                        {"nombre": s.get("name", ""), "opciones": [
+                            {"valor": o.get("value", ""), "texto": o.get_text(" ", strip=True)[:65]}
+                            for o in s.select("option")[:15]
+                        ]}
+                        for s in bs.select("select[name]")[:15]
+                    ]
                     extras, estado = paginas_postback(sesion, rr.url, rr.text, max_paginas=5)
                     salida["busqueda_procesos"]["paginacion"] = estado
                     vistos = set(procesos(rr.text))
