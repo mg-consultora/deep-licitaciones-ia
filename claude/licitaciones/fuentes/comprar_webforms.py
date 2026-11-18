@@ -14,6 +14,16 @@ POSTBACK = re.compile(r"__doPostBack\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]*
 MAX_PAGINAS = 15
 
 
+def es_pantalla_error(url, html):
+    """Detecta errores funcionales aun cuando ASP.NET responde HTTP 200."""
+    ruta = (urlparse(url).path or "").lower()
+    if "pantallaerror.aspx" in ruta or ruta.endswith("/error.aspx"):
+        return True
+    soup = BeautifulSoup(html, "html.parser")
+    titulo = soup.title.get_text(" ", strip=True).lower() if soup.title else ""
+    return bool(re.search(r"error (?:de|del|en) (?:la )?(?:aplicaci[oó]n|servidor)", titulo))
+
+
 def acciones_paginacion(html):
     soup = BeautifulSoup(html, "html.parser")
     acciones = []
@@ -56,6 +66,8 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
     """
     if urlparse(url).scheme != "https" or not (urlparse(url).hostname or "").endswith("comprar.gob.ar"):
         return [], "Origen COMPR.AR no seguro"
+    if es_pantalla_error(url, html_inicial):
+        return [], "Página de error ASP.NET detectada; cobertura total no acreditada"
     paginas = []
     visitadas = {hashlib.sha256(html_inicial.encode("utf-8")).hexdigest()}
     # La navegación WebForms es secuencial: usar Next desde el estado actual.
@@ -81,6 +93,9 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
             respuesta.raise_for_status()
             if urlparse(respuesta.url).hostname != urlparse(url).hostname:
                 errores.append("Redirección fuera de COMPR.AR")
+                break
+            if es_pantalla_error(respuesta.url, respuesta.text):
+                errores.append("COMPR.AR devolvió PantallaError.aspx (HTTP 200 no implica éxito)")
                 break
             if "html" not in respuesta.headers.get("Content-Type", "").lower():
                 errores.append("Respuesta no HTML")
