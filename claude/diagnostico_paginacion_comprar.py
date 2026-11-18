@@ -7,7 +7,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -67,6 +67,59 @@ def diagnosticar():
         salida["segunda_pagina_distinta_verificada"] = any(
             p["cantidad_nuevos"] > 0 for p in salida["paginas_adicionales"]
         )
+        # Paso 2: activar el botón real "BÚSQUEDA DE PROCESOS" de la portada.
+        # El evento fue observado en los logs oficiales de GitHub Actions.
+        from licitaciones.fuentes.comprar_webforms import POSTBACK
+        boton = next((
+            POSTBACK.search((a.get("href") or "") + " " + (a.get("onclick") or ""))
+            for a in soup.select("a[href],a[onclick]")
+            if "BÚSQUEDA DE PROCESOS" in a.get_text(" ", strip=True).upper()
+        ), None)
+        if boton:
+            datos = campos_formulario(r.text)
+            if datos and "__VIEWSTATE" in datos:
+                datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = boton.groups()
+                action = urljoin(r.url, form.get("action", "") if form else "")
+                try:
+                    rr = sesion.post(action, data=datos, timeout=(8, 30),
+                                    headers={"Referer": r.url})
+                    rr.raise_for_status()
+                    if not (urlparse(rr.url).hostname or "").endswith("comprar.gob.ar"):
+                        raise ValueError("Redireccion fuera de COMPR.AR")
+                    bs = BeautifulSoup(rr.text, "html.parser")
+                    salida["busqueda_procesos"] = {
+                        "http": rr.status_code, "url": rr.url,
+                        "titulo": bs.title.get_text(" ", strip=True)[:120] if bs.title else "",
+                        "formularios": len(bs.select("form")),
+                        "procesos_visibles": procesos(rr.text)[:100],
+                        "cantidad_procesos": len(procesos(rr.text)),
+                        "eventos_paginacion": [
+                            {"target": t, "argument": a}
+                            for t,a in acciones_paginacion(rr.text)[:30]
+                        ],
+                        "campos_busqueda": [
+                            {"nombre": x.get("name", "")[:120], "tipo": x.get("type", "")}
+                            for x in bs.select("input[name],select[name]")[:60]
+                            if x.get("type", "").lower() != "hidden"
+                        ]
+                    }
+                    extras, estado = paginas_postback(sesion, rr.url, rr.text, max_paginas=5)
+                    salida["busqueda_procesos"]["paginacion"] = estado
+                    vistos = set(procesos(rr.text))
+                    salida["busqueda_procesos"]["paginas_adicionales"] = []
+                    for i, (url2, html2) in enumerate(extras, 2):
+                        nuevos = set(procesos(html2)) - vistos
+                        salida["busqueda_procesos"]["paginas_adicionales"].append(
+                            {"pagina": i, "nuevos": sorted(nuevos)[:50], "cantidad_nuevos": len(nuevos)}
+                        )
+                        vistos.update(procesos(html2))
+                    salida["busqueda_procesos"]["segunda_pagina_distinta_verificada"] = any(
+                        x["cantidad_nuevos"] > 0 for x in salida["busqueda_procesos"]["paginas_adicionales"]
+                    )
+                except Exception as exc:
+                    salida["busqueda_procesos"] = {"error": type(exc).__name__ + ": " + str(exc)[:200]}
+        else:
+            salida["busqueda_procesos"] = {"error": "No se encontro el evento de busqueda en el HTML"}
         if not acciones:
             salida["hipotesis"] = "No hay Page$Next visible en la portada; investigar formulario de búsqueda y postbacks numéricos"
     except Exception as e:
