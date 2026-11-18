@@ -67,6 +67,59 @@ def diagnosticar():
         salida["segunda_pagina_distinta_verificada"] = any(
             p["cantidad_nuevos"] > 0 for p in salida["paginas_adicionales"]
         )
+        # Paso 1b: entrar al listado real mediante el enlace de consultas frecuentes.
+        # La portada muestra cinco procesos destacados, NO la lista paginada.
+        from licitaciones.fuentes.comprar_webforms import POSTBACK
+        frecuente = next((
+            POSTBACK.search((a.get("href") or "") + " " + (a.get("onclick") or ""))
+            for a in soup.select("a[href],a[onclick]")
+            if "PROCESOS CON APERTURA PRÓXIMA" in a.get_text(" ", strip=True).upper()
+            or "PROCESOS CON APERTURA PROXIMA" in a.get_text(" ", strip=True).upper()
+        ), None)
+        if frecuente:
+            datos = campos_formulario(r.text)
+            if datos and "__VIEWSTATE" in datos:
+                datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = frecuente.groups()
+                action = urljoin(r.url, form.get("action", "") if form else "")
+                try:
+                    rf = sesion.post(action, data=datos, timeout=(8, 30),
+                                    headers={"Referer": r.url})
+                    rf.raise_for_status()
+                    if urlparse(rf.url).hostname != "comprar.gob.ar":
+                        raise ValueError("Redireccion fuera de COMPR.AR")
+                    sf = BeautifulSoup(rf.text, "html.parser")
+                    iniciales = set(procesos(rf.text))
+                    extras, estado = paginas_postback(sesion, rf.url, rf.text, max_paginas=5)
+                    vistos = set(iniciales)
+                    adicionales = []
+                    for indice, (pagina_url, pagina_html) in enumerate(extras, 2):
+                        nuevos = set(procesos(pagina_html)) - vistos
+                        adicionales.append({"pagina": indice, "cantidad_procesos": len(procesos(pagina_html)),
+                                            "cantidad_nuevos": len(nuevos), "ejemplos_nuevos": sorted(nuevos)[:8]})
+                        vistos.update(procesos(pagina_html))
+                    salida["consulta_apertura_proxima"] = {
+                        "http": rf.status_code, "url": rf.url,
+                        "titulo": sf.title.get_text(" ", strip=True)[:120] if sf.title else "",
+                        "procesos_primera_pagina": len(iniciales),
+                        "ejemplos": sorted(iniciales)[:8],
+                        "eventos_paginacion": [
+                            {"target": t, "argument": a}
+                            for t, a in acciones_paginacion(rf.text)[:20]
+                        ],
+                        "paginacion": estado,
+                        "paginas_adicionales": adicionales,
+                        "segunda_pagina_distinta_verificada": any(x["cantidad_nuevos"] > 0 for x in adicionales),
+                        "cobertura_total_acreditada": False,
+                    }
+                except Exception as exc:
+                    salida["consulta_apertura_proxima"] = {
+                        "error": type(exc).__name__ + ": " + str(exc)[:200],
+                        "cobertura_total_acreditada": False
+                    }
+            else:
+                salida["consulta_apertura_proxima"] = {"error": "Formulario inicial sin VIEWSTATE"}
+        else:
+            salida["consulta_apertura_proxima"] = {"error": "No se encontro enlace de apertura proxima"}
         # Paso 2: activar el botón real "BÚSQUEDA DE PROCESOS" de la portada.
         # El evento fue observado en los logs oficiales de GitHub Actions.
         from licitaciones.fuentes.comprar_webforms import POSTBACK
