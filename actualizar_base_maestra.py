@@ -25,7 +25,14 @@ def actualizar(path):
         celdas = re.findall(r"<td[^>]*>(.*?)</td>", fila, re.S)
         if len(celdas) > 1:
             claves.add(re.sub(r"<[^>]+>", "", celdas[1]).strip().lower())
+    historico = Path("base_maestra_registros.json")
+    previos = json.loads(historico.read_text(encoding="utf-8")) if historico.exists() else []
+    for p in previos:
+        numero = str(p.get("numero_proceso") or "").strip()
+        if numero and numero.lower() not in claves:
+            procesos.append(p)
     nuevos = 0
+    persistidos = list(previos)
     for p in procesos:
         numero = str(p.get("numero_proceso") or "").strip()
         if not numero or numero.lower() in claves:
@@ -39,6 +46,8 @@ def actualizar(path):
         enlace = '<a href="' + html.escape(link, quote=True) + '" target="_blank" rel="noopener">Aviso registrado</a>' if link.startswith(("https://","http://")) else "Sin enlace"
         filas.append("<tr><td>" + nombre + "</td><td>" + html.escape(numero) + "</td><td>" + objeto + "</td><td>Agente: " + estado + " · Presentación: " + fecha + " (verificar fuente oficial)</td><td>" + enlace + "</td></tr>")
         nuevos += 1
+        persistidos.append(p)
+    historico.write_text(json.dumps(persistidos, ensure_ascii=False, indent=2), encoding="utf-8")
     fecha_revision = datetime.now().strftime("%d/%m/%Y %H:%M")
     tabla = re.search(r"<table.*?</table>", BASE, re.S).group(0)
     tabla = re.sub(r"<tbody>.*?</tbody>", "<tbody>" + "".join(filas) + "</tbody>", tabla, flags=re.S)
