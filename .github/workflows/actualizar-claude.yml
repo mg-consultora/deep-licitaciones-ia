@@ -31,6 +31,11 @@ jobs:
         run: |
           python -m pip install -r claude/requirements.txt
           python -m pip install requests beautifulsoup4 pyyaml
+      - name: Validar extractor y sintaxis antes de publicar
+        run: |
+          python -m compileall -q claude actualizar_base_maestra.py
+          cd claude
+          python -m pytest -q tests/test_extractor_comprar.py
       - name: Ejecutar agente real de Claude
         working-directory: claude
         run: python agente.py --dias 5 --sin-avisos
