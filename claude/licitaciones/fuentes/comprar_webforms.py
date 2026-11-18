@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 
 POSTBACK = re.compile(r"__doPostBack\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)", re.I)
@@ -54,8 +54,17 @@ def campos_formulario(html):
     datos = {}
     for field in form.select("input[name]"):
         tipo = field.get("type", "text").lower()
-        if tipo in ("hidden", "text", "search"):
+        if tipo in ("hidden", "text", "search", "date"):
             datos[field["name"]] = field.get("value", "")
+        elif tipo in ("checkbox", "radio") and field.has_attr("checked"):
+            datos[field["name"]] = field.get("value", "on")
+    # WebForms requiere los valores seleccionados de los desplegables.
+    for field in form.select("select[name]"):
+        seleccion = field.select_one("option[selected]") or field.select_one("option")
+        if seleccion is not None:
+            datos[field["name"]] = seleccion.get("value", seleccion.get_text(" ", strip=True))
+    for field in form.select("textarea[name]"):
+        datos[field["name"]] = field.get_text()
     return datos
 
 
@@ -79,16 +88,24 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
             break
         siguiente = next((x for x in opciones if re.search(r"page\$next", x[1], re.I)), None)
         if siguiente is None:
-            # Elegir un número solo cuando el servidor expone una página siguiente
-            # inequívoca; de otro modo detenerse sin declarar cobertura completa.
-            break
+            # Algunos GridView muestran Page$2, Page$3 sin Page$Next.
+            numero_siguiente = str(2 + len(paginas))
+            siguiente = next((x for x in opciones
+                              if x[1].lower() == "page$" + numero_siguiente), None)
+            if siguiente is None:
+                break
         datos = campos_formulario(actual)
         if datos is None or "__VIEWSTATE" not in datos:
             errores.append("Formulario sin __VIEWSTATE; no se puede continuar")
             break
         datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = siguiente
+        formulario = BeautifulSoup(actual, "html.parser").find("form")
+        destino = urljoin(url, formulario.get("action", "") if formulario else "")
+        if urlparse(destino).hostname != urlparse(url).hostname:
+            errores.append("Acción de formulario fuera de COMPR.AR")
+            break
         try:
-            respuesta = sesion.post(url, data=datos, timeout=(8, 25),
+            respuesta = sesion.post(destino, data=datos, timeout=(8, 25),
                                     headers={"Referer": url})
             respuesta.raise_for_status()
             if urlparse(respuesta.url).hostname != urlparse(url).hostname:
