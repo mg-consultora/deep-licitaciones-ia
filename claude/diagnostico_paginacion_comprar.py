@@ -6,6 +6,7 @@ números de proceso y evidencia de diferencias entre páginas.
 import json
 import re
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse, urljoin
 
@@ -29,8 +30,23 @@ def diagnosticar():
     sesion.headers["User-Agent"] = "Mozilla/5.0 (compatible; DEEP-Diagnostico/1.0)"
     salida = {"url_inicial": URL, "cobertura_total_acreditada": False}
     try:
-        r = sesion.get(URL, timeout=(8, 25))
-        r.raise_for_status()
+        # Reintentos limitados ante fallas transitorias de red, sin fingir cobertura.
+        errores_conexion = []
+        for intento in range(1, 4):
+            try:
+                r = sesion.get(URL, timeout=(15, 30))
+                r.raise_for_status()
+                break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+                errores_conexion.append({"intento": intento, "tipo": type(exc).__name__})
+                if intento == 3:
+                    salida["estado"] = "FUENTE_NO_DISPONIBLE"
+                    salida["intentos_conexion"] = errores_conexion
+                    salida["error"] = "COMPR.AR no respondió después de 3 intentos; extracción y paginación no verificadas"
+                    raise
+                time.sleep(intento * 2)
+        if errores_conexion:
+            salida["intentos_conexion"] = errores_conexion
         soup = BeautifulSoup(r.text, "html.parser")
         acciones = acciones_paginacion(r.text)
         form = soup.find("form")
@@ -204,7 +220,8 @@ def diagnosticar():
         if not acciones:
             salida["hipotesis"] = "No hay Page$Next visible en la portada; investigar formulario de búsqueda y postbacks numéricos"
     except Exception as e:
-        salida["error"] = type(e).__name__ + ": " + str(e)[:250]
+        salida.setdefault("estado", "ERROR_DIAGNOSTICO")
+        salida.setdefault("error", type(e).__name__ + ": " + str(e)[:250])
     finally:
         Path("diagnostico_comprar.json").write_text(
             json.dumps(salida, ensure_ascii=False, indent=2), encoding="utf-8")
