@@ -338,9 +338,11 @@ a{color:var(--ac)}.mut{color:var(--mut)}
 <div class="filtros">
   <input id="q" placeholder="Buscar: rectificador, YPF, Neuquén, 110 Vcc…">
   <select id="sector"></select><select id="prov"></select><select id="fuente"></select>
+  <button id="buscar-deep" type="button" style="background:#1f4e79;color:white;font-weight:650">🔎 Buscar</button>
   <button id="csv">Descargar CSV</button>
 </div>
 <div id="lista"></div>
+<div class="panel" id="resultados-potenciales" aria-live="polite"></div>
 <div class="panel" id="fuentes"></div>
 </main>
 <script>
@@ -420,7 +422,31 @@ if(fuentesConError.length){
 }
 $("fuentes").innerHTML = `<h2>Fuentes</h2>` + D.fuentes.map(s=>`<div class="fuente"><div><b>${esc(s.nombre)}</b><br><span class="mut">${esc(s.detalle)}</span></div>
   <div class="est ${s.estado}">${EST[s.estado]||s.estado}</div></div>`).join("");
-["q","sector","prov","fuente"].forEach(id=>$(id).addEventListener("input",pintar));
+// Búsqueda unificada: licitaciones verificadas + obras potenciales existentes en este tablero.
+function buscarDEEP(){
+  pintar();
+  const q=($("q").value||"").trim().toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const sector=$("sector").value, prov=$("prov").value, fuente=$("fuente").value;
+  const tabla=document.querySelector("#obras-revision-tecnica tbody");
+  const filas=tabla?Array.from(tabla.querySelectorAll("tr")):[];
+  const normalizar=s=>(s||"").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const potenciales=filas.filter(tr=>{
+    const c=Array.from(tr.cells).map(td=>td.textContent.trim());
+    const texto=normalizar(c.join(" "));
+    // La tabla de potenciales no trae provincia/sector estructurados: no afirmar coincidencias desconocidas.
+    return (!q||texto.includes(q)) && (!fuente||c[4]===fuente) && (!prov||texto.includes(normalizar(prov))) && (!sector||texto.includes(normalizar(sector)));
+  });
+  const destino=$("resultados-potenciales");
+  const encabezado='<h2>Oportunidades potenciales (sin vigencia confirmada)</h2><p class="mut">Estas coincidencias proceden de obras detectadas, no son licitaciones abiertas verificadas. Revisá el aviso oficial antes de cotizar.</p>';
+  destino.innerHTML=encabezado+(potenciales.length?'<div style="overflow-x:auto"><table><thead><tr><th>Proceso</th><th>Obra</th><th>Motivo</th><th>Fecha informada</th><th>Fuente</th><th>Enlace</th></tr></thead><tbody></tbody></table></div>':'<p class="mut">No hay obras potenciales que coincidan con esta búsqueda.</p>');
+  const cuerpo=destino.querySelector("tbody");
+  if(cuerpo) potenciales.forEach(tr=>cuerpo.appendChild(tr.cloneNode(true)));
+}
+$("buscar-deep").addEventListener("click",buscarDEEP);
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter")buscarDEEP();});
+["q","sector","prov","fuente"].forEach(id=>$(id).addEventListener("input",buscarDEEP));
+
+
 $("csv").onclick=()=>{ const cols=["semaforo","titulo","organismo","numero_proceso","tipo_contratacion","estado","provincia","sector","fecha_publicacion","fecha_limite_consultas","fecha_presentacion","fecha_apertura","link","fuente"];
   const rows=[cols.join(";")].concat(visibles().map(p=>cols.map(c=>`"${(p[c]??"").toString().replace(/"/g,'""')}"`).join(";")));
   const b=new Blob(["﻿"+rows.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="licitaciones.csv"; a.click(); };
