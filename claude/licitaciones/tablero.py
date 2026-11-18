@@ -39,7 +39,7 @@ def fecha(v):
     if not v: return None
     try:
         d = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
-        return d.replace(tzinfo=None) if d.year in (2026, 2027) else None
+        return d.replace(tzinfo=None) if datetime.now().year - 1 <= d.year <= datetime.now().year + 2 else None
     except (ValueError, TypeError, OverflowError):
         return None
 
