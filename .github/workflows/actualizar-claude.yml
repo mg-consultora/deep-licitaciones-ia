@@ -44,6 +44,8 @@ jobs:
         run: |
           cp claude/salida/tablero.html index.html
           python obras.py --html index.html
+          python actualizar_base_maestra.py --html index.html
+          grep -q 'base-maestra-deep' index.html
           test -s index.html
           grep -q 'o-prioritarias' index.html
           grep -q 'o-pro' index.html
