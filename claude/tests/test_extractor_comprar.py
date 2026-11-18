@@ -19,3 +19,12 @@ def test_paginacion_real():
     page = '<a href="?page=2">2</a><a href="https://externo.com/?page=3">3</a>'
     links = paginas_enlazadas(page, "https://comprar.gob.ar/buscar")
     assert links == ["https://comprar.gob.ar/buscar?page=2"]
+
+def test_distingue_cierre_de_apertura():
+    page = ('<table><tr><th>Proceso</th><th>Fecha de presentación</th><th>Fecha de apertura</th><th>Objeto</th></tr>'
+            '<tr><td>392-0016-LPR26</td><td>19/11/2026</td><td>21/11/2026</td>'
+            '<td>Rectificador industrial 110 Vcc</td></tr></table>')
+    items = extraer_items(page, "https://comprar.gob.ar/buscar", "COMPR.AR")
+    assert len(items) == 1
+    assert items[0].fecha_presentacion.day == 19
+    assert items[0].fecha_apertura.day == 21
