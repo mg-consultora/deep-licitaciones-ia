@@ -92,7 +92,7 @@ def paginas_enlazadas(html: str, origen: str) -> list[str]:
         if destino == origen:
             continue
         if (re.search(r"^(siguiente|next|[2-9]|[1-9][0-9]|>)$", etiqueta)
-                or re.search(r"(?:[?&](?:page|pagina|pageno|pageindex)=\\d+)", destino, re.I)):
+                or re.search(r"(?:[?&](?:page|pagina|pageno|pageindex)=\d+)", destino, re.I)):
             enlaces.append(destino)
     return list(dict.fromkeys(enlaces))[:12]
 
