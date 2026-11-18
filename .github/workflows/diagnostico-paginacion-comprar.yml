@@ -1,0 +1,25 @@
+name: Diagnosticar paginacion real COMPR.AR
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspeccionar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencias
+        run: python -m pip install requests beautifulsoup4
+      - name: Inspeccionar paginador y probar POST real
+        run: python claude/diagnostico_paginacion_comprar.py
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-paginacion-comprar
+          path: diagnostico_comprar.json
+          retention-days: 7
