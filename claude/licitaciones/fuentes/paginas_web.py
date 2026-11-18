@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
+from .comprar_webforms import paginas_postback
 
 
 def _fecha_valida(fecha):
@@ -130,9 +131,14 @@ class PaginasWeb(Fuente):
                 if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower():
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
+                    # COMPR.AR WebForms: conservar estado del formulario entre POST.
+                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text)
+                    for url_js, html_js in paginas_js:
+                        items.extend(extraer_items(html_js, url_js, p["nombre"]))
+                    paginas_leidas += len(paginas_js)
                     visitadas = {r.url}
                     cola = paginas_enlazadas(r.text, r.url)
-                    while cola and paginas_leidas < 8:
+                    while cola and paginas_leidas < 15:
                         destino = cola.pop(0)
                         if destino in visitadas:
                             continue
@@ -156,7 +162,7 @@ class PaginasWeb(Fuente):
                 ops.extend(unicos.values())
                 detalle_fuentes.append(
                     f"{p['nombre']}: {len(unicos)} registros de {paginas_leidas} página(s) HTML; "
-                    "cobertura total y vigencia NO acreditadas")
+                    "cobertura total y vigencia NO acreditadas" + (f"; {diagnostico_js}" if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower() else ""))
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
         detalle = f"{len(paginas) - len(errores)}/{len(paginas)} páginas leídas"
