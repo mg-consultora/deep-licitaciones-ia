@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import hashlib
 import re
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -286,6 +288,10 @@ class BoletinOficial(Fuente):
         self.dias = dias
         self.sesion = requests.Session()
         self.sesion.headers["User-Agent"] = USER_AGENT
+        retry = Retry(total=2, connect=2, read=1, backoff_factor=1,
+                      status_forcelist=[429, 500, 502, 503, 504],
+                      allowed_methods=frozenset(["GET"]))
+        self.sesion.mount("https://", HTTPAdapter(max_retries=retry))
 
     def _listado(self, dia: date) -> dict[date, dict[str, str]]:
         r = self.sesion.get(f"{OTS_URL}/ots/", params={"date_filter": dia.strftime("%d-%m-%Y")}, timeout=60)
