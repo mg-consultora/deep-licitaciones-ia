@@ -124,7 +124,28 @@ def evaluar(p):
     # explícitamente identificado (p.ej. UPS industrial con cables incluidos).
     exactos = [t for t in PRODUCTOS_EXACTOS if contiene(texto, t) or contiene(canon, t)]
     genericos = [t for t in PRODUCTOS_CON_CONTEXTO if contiene(texto, t)]
-    industrial = coincide(texto, CONTEXTO_INDUSTRIAL)
+    # El contexto industrial debe estar junto al producto, no en la dirección
+    # del organismo ni en otra sección remota del aviso.
+    ventanas = []
+    for termino in PRODUCTOS_CON_CONTEXTO:
+        for match in re.finditer(r"(?<![a-z0-9])" + re.escape(termino) + r"(?![a-z0-9])", canon):
+            ventanas.append(canon[max(0, match.start()-200):match.end()+200])
+    industrial = any(coincide(ventana, CONTEXTO_INDUSTRIAL) for ventana in ventanas)
+    # Excluir baterías vehiculares y UPS de oficina aunque se mencione
+    # accidentalmente un parque industrial o subestación en el mismo aviso.
+    objeto = norm(" ".join(str(p.get(k) or "") for k in ("titulo", "objeto")))
+    exclusiones_duras = (
+        "bateria automotor", "baterias automotor", "bateria automotriz",
+        "baterias automotrices", "bateria para camioneta",
+        "baterias para camionetas", "bateria para camion",
+        "baterias para camiones", "baterias para vehiculos",
+        "baterias para motocicletas", "ups para computadoras",
+        "ups para equipos informaticos", "ups para computadoras de oficina",
+    )
+    if coincide(objeto, exclusiones_duras) and not any(
+        contiene(objeto, t) for t in PRODUCTOS_EXACTOS
+    ):
+        return 0, "Equipamiento automotor o informático fuera del catálogo DEEP"
     # "Baterías" a secas o "UPS" sin grado industrial nunca son suficientes.
     valido = bool(exactos) or (bool(genericos) and industrial)
     if not valido:
