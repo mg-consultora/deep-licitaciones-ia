@@ -1,0 +1,55 @@
+name: Diagnostico fuentes oficiales DEEP
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: python -m pip install requests beautifulsoup4
+      - name: Diagnosticar DNS TLS y paginas publicas
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, socket, ssl, requests
+          from bs4 import BeautifulSoup
+          from pathlib import Path
+          hosts = ["otslist.boletinoficial.gob.ar", "www.boletinoficial.gob.ar", "comprar.gob.ar", "contratar.gob.ar"]
+          salida = {}
+          for host in hosts:
+              d = {}
+              try:
+                  d["dns"] = socket.gethostbyname(host)
+                  with socket.create_connection((host, 443), timeout=8) as sock:
+                      with ssl.create_default_context().wrap_socket(sock, server_hostname=host) as tls:
+                          d["tls"] = tls.version()
+              except Exception as e:
+                  d["error_red"] = type(e).__name__ + ": " + str(e)[:180]
+              salida[host] = d
+          for nombre, url in [("comprar", "https://comprar.gob.ar/"), ("boletin", "https://otslist.boletinoficial.gob.ar/ots/")]:
+              try:
+                  r = requests.get(url, timeout=(8, 15), headers={"User-Agent": "Mozilla/5.0 DEEP diagnostico"})
+                  soup = BeautifulSoup(r.text, "html.parser")
+                  salida[nombre] = {"http": r.status_code, "url_final": r.url, "tablas": len(soup.select("table")), "formularios": len(soup.select("form")), "viewstate": bool(soup.select_one('input[name="__VIEWSTATE"]')), "postbacks": r.text.count("__doPostBack")}
+                  Path(nombre + "_diagnostico.html").write_text(r.text[:300000], encoding="utf-8")
+              except Exception as e:
+                  salida[nombre] = {"error": type(e).__name__ + ": " + str(e)[:180]}
+          Path("diagnostico.json").write_text(json.dumps(salida, indent=2, ensure_ascii=False), encoding="utf-8")
+          print(json.dumps(salida, indent=2, ensure_ascii=False))
+          if any("error" in salida[x] or salida[x].get("http") != 200 for x in ("comprar", "boletin")):
+              raise SystemExit("Fuentes criticas inaccesibles: revisar diagnostico.json")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diagnostico-fuentes-deep
+          path: |
+            diagnostico.json
+            *_diagnostico.html
+          retention-days: 7
