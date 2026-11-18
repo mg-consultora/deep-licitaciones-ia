@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, urldefrag
 
 import requests
 from bs4 import BeautifulSoup
@@ -78,6 +78,25 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
     return items
 
 
+def paginas_enlazadas(html: str, origen: str) -> list[str]:
+    """Paginación HTML explícita; no presume que se accedió a páginas JS."""
+    soup = BeautifulSoup(html, "html.parser")
+    host = (urlparse(origen).hostname or "").lower()
+    enlaces = []
+    for a in soup.find_all("a", href=True):
+        etiqueta = normalizar(a.get_text(" ", strip=True))
+        destino = urldefrag(urljoin(origen, a["href"]))[0]
+        u = urlparse(destino)
+        if u.scheme != "https" or (u.hostname or "").lower() != host:
+            continue
+        if destino == origen:
+            continue
+        if (re.search(r"^(siguiente|next|[2-9]|[1-9][0-9]|>)$", etiqueta)
+                or re.search(r"(?:[?&](?:page|pagina|pageno|pageindex)=\\d+)", destino, re.I)):
+            enlaces.append(destino)
+    return list(dict.fromkeys(enlaces))[:12]
+
+
 class PaginasWeb(Fuente):
     nombre = "Páginas públicas configuradas"
 
@@ -94,9 +113,38 @@ class PaginasWeb(Fuente):
                 # Tiempo de conexión corto y lectura acotada por fuente.
                 r = s.get(p["url"], timeout=(8, 20))
                 r.raise_for_status()
-                items = extraer_items(r.text, p["url"], p["nombre"])
-                ops += items
-                detalle_fuentes.append(f"{p['nombre']}: {len(items)} registros HTML (sin validar vigencia)")
+                items = extraer_items(r.text, r.url, p["nombre"])
+                paginas_leidas = 1
+                if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower():
+                    # Solo páginas realmente enlazadas y accesibles. No inventar
+                    # cobertura total cuando el portal pagina mediante JavaScript.
+                    visitadas = {r.url}
+                    cola = paginas_enlazadas(r.text, r.url)
+                    while cola and paginas_leidas < 8:
+                        destino = cola.pop(0)
+                        if destino in visitadas:
+                            continue
+                        visitadas.add(destino)
+                        try:
+                            sub = s.get(destino, timeout=(8, 20))
+                            sub.raise_for_status()
+                            if "html" not in sub.headers.get("Content-Type", "").lower():
+                                continue
+                            paginas_leidas += 1
+                            items.extend(extraer_items(sub.text, sub.url, p["nombre"]))
+                            for link in paginas_enlazadas(sub.text, sub.url):
+                                if link not in visitadas and link not in cola:
+                                    cola.append(link)
+                        except requests.RequestException:
+                            continue
+                unicos = {}
+                for item in items:
+                    clave = (item.numero_proceso or "", item.titulo, item.link)
+                    unicos.setdefault(clave, item)
+                ops.extend(unicos.values())
+                detalle_fuentes.append(
+                    f"{p['nombre']}: {len(unicos)} registros de {paginas_leidas} página(s) HTML; "
+                    "cobertura total y vigencia NO acreditadas")
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
         detalle = f"{len(paginas) - len(errores)}/{len(paginas)} páginas leídas"
