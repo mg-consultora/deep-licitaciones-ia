@@ -1,0 +1,49 @@
+name: Respaldo diario seguro DEEP
+
+on:
+  schedule:
+    - cron: '40 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respaldo-diario-deep
+  cancel-in-progress: false
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Obtener repositorio con historial completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Recuperar ramas y etiquetas remotas
+        run: |
+          git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+          git fetch origin '+refs/tags/*:refs/tags/*'
+
+      - name: Crear copia recuperable e inventario
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p respaldo
+          git bundle create respaldo/deep-repositorio.bundle --all
+          git bundle verify respaldo/deep-repositorio.bundle
+          git show-ref > respaldo/referencias.txt
+          git rev-parse HEAD > respaldo/commit-main.txt
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > respaldo/fecha-utc.txt
+          sha256sum respaldo/deep-repositorio.bundle > respaldo/SHA256SUMS.txt
+
+      - name: Guardar respaldo descargable durante 90 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-deep-${{ github.run_id }}
+          path: respaldo/
+          retention-days: 90
+          if-no-files-found: error
