@@ -555,8 +555,16 @@ class SesionContratar:
                 if e.code < 500:
                     break
             except (URLError, TimeoutError, OSError) as e:
-                self.bitacora.append(("POST" if datos else "GET", url, None, None, round(time.time() - t0, 2)))
-                ultimo_error = ErrorPortal("%s: %s" % (type(e).__name__, e))
+                duracion = round(time.time() - t0, 2)
+                self.bitacora.append(("POST" if datos else "GET", url, None, None, duracion))
+                tipo = type(e).__name__
+                detalle = str(e)[:180]
+                print(
+                    "DIAGNOSTICO CONTRAT.AR: metodo=%s ruta=%s intento=%d/2 duracion=%.2fs error=%s detalle=%s"
+                    % ("POST" if datos else "GET", urlparse(url).path, intento, duracion, tipo, detalle),
+                    flush=True,
+                )
+                ultimo_error = ErrorPortal("%s: %s" % (tipo, e))
             if intento == 1:
                 time.sleep(3 if self.pausa else 0)
         raise ultimo_error
