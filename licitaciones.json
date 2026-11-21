@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-11-17T15:23:41.657925+00:00",
+  "actualizado": "2026-11-21T21:42:07.619482+00:00",
   "versionAgente": "DEEP-CONTRATAR-V3-CONTROL-PLAZOS-20261026",
   "estado": "oportunidades_pendientes_de_verificacion",
   "extraccionCompleta": true,
@@ -21,7 +21,7 @@
           "nombre": "Próximas aperturas",
           "url": "https://contratar.gob.ar/ListarAperturaProxima.aspx",
           "paginas": 1,
-          "filas": 5,
+          "filas": 4,
           "completa": true,
           "motivo": "",
           "errores": []
@@ -31,7 +31,7 @@
           "nombre": "Aperturas de los últimos 90 días",
           "url": "https://contratar.gob.ar/ListarAperturaUltimos30Dias.aspx",
           "paginas": 1,
-          "filas": 2,
+          "filas": 3,
           "completa": true,
           "motivo": "",
           "errores": []
@@ -86,7 +86,7 @@
       "paginaListado": 1,
       "observaciones": "Referencia detectada en el listado oficial de CONTRAT.AR (proximas). Fechas y circulares tomadas de la ficha cuando se pudo acceder. La apertura no equivale al cierre de ofertas. Tipo: Licitación Pública.",
       "alertas": [],
-      "ultimaVerificacion": "2026-11-17T15:23:41.657895+00:00"
+      "ultimaVerificacion": "2026-11-21T21:42:07.619454+00:00"
     }
   ]
 }
