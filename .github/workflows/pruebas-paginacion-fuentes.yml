@@ -1,0 +1,21 @@
+name: Pruebas paginacion fuentes DEEP
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/cobertura-fuentes-20261121
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias de pruebas
+        run: python -m pip install requests beautifulsoup4 pyyaml
+      - name: Verificar sintaxis
+        run: python -m compileall -q claude/licitaciones/fuentes/paginas_web.py tests/test_paginacion_fuentes.py
+      - name: Ejecutar pruebas sin red
+        run: python -m unittest discover -s tests -p 'test_paginacion_fuentes.py' -v
