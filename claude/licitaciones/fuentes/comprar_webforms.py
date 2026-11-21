@@ -131,3 +131,50 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
     if errores:
         estado += "; " + ", ".join(errores)
     return paginas, estado
+
+
+def buscar_procesos_avanzado(sesion, url, html, max_paginas=50):
+    """Entrar por el buscador real y ejecutar Buscar. No usa la portada como listado."""
+    if urlparse(url).hostname != "comprar.gob.ar" or es_pantalla_error(url, html):
+        return [], "Origen invalido o pantalla de error"
+    soup = BeautifulSoup(html, "html.parser")
+    enlace = next((a for a in soup.select("a[href],a[onclick]")
+                   if "busqueda de procesos" in __import__("unicodedata").normalize(
+                       "NFKD", a.get_text(" ", strip=True).lower()).encode("ascii", "ignore").decode()), None)
+    if enlace is None:
+        return [], "No se encontro acceso al buscador avanzado"
+    m = POSTBACK.search((enlace.get("href") or "") + " " + (enlace.get("onclick") or ""))
+    datos = campos_formulario(html)
+    if m is None or not datos or "__VIEWSTATE" not in datos:
+        return [], "Falta evento o VIEWSTATE del acceso al buscador"
+    datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = m.groups()
+    form = soup.find("form")
+    destino = urljoin(url, form.get("action", "") if form else "")
+    if urlparse(destino).hostname != "comprar.gob.ar":
+        return [], "Accion fuera de COMPR.AR"
+    try:
+        r = sesion.post(destino, data=datos, timeout=(10, 30), headers={"Referer": url})
+        r.raise_for_status()
+        if urlparse(r.url).hostname != "comprar.gob.ar" or es_pantalla_error(r.url, r.text):
+            return [], "Buscador avanzado devolvio error o redireccion"
+        bs = BeautifulSoup(r.text, "html.parser")
+        control = bs.find(id="ctl00_CPH1_btnListarPliegoAvanzado") or bs.find(
+            attrs={"name": "ctl00$CPH1$btnListarPliegoAvanzado"})
+        datos = campos_formulario(r.text)
+        if control is None or not datos or "__VIEWSTATE" not in datos:
+            return [], "Falta boton Buscar o VIEWSTATE"
+        evento = POSTBACK.search((control.get("href") or "") + " " + (control.get("onclick") or ""))
+        datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = evento.groups() if evento else (
+            "ctl00$CPH1$btnListarPliegoAvanzado", "")
+        form = bs.find("form")
+        destino = urljoin(r.url, form.get("action", "") if form else "")
+        if urlparse(destino).hostname != "comprar.gob.ar":
+            return [], "Accion Buscar fuera de COMPR.AR"
+        resultado = sesion.post(destino, data=datos, timeout=(10, 45), headers={"Referer": r.url})
+        resultado.raise_for_status()
+        if urlparse(resultado.url).hostname != "comprar.gob.ar" or es_pantalla_error(resultado.url, resultado.text):
+            return [], "Busqueda avanzada devolvio error o redireccion"
+        adicionales, estado = paginas_postback(sesion, resultado.url, resultado.text, max_paginas=max_paginas)
+        return [(resultado.url, resultado.text)] + adicionales, "Busqueda avanzada: " + estado
+    except Exception as exc:
+        return [], "Busqueda avanzada fallo: " + type(exc).__name__ + ": " + str(exc)[:120]
