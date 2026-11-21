@@ -28,6 +28,22 @@ class TestPaginacion(unittest.TestCase):
         self.assertIn("2 página(s)", resultado.detalle)
         self.assertEqual(resultado.estado, "ok")
 
+    def test_mas_de_doce_enlaces_no_se_pierden(self):
+        html = "".join(f'<a href="?page={i}">{i}</a>' for i in range(2, 20))
+        self.assertEqual(len(paginas_enlazadas(html, "https://example.org/list")), 18)
+
+    def test_limite_paginas_marca_parcial(self):
+        url = "https://example.org/list"
+        def get(destino, timeout):
+            numero = int(destino.split("page=")[-1]) if "page=" in destino else 1
+            return Response(destino, f'<a href="?page={numero+1}">Next</a>')
+        with patch("requests.Session") as session:
+            session.return_value.get.side_effect = get
+            resultado = PaginasWeb({"max_paginas_por_fuente": 3, "paginas_publicas": [{"nombre": "Prueba", "url": url}]}).obtener()
+        self.assertEqual(resultado.estado, "parcial")
+        self.assertIn("3 página(s)", resultado.detalle)
+        self.assertIn("enlaces pendientes=1", resultado.detalle)
+
     def test_error_secundario_marca_parcial(self):
         url = "https://example.org/list"
         def get(destino, timeout):
