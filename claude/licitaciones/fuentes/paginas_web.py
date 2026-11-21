@@ -116,7 +116,7 @@ def paginas_enlazadas(html: str, origen: str) -> list[str]:
         if (re.search(r"^(siguiente|next|[2-9]|[1-9][0-9]|>)$", etiqueta)
                 or re.search(r"(?:[?&](?:page|pagina|pageno|pageindex)=\d+)", destino, re.I)):
             enlaces.append(destino)
-    return list(dict.fromkeys(enlaces))[:12]
+    return list(dict.fromkeys(enlaces))
 
 
 class PaginasWeb(Fuente):
@@ -128,6 +128,7 @@ class PaginasWeb(Fuente):
             return ResultadoFuente(self.nombre, "desactivada", "No hay páginas cargadas en config.yaml")
         ops, errores, detalle_fuentes = [], [], []
         parciales = []
+        max_paginas = max(1, min(200, int(self.config.get("max_paginas_por_fuente", 50))))
         s = requests.Session()
         s.headers["User-Agent"] = USER_AGENT
         for p in paginas:
@@ -146,13 +147,13 @@ class PaginasWeb(Fuente):
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
-                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text)
+                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text, max_paginas=max_paginas)
                     for url_js, html_js in paginas_js:
                         items.extend(extraer_items(html_js, url_js, p["nombre"]))
                     paginas_leidas += len(paginas_js)
                 # Recorrer paginacion HTML en TODAS las fuentes configuradas.
                 # Limite de seguridad: no afirmar cobertura total al alcanzarlo.
-                while cola and paginas_leidas < 15:
+                while cola and paginas_leidas < max_paginas:
                     destino = cola.pop(0)
                     if destino in visitadas:
                         continue
@@ -160,6 +161,9 @@ class PaginasWeb(Fuente):
                     try:
                         sub = s.get(destino, timeout=(8, 20))
                         sub.raise_for_status()
+                        if (urlparse(sub.url).hostname or "").lower() != (urlparse(r.url).hostname or "").lower():
+                            errores_pagina.append(f"{destino}: redireccion fuera de fuente")
+                            continue
                         if "html" not in sub.headers.get("Content-Type", "").lower():
                             errores_pagina.append(f"{destino}: respuesta no HTML")
                             continue
@@ -170,7 +174,7 @@ class PaginasWeb(Fuente):
                                 cola.append(link)
                     except requests.RequestException as exc:
                         errores_pagina.append(f"{destino}: {type(exc).__name__}")
-                if cola or errores_pagina or (diagnostico_js and "cobertura total no acreditada" in diagnostico_js.lower()):
+                if cola or errores_pagina or diagnostico_js:
                     parciales.append(p["nombre"])
                 unicos = {}
                 for item in items:
@@ -180,6 +184,7 @@ class PaginasWeb(Fuente):
                 detalle_fuentes.append(
                     f"{p['nombre']}: {len(unicos)} registros de {paginas_leidas} página(s) HTML; "
                     f"enlaces pendientes={len(cola)}; errores secundarios={len(errores_pagina)}; "
+                    f"limite paginas={max_paginas}; "
                     "cobertura total y vigencia NO acreditadas" + (f"; {diagnostico_js}" if diagnostico_js else ""))
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
