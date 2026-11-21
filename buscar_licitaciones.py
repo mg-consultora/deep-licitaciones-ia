@@ -24,7 +24,7 @@ CONTRATAR_MAX_PAGINAS   10                  páginas máximas por listado
 CONTRATAR_MAX_DETALLES  25                  fichas máximas por ejecución
 CONTRATAR_MAX_PEDIDOS   80                  pedidos HTTP máximos por ejecución
 CONTRATAR_PAUSA         2.0                 segundos entre pedidos
-CONTRATAR_TIMEOUT       35                  segundos de espera por pedido
+CONTRATAR_TIMEOUT       20                  segundos de espera por pedido
 CONTRATAR_EXCLUIR_APERTURA_VENCIDA 0        1 = sin cierre publicado, se excluye si la apertura ya pasó
 DEEP_ARCHIVO_SALIDA     licitaciones.json
 """
@@ -90,7 +90,7 @@ def configuracion():
         "max_detalles": max(0, _entero("CONTRATAR_MAX_DETALLES", 25)),
         "max_pedidos": max(2, _entero("CONTRATAR_MAX_PEDIDOS", 80)),
         "pausa": max(0.0, _decimal("CONTRATAR_PAUSA", 2.0)),
-        "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 60)),
+        "timeout": max(5, _entero("CONTRATAR_TIMEOUT", 20)),
         "excluir_apertura_vencida": os.environ.get("CONTRATAR_EXCLUIR_APERTURA_VENCIDA", "0") != "0",
         "salida": os.environ.get("DEEP_ARCHIVO_SALIDA", "licitaciones.json"),
     }
@@ -556,7 +556,7 @@ class SesionContratar:
                     break
             except (URLError, TimeoutError, OSError) as e:
                 self.bitacora.append(("POST" if datos else "GET", url, None, None, round(time.time() - t0, 2)))
-                ultimo_error = ErrorPortal("%s: %s" % (type(e).__name__, e))
+                ultimo_error = ErrorPortal("%s: %s (metodo=%s, ruta=%s, intento=%d, duracion=%.1fs)" % (type(e).__name__, e, "POST" if datos else "GET", urlparse(url).path, intento, time.time() - t0))
             if intento == 1:
                 time.sleep(3 if self.pausa else 0)
         raise ultimo_error
@@ -1026,6 +1026,7 @@ def extraer_contratar(cfg):
             })
 
     acumulado["pedidos"] = sesion.pedidos
+    acumulado["bitacora"] = sesion.bitacora[-40:]
     acumulado["completa"] = bool(acumulado["listados"]) and all(
         item["completa"] for item in acumulado["listados"]
     ) and not acumulado["errores_detalle"]
@@ -1190,6 +1191,7 @@ def main():
             "no_relevantes": 0,
             "errores_detalle": [],
             "pedidos": 0,
+            "bitacora": [],
             "completa": False,
         }
         error_general = f"{type(error).__name__}: {error}"
@@ -1267,6 +1269,8 @@ def main():
     print("Registros obtenidos:", len(extraccion["registros"]))
     print("Registros publicados:", len(registros))
     print("Pedidos HTTP:", extraccion["pedidos"])
+    for metodo, url, status, final, segundos in extraccion.get("bitacora", []):
+        print("HTTP:", metodo, urlparse(url).path, "status=", status, "duracion=", segundos, "seg")
     print("Extracción completa:", completa)
 
     for error in errores:
