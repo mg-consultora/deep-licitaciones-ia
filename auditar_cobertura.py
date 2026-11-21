@@ -15,7 +15,7 @@ def auditar(p, session):
     nombre, url = p["nombre"], p["url"]
     d = {"fuente": nombre, "url": url, "paginas": 0, "registros": 0,
          "procesos_unicos": 0, "pendientes": 0, "cobertura": "no_acreditada",
-         "errores": [], "paginas_detalle": []}
+         "errores": [], "paginas_detalle": [], "estado": "error"}
     try:
         inicial = session.get(url, timeout=(8, 20))
         inicial.raise_for_status()
@@ -36,6 +36,8 @@ def auditar(p, session):
                 continue
             visitadas.add(pagina_url)
             items = extraer_items(html, pagina_url, nombre)
+            # Contar por separado candidatos sin identificador verificable.
+            # Nunca interpretar elementos HTML como licitaciones confirmadas.
             d["paginas"] += 1
             d["registros"] += len(items)
             for item in items:
@@ -66,6 +68,7 @@ def auditar(p, session):
             d["errores"].append("Limite alcanzado; quedan paginas pendientes")
         if not d["errores"]:
             d["cobertura"] = "paginacion_visible_recorrida_no_exhaustividad"
+        d["estado"] = "parcial" if d["errores"] or d["pendientes"] else "lectura_sin_verificacion"
     except Exception as e:
         d["errores"].append(type(e).__name__ + ": " + str(e)[:180])
     return d
