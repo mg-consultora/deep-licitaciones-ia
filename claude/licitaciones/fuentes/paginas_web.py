@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
-from .comprar_webforms import paginas_postback
+from .comprar_webforms import buscar_procesos_avanzado
 
 
 def _fecha_valida(fecha):
@@ -137,7 +137,7 @@ class PaginasWeb(Fuente):
                 # Tiempo de conexión corto y lectura acotada por fuente.
                 r = s.get(p["url"], timeout=(8, 20))
                 r.raise_for_status()
-                items = extraer_items(r.text, r.url, p["nombre"])
+                items = [] if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower() else extraer_items(r.text, r.url, p["nombre"])
                 paginas_leidas = 1
                 diagnostico_js = ""
                 errores_pagina = []
@@ -147,7 +147,7 @@ class PaginasWeb(Fuente):
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
-                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text, max_paginas=max_paginas)
+                    paginas_js, diagnostico_js = buscar_procesos_avanzado(s, r.url, r.text, max_paginas=max_paginas)
                     for url_js, html_js in paginas_js:
                         items.extend(extraer_items(html_js, url_js, p["nombre"]))
                     paginas_leidas += len(paginas_js)
