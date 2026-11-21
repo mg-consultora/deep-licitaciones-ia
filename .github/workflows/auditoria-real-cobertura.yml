@@ -1,0 +1,30 @@
+name: Auditoria real cobertura DEEP
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 9 * * 1'
+permissions:
+  contents: read
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: python -m pip install requests beautifulsoup4 pyyaml
+      - name: Ejecutar auditoria real por fuente
+        run: python -u auditar_cobertura.py
+      - name: Publicar resultados de auditoria
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-real-cobertura-deep
+          path: |
+            auditoria_cobertura.json
+            auditoria_cobertura.md
+          if-no-files-found: warn
+          retention-days: 30
