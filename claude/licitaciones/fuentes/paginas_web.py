@@ -147,7 +147,7 @@ class PaginasWeb(Fuente):
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
-                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text)
+                    paginas_js, diagnostico_js = paginas_postback(s, r.url, r.text, max_paginas=max_paginas)
                     for url_js, html_js in paginas_js:
                         items.extend(extraer_items(html_js, url_js, p["nombre"]))
                     paginas_leidas += len(paginas_js)
