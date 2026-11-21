@@ -4,6 +4,8 @@ No almacena cookies ni VIEWSTATE en artefactos. Solo registra controles,
 números de proceso y evidencia de diferencias entre páginas.
 """
 import json
+import socket
+import ssl
 import re
 import sys
 import time
@@ -29,6 +31,25 @@ def diagnosticar():
     sesion = requests.Session()
     sesion.headers["User-Agent"] = "Mozilla/5.0 (compatible; DEEP-Diagnostico/1.0)"
     salida = {"url_inicial": URL, "cobertura_total_acreditada": False}
+    salida["conectividad"] = {}
+    for host in ("comprar.gob.ar", "www.comprar.gob.ar"):
+        estado = {}
+        try:
+            direcciones = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+            estado["ips"] = sorted({x[4][0] for x in direcciones})[:8]
+        except Exception as exc:
+            estado["dns_error"] = type(exc).__name__ + ": " + str(exc)[:160]
+            salida["conectividad"][host] = estado
+            continue
+        try:
+            inicio = time.monotonic()
+            with socket.create_connection((host, 443), timeout=10) as sock:
+                estado["tcp_443_ms"] = round((time.monotonic()-inicio)*1000)
+                with ssl.create_default_context().wrap_socket(sock, server_hostname=host) as tls:
+                    estado["tls_version"] = tls.version()
+        except Exception as exc:
+            estado["tcp_tls_error"] = type(exc).__name__ + ": " + str(exc)[:160]
+        salida["conectividad"][host] = estado
     try:
         # Reintentos limitados ante fallas transitorias de red, sin fingir cobertura.
         errores_conexion = []
