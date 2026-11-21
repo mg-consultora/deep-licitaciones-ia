@@ -127,6 +127,7 @@ class PaginasWeb(Fuente):
         if not paginas:
             return ResultadoFuente(self.nombre, "desactivada", "No hay páginas cargadas en config.yaml")
         ops, errores, detalle_fuentes = [], [], []
+        parciales = []
         s = requests.Session()
         s.headers["User-Agent"] = USER_AGENT
         for p in paginas:
@@ -137,6 +138,10 @@ class PaginasWeb(Fuente):
                 r.raise_for_status()
                 items = extraer_items(r.text, r.url, p["nombre"])
                 paginas_leidas = 1
+                diagnostico_js = ""
+                errores_pagina = []
+                visitadas = {r.url}
+                cola = paginas_enlazadas(r.text, r.url)
                 if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower():
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
@@ -145,9 +150,9 @@ class PaginasWeb(Fuente):
                     for url_js, html_js in paginas_js:
                         items.extend(extraer_items(html_js, url_js, p["nombre"]))
                     paginas_leidas += len(paginas_js)
-                    visitadas = {r.url}
-                    cola = paginas_enlazadas(r.text, r.url)
-                    while cola and paginas_leidas < 15:
+                # Recorrer paginacion HTML en TODAS las fuentes configuradas.
+                # Limite de seguridad: no afirmar cobertura total al alcanzarlo.
+                while cola and paginas_leidas < 15:
                         destino = cola.pop(0)
                         if destino in visitadas:
                             continue
@@ -162,8 +167,10 @@ class PaginasWeb(Fuente):
                             for link in paginas_enlazadas(sub.text, sub.url):
                                 if link not in visitadas and link not in cola:
                                     cola.append(link)
-                        except requests.RequestException:
-                            continue
+                        except requests.RequestException as exc:
+                            errores_pagina.append(f"{destino}: {type(exc).__name__}")
+                if cola or errores_pagina:
+                    parciales.append(p["nombre"])
                 unicos = {}
                 for item in items:
                     clave = (item.numero_proceso or "", item.titulo, item.link)
@@ -171,7 +178,8 @@ class PaginasWeb(Fuente):
                 ops.extend(unicos.values())
                 detalle_fuentes.append(
                     f"{p['nombre']}: {len(unicos)} registros de {paginas_leidas} página(s) HTML; "
-                    "cobertura total y vigencia NO acreditadas" + (f"; {diagnostico_js}" if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower() else ""))
+                    f"enlaces pendientes={len(cola)}; errores secundarios={len(errores_pagina)}; "
+                    "cobertura total y vigencia NO acreditadas" + (f"; {diagnostico_js}" if diagnostico_js else ""))
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
         detalle = f"{len(paginas) - len(errores)}/{len(paginas)} páginas leídas"
@@ -179,4 +187,7 @@ class PaginasWeb(Fuente):
             detalle += " — " + "; ".join(detalle_fuentes)
         if errores:
             detalle += " — fallaron: " + "; ".join(errores)
-        return ResultadoFuente(self.nombre, "ok" if len(errores) < len(paginas) else "error", detalle, ops)
+        if parciales:
+            detalle += " — paginacion parcial: " + ", ".join(parciales)
+        estado = "error" if len(errores) == len(paginas) else ("parcial" if errores or parciales else "ok")
+        return ResultadoFuente(self.nombre, estado, detalle, ops)
