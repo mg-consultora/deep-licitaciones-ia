@@ -153,23 +153,24 @@ class PaginasWeb(Fuente):
                 # Recorrer paginacion HTML en TODAS las fuentes configuradas.
                 # Limite de seguridad: no afirmar cobertura total al alcanzarlo.
                 while cola and paginas_leidas < 15:
-                        destino = cola.pop(0)
-                        if destino in visitadas:
+                    destino = cola.pop(0)
+                    if destino in visitadas:
+                        continue
+                    visitadas.add(destino)
+                    try:
+                        sub = s.get(destino, timeout=(8, 20))
+                        sub.raise_for_status()
+                        if "html" not in sub.headers.get("Content-Type", "").lower():
+                            errores_pagina.append(f"{destino}: respuesta no HTML")
                             continue
-                        visitadas.add(destino)
-                        try:
-                            sub = s.get(destino, timeout=(8, 20))
-                            sub.raise_for_status()
-                            if "html" not in sub.headers.get("Content-Type", "").lower():
-                                continue
-                            paginas_leidas += 1
-                            items.extend(extraer_items(sub.text, sub.url, p["nombre"]))
-                            for link in paginas_enlazadas(sub.text, sub.url):
-                                if link not in visitadas and link not in cola:
-                                    cola.append(link)
-                        except requests.RequestException as exc:
-                            errores_pagina.append(f"{destino}: {type(exc).__name__}")
-                if cola or errores_pagina:
+                        paginas_leidas += 1
+                        items.extend(extraer_items(sub.text, sub.url, p["nombre"]))
+                        for link in paginas_enlazadas(sub.text, sub.url):
+                            if link not in visitadas and link not in cola:
+                                cola.append(link)
+                    except requests.RequestException as exc:
+                        errores_pagina.append(f"{destino}: {type(exc).__name__}")
+                if cola or errores_pagina or (diagnostico_js and "cobertura total no acreditada" in diagnostico_js.lower()):
                     parciales.append(p["nombre"])
                 unicos = {}
                 for item in items:
