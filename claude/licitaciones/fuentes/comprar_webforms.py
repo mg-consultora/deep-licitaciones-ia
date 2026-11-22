@@ -249,7 +249,7 @@ def abrir_detalle_postback(sesion, url, html, numero):
                 if numero not in contenido:
                     return None, "detalle_sin_numero"
                 return (r.url, r.text), "detalle_abierto"
-            except requests.RequestException as exc:
+            except Exception as exc:
                 return None, type(exc).__name__
         return None, "fila_sin_evento_detalle"
     return None, "proceso_no_encontrado"
