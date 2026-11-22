@@ -38,7 +38,15 @@ jobs:
           cd claude
           python -m pytest -q tests/test_extractor_comprar.py tests/test_comprar_webforms.py tests/test_clasificador_deep.py
       - name: Consultar fichas COMPR.AR con Chromium
+        continue-on-error: true
         run: python -u extraer_comprar_chromium_diario.py
+      - name: Guardar evidencia de Chromium
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-comprar-chromium
+          path: claude/salida/comprar_playwright_verificado.json
+          if-no-files-found: warn
       - name: Ejecutar agente real de Claude
         working-directory: claude
         run: python agente.py --dias 5 --sin-avisos
