@@ -182,3 +182,74 @@ def buscar_procesos_avanzado(sesion, url, html, max_paginas=50):
         return [(resultado.url, resultado.text)] + adicionales, "Busqueda avanzada: " + estado
     except Exception as exc:
         return [], "Busqueda avanzada fallo: " + type(exc).__name__ + ": " + str(exc)[:120]
+
+
+def diagnosticar_filas_dinamicas(html, limite=12):
+    """Evidencia segura de controles WebForms sin guardar VIEWSTATE ni cookies."""
+    soup = BeautifulSoup(html, "html.parser")
+    salida = []
+    for tr in soup.select("tr"):
+        texto = tr.get_text(" ", strip=True)
+        numero = re.search(r"\b\d{2,3}(?:/\d+)?-\d{4}-[A-Z]{3}\d{2}\b", texto, re.I)
+        if not numero:
+            continue
+        eventos = []
+        for tag in tr.select("[href], [onclick], input[type=submit], button"):
+            script = (tag.get("href") or "") + " " + (tag.get("onclick") or "")
+            m = POSTBACK.search(script)
+            eventos.append({
+                "etiqueta": tag.get_text(" ", strip=True)[:60],
+                "tipo": tag.name,
+                "evento": list(m.groups()) if m else None,
+                "control": (tag.get("name") or tag.get("id") or "")[:120],
+                "ruta": (tag.get("href") or "")[:160] if not m else "postback"
+            })
+        salida.append({"numero": numero.group(0), "eventos": eventos[:8],
+                       "columnas": [x.get_text(" ", strip=True)[:80] for x in tr.find_all("td", recursive=False)][:12]})
+        if len(salida) >= limite:
+            break
+    return salida
+
+
+def abrir_detalle_postback(sesion, url, html, numero):
+    """Ejecuta exclusivamente el evento de detalle asociado a la fila solicitada."""
+    if urlparse(url).scheme != "https" or urlparse(url).hostname != "comprar.gob.ar":
+        return None, "origen_no_oficial"
+    soup = BeautifulSoup(html, "html.parser")
+    for tr in soup.select("tr"):
+        if numero not in tr.get_text(" ", strip=True):
+            continue
+        for tag in tr.select("[href], [onclick]"):
+            texto = tag.get_text(" ", strip=True).lower()
+            script = (tag.get("href") or "") + " " + (tag.get("onclick") or "")
+            m = POSTBACK.search(script)
+            if not m or not re.search(r"ver|detalle|consultar|proceso|pliego", texto + " " + script, re.I):
+                continue
+            datos = campos_formulario(html)
+            if not datos or "__VIEWSTATE" not in datos:
+                return None, "sin_viewstate"
+            datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = m.groups()
+            form = soup.find("form")
+            destino = urljoin(url, form.get("action", "") if form else "")
+            if urlparse(destino).hostname != "comprar.gob.ar":
+                return None, "accion_externa"
+            try:
+                r = sesion.post(destino, data=datos, headers={"Referer": url},
+                                timeout=(8, 25), allow_redirects=False)
+                if r.status_code in (301, 302, 303):
+                    destino = urljoin(url, r.headers.get("Location", ""))
+                    if urlparse(destino).hostname != "comprar.gob.ar":
+                        return None, "redireccion_externa"
+                    r = sesion.get(destino, timeout=(8, 25), allow_redirects=False)
+                if r.status_code != 200 or urlparse(r.url).hostname != "comprar.gob.ar":
+                    return None, "http_" + str(r.status_code)
+                if es_pantalla_error(r.url, r.text):
+                    return None, "error_webforms"
+                contenido = BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True)
+                if numero not in contenido:
+                    return None, "detalle_sin_numero"
+                return (r.url, r.text), "detalle_abierto"
+            except requests.RequestException as exc:
+                return None, type(exc).__name__
+        return None, "fila_sin_evento_detalle"
+    return None, "proceso_no_encontrado"
