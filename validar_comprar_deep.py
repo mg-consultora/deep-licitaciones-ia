@@ -21,7 +21,7 @@ def main():
     relevantes = []
     descartes = Counter()
     sesion = requests.Session()
-    for op in unicos.values():
+    for op in sorted(unicos.values(), key=lambda o: (o.numero_proceso[-2:] == str(datetime.now().year)[-2:], o.numero_proceso), reverse=True):
         motivo = motivo_descarte(op)
         if motivo:
             descartes[motivo] += 1
@@ -53,6 +53,7 @@ def main():
         "fichas_verificadas": len(relevantes),
         "relevantes": relevantes,
         "cobertura_exhaustiva_verificada": False,
+        "validacion_de_vigencia_completa": False,
         "advertencia": "No se consideran plazos verificados ni se publican licitaciones sin comprobar detalle oficial."
     }
     Path("informe_comprar_deep.json").write_text(json.dumps(informe, indent=2, ensure_ascii=False), encoding="utf-8")
