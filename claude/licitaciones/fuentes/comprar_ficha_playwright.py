@@ -34,7 +34,9 @@ def extraer_ficha(html, numero):
         if any(e in etiqueta for e in ETIQUETAS_APERTURA) and len(linea)<110:
             apertura=apertura or parse_fecha(ventana)
         if etiqueta in ("estado","estado del proceso","situación","situacion") and i+1<len(lineas):
-            estado=lineas[i+1][:100]
+            candidato=lineas[i+1][:100]
+            if re.search(r"^(publicad|convocad|adjudicad|preadjudicad|desiert|anulad|finalizad|en evaluaci[oó]n|apertura)", candidato, re.I):
+                estado=candidato
     circulares=[]
     # Solo registros de la sección Circulares, no el campo 'Acepta prórroga'.
     seccion=soup.find(string=lambda t: bool(t and t.strip().casefold()=="circulares"))
