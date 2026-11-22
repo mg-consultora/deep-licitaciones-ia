@@ -1,5 +1,6 @@
 """Prueba real del extractor COMPR.AR y filtro comercial DEEP; no publica ofertas."""
 import json
+import os
 from collections import Counter
 import requests
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from claude.licitaciones.verificacion_comprar import motivo_descarte, ficha_ofic
 def main():
     cfg = yaml.safe_load(Path("claude/config.yaml").read_text(encoding="utf-8"))
     cfg["paginas_publicas"] = [p for p in cfg["paginas_publicas"] if "comprar.gob.ar" in p["url"]]
-    cfg["max_paginas_por_fuente"] = 200
+    cfg["max_paginas_por_fuente"] = int(os.getenv("DEEP_COMPRAR_MAX_PAGINAS", "200"))
     cfg["auditoria_comprar_sin_publicar"] = True
     resultado = PaginasWeb(cfg).obtener()
     filtro = Filtro(cfg)
