@@ -82,6 +82,7 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
     # La navegación WebForms es secuencial: usar Next desde el estado actual.
     actual = html_inicial
     errores = []
+    fin_natural = False
     # Tramos de 25: se conserva VIEWSTATE y sesion entre tramos.
     # El limite es una cota de seguridad, nunca prueba de exhaustividad.
     for indice in range(max(0, max_paginas - 1)):
@@ -89,6 +90,7 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
             print(f"COMPR.AR: tramo completado, {indice + 1} paginas; continuando", flush=True)
         opciones = acciones_paginacion(actual)
         if not opciones:
+            fin_natural = True
             break
         siguiente = next((x for x in opciones if re.search(r"page\$next", x[1], re.I)), None)
         if siguiente is None:
@@ -97,6 +99,7 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
             siguiente = next((x for x in opciones
                               if x[1].lower() == "page$" + numero_siguiente), None)
             if siguiente is None:
+                errores.append("Paginador sin siguiente identificable; fin no acreditado")
                 break
         datos = campos_formulario(actual)
         if datos is None or "__VIEWSTATE" not in datos:
@@ -132,6 +135,10 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
         paginas.append((respuesta.url, respuesta.text))
         actual = respuesta.text
     estado = f"{1 + len(paginas)} página(s) WebForms recorridas; cobertura total no acreditada"
+    if fin_natural:
+        estado += "; sin controles de paginación adicionales visibles"
+    elif len(paginas) >= max(0, max_paginas - 1) and not errores:
+        estado += "; LIMITE_DE_PAGINAS_ALCANZADO: continuar por segmentos o filtros oficiales"
     if errores:
         estado += "; " + ", ".join(errores)
     return paginas, estado
