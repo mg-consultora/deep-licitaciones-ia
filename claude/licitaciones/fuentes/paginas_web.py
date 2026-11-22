@@ -187,6 +187,8 @@ class PaginasWeb(Fuente):
                     aprobadas = []
                     rechazadas = {}
                     for op in unicos.values():
+                        if self.config.get("auditoria_comprar_sin_publicar"):
+                            continue
                         motivo = motivo_descarte(op)
                         if not motivo and not filtro.evaluar(op):
                             motivo = "no_relevante_deep"
