@@ -266,6 +266,12 @@ def filtrar_alertas(alertas, procesos):
     numeros = {norm(p.get("numero_proceso")) for p in validos if len(norm(p.get("numero_proceso"))) >= 7}
     resultado = []
     for a in alertas:
+        # Solo cambios documentados; sin avisos genéricos ni enlaces inventados.
+        if a.get("tipo") not in ("Circular nueva", "Fecha modificada"):
+            continue
+        enlace = str(a.get("link") or "").strip()
+        if not enlace.startswith("https://"):
+            continue
         m = norm(" ".join(str(a.get(k) or "") for k in ("mensaje", "titulo", "organismo")))
         if coincide(m, EXCLUSION) or coincide(m, EXCLUSION_INFORMATICA): continue
         link = str(a.get("link") or "").strip()
@@ -431,8 +437,8 @@ function pintar(){ kpis(); const L=visibles();
     <span class="mut">${esc(p.fuente)}</span>
     ${(p.terminos||[]).slice(0,5).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
   </div>`).join("") : `<div class="vacio">${D.procesos.length===0?"No hay licitaciones DEEP verificadas para mostrar. Los filtros están disponibles, pero esta actualización no contiene oportunidades. Revisá las fuentes y el seguimiento de procesos más abajo.":"Ninguna oportunidad coincide con los filtros seleccionados. Elegí Todos para ampliar la búsqueda."}</div>`; }
-$("alertas").innerHTML = `<h2>Novedades: circulares y cambios de fecha</h2>` + (D.alertas.length ? D.alertas.map(a=>
-  `<div class="alerta"><span class="tag">${esc(a.tipo)}</span>${esc(a.mensaje)} ${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">abrir ↗</a>`:""} <span class="mut">· ${f(a.fecha)}</span></div>`).join("")
+$("alertas").innerHTML = `<h2>Actualizaciones oficiales detectadas</h2>` + (D.alertas.length ? D.alertas.map(a=>
+  `<div class="alerta"><span class="tag">${esc(a.tipo)}</span>${esc(a.mensaje)} ${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">Ver actualización</a>`:""} <span class="mut">· ${f(a.fecha)}</span></div>`).join("")
   : `<div class="mut">Sin novedades desde la última revisión.</div>`);
 const EST={ok:"Funcionando",error:"Con error",pendiente_credenciales:"Pendiente de usuario y clave",desactivada:"Desactivada"};
 const fuentesConError=(D.fuentes||[]).filter(s=>s.estado!=="ok" && s.estado!=="desactivada");
