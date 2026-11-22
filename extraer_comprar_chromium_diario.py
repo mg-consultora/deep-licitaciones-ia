@@ -3,6 +3,8 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
+import sys
+import time
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
 from claude.licitaciones.fuentes.comprar_ficha_playwright import extraer_ficha
@@ -20,7 +22,15 @@ def main():
             page=browser.new_page(locale="es-AR",timezone_id="America/Argentina/Buenos_Aires")
             page.set_default_timeout(12000)
             try:
-                page.goto("https://comprar.gob.ar/",wait_until="domcontentloaded",timeout=60000)
+                for intento in range(3):
+                    try:
+                        page.goto("https://comprar.gob.ar/",wait_until="commit",timeout=30000)
+                        page.wait_for_load_state("domcontentloaded",timeout=20000)
+                        break
+                    except Exception:
+                        if intento == 2:
+                            raise
+                        time.sleep(3 * (intento + 1))
                 page.get_by_text(re.compile("PROCESOS CON APERTURA PR[OÓ]XIMA",re.I)).first.click(timeout=15000)
                 page.wait_for_load_state("domcontentloaded",timeout=25000)
                 if urlparse(page.url).hostname!="comprar.gob.ar": raise ValueError("Dominio no oficial")
@@ -76,3 +86,5 @@ def main():
                       "circulares":len(informe["circulares"]),"error":informe.get("error")},ensure_ascii=False))
 if __name__=="__main__":
     main()
+    if json.loads(DESTINO.read_text(encoding="utf-8"))["estado"] == "error":
+        sys.exit(2)
