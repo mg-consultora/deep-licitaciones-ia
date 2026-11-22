@@ -13,12 +13,14 @@ def main():
     cfg = yaml.safe_load(Path("claude/config.yaml").read_text(encoding="utf-8"))
     cfg["paginas_publicas"] = [p for p in cfg["paginas_publicas"] if "comprar.gob.ar" in p["url"]]
     cfg["max_paginas_por_fuente"] = 200
+    cfg["auditoria_comprar_sin_publicar"] = True
     resultado = PaginasWeb(cfg).obtener()
     filtro = Filtro(cfg)
     unicos = {}
     for op in resultado.oportunidades:
         unicos.setdefault(op.numero_proceso or op.clave, op)
     relevantes = []
+    pendientes = []
     descartes = Counter()
     sesion = requests.Session()
     for op in sorted(unicos.values(), key=lambda o: (o.numero_proceso[-2:] == str(datetime.now().year)[-2:], o.numero_proceso), reverse=True):
@@ -32,6 +34,9 @@ def main():
         confirmado, motivo = ficha_oficial_verificada(op, sesion)
         if not confirmado:
             descartes[motivo] += 1
+            pendientes.append({"numero": op.numero_proceso, "titulo": op.titulo,
+                               "enlace_referencia": op.link, "motivo": motivo,
+                               "puntaje": op.puntaje, "terminos": op.terminos})
             continue
         if confirmado:
             relevantes.append({
@@ -49,6 +54,8 @@ def main():
         "candidatos_extraidos": len(resultado.oportunidades),
         "procesos_unicos": len(unicos),
         "relevantes_deep": len(relevantes),
+        "candidatos_industriales_pendientes": len(pendientes),
+        "pendientes_verificacion": pendientes[:200],
         "descartes_por_motivo": dict(descartes),
         "fichas_verificadas": len(relevantes),
         "relevantes": relevantes,
