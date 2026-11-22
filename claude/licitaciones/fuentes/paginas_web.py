@@ -78,6 +78,9 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             apertura = next((celda for titulo, celda in columnas.items() if "apertura" in titulo), None)
             fechas_apertura = [f for _, f in buscar_fechas(apertura.get_text(" ", strip=True)) if _fecha_valida(f)] if apertura else []
             ap = fechas_apertura[0] if fechas_apertura else None
+            celda_estado = next((celda for titulo, celda in columnas.items()
+                                 if "estado" in titulo or "situacion" in titulo), None)
+            estado_oficial = celda_estado.get_text(" ", strip=True) if celda_estado else "Sin verificar"
             # Cierre/presentación es diferente de apertura: no inferir fechas.
             celda_cierre = next((celda for titulo, celda in columnas.items()
                                  if "presentacion" in titulo or "cierre" in titulo
@@ -90,7 +93,7 @@ def extraer_items(html: str, url_base: str, nombre: str) -> list[Oportunidad]:
             fuente=f"Página: {nombre}",
             titulo=_limpiar_titulo(texto)[:220],
             organismo=nombre,
-            estado="Circular" if "circular" in norm else "Publicada",
+            estado=(estado_oficial if es_comprar else ("Circular" if "circular" in norm else "Publicada")),
             fecha_publicacion=None if es_comprar else (fechas[0] if fechas and fechas[0] != ap else None),
             # Nunca inferir apertura desde una fecha arbitraria del aviso.
             fecha_apertura=ap,
