@@ -170,7 +170,7 @@ class PaginasWeb(Fuente):
                         nuevos = extraer_items(html_js, url_js, p["nombre"])
                         # La auditoría también debe abrir fichas: omitirlas producía
                         # siempre cero verificaciones, incluso con candidatos válidos.
-                        if True:
+                        if nuevos:
                             filtro_comprar = Filtro(self.config)
                             for op in nuevos:
                                 if motivo_descarte(op) or not filtro_comprar.evaluar(op):
