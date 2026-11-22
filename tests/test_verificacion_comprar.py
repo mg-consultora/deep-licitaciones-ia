@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import Mock
 from claude.licitaciones.modelo import Oportunidad
-from claude.licitaciones.verificacion_comprar import motivo_descarte, ficha_oficial_verificada
+from claude.licitaciones.verificacion_comprar import motivo_descarte, ficha_oficial_verificada, _vigencia_en_ficha
 
 class VerificacionComprarTest(unittest.TestCase):
     def op(self, titulo, **kwargs):
@@ -35,6 +35,18 @@ class VerificacionComprarTest(unittest.TestCase):
         ok, motivo=ficha_oficial_verificada(op, session)
         self.assertFalse(ok)
         self.assertEqual(motivo, "numero_no_coincide_en_ficha")
+
+class VigenciaFichaTest(unittest.TestCase):
+    def test_numero_sin_cierre_no_es_vigente(self):
+        ok, motivo = _vigencia_en_ficha("<p>84-1234-LPR26</p>", "84-1234-LPR26")
+        self.assertFalse(ok)
+        self.assertEqual(motivo, "sin_cierre_oficial_identificable")
+
+    def test_estado_adjudicado_descartado(self):
+        html = "<p>84-1234-LPR26</p><table><tr><td>Estado</td><td>Adjudicada</td></tr></table>"
+        ok, motivo = _vigencia_en_ficha(html, "84-1234-LPR26")
+        self.assertFalse(ok)
+        self.assertEqual(motivo, "estado_oficial_cerrado")
 
 if __name__ == "__main__":
     unittest.main()
