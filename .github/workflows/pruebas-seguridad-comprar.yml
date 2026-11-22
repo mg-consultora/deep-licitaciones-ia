@@ -1,0 +1,24 @@
+name: Pruebas seguridad COMPR.AR
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'claude/licitaciones/verificacion_comprar.py'
+      - 'claude/licitaciones/fuentes/comprar_webforms.py'
+      - 'claude/licitaciones/fuentes/paginas_web.py'
+      - 'validar_comprar_deep.py'
+      - 'tests/test_verificacion_comprar.py'
+      - '.github/workflows/pruebas-seguridad-comprar.yml'
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests beautifulsoup4 pyyaml
+      - run: python -m compileall -q claude/licitaciones validar_comprar_deep.py tests/test_verificacion_comprar.py
+      - run: python -m unittest discover -s tests -p 'test_verificacion_comprar.py' -v

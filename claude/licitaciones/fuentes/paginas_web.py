@@ -17,6 +17,8 @@ from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
 from .comprar_webforms import buscar_procesos_avanzado
+from ..filtros import Filtro
+from ..verificacion_comprar import motivo_descarte, ficha_oficial_verificada
 
 
 def _fecha_valida(fecha):
@@ -180,7 +182,26 @@ class PaginasWeb(Fuente):
                 for item in items:
                     clave = (item.numero_proceso or "", item.titulo, item.link)
                     unicos.setdefault(clave, item)
-                ops.extend(unicos.values())
+                if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower():
+                    filtro = Filtro(self.config)
+                    aprobadas = []
+                    rechazadas = {}
+                    for op in unicos.values():
+                        motivo = motivo_descarte(op)
+                        if not motivo and not filtro.evaluar(op):
+                            motivo = "no_relevante_deep"
+                        if not motivo:
+                            confirmado, motivo = ficha_oficial_verificada(op, s)
+                            if confirmado:
+                                aprobadas.append(op)
+                        if motivo:
+                            rechazadas[motivo] = rechazadas.get(motivo, 0) + 1
+                    detalle_fuentes.append(
+                        f"COMPR.AR: {len(aprobadas)} fichas verificadas para DEEP; "
+                        f"descartes={rechazadas}; resultados sin ficha NO publicados")
+                    ops.extend(aprobadas)
+                else:
+                    ops.extend(unicos.values())
                 detalle_fuentes.append(
                     f"{p['nombre']}: {len(unicos)} registros de {paginas_leidas} página(s) HTML; "
                     f"enlaces pendientes={len(cola)}; errores secundarios={len(errores_pagina)}; "
