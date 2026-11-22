@@ -199,7 +199,7 @@ class PaginasWeb(Fuente):
                     detalle_fuentes.append(
                         f"COMPR.AR: {len(aprobadas)} fichas verificadas para DEEP; "
                         f"descartes={rechazadas}; resultados sin ficha NO publicados")
-                    ops.extend(aprobadas)
+                    ops.extend(unicos.values() if self.config.get("auditoria_comprar_sin_publicar") else aprobadas)
                 else:
                     ops.extend(unicos.values())
                 detalle_fuentes.append(
