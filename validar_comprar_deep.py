@@ -1,23 +1,39 @@
 """Prueba real del extractor COMPR.AR y filtro comercial DEEP; no publica ofertas."""
 import json
+from collections import Counter
+import requests
 from datetime import datetime, timezone
 from pathlib import Path
 import yaml
 from claude.licitaciones.fuentes.paginas_web import PaginasWeb
 from claude.licitaciones.filtros import Filtro
+from claude.licitaciones.verificacion_comprar import motivo_descarte, ficha_oficial_verificada
 
 def main():
     cfg = yaml.safe_load(Path("claude/config.yaml").read_text(encoding="utf-8"))
     cfg["paginas_publicas"] = [p for p in cfg["paginas_publicas"] if "comprar.gob.ar" in p["url"]]
-    cfg["max_paginas_por_fuente"] = 50
+    cfg["max_paginas_por_fuente"] = 200
     resultado = PaginasWeb(cfg).obtener()
     filtro = Filtro(cfg)
     unicos = {}
     for op in resultado.oportunidades:
         unicos.setdefault(op.numero_proceso or op.clave, op)
     relevantes = []
+    descartes = Counter()
+    sesion = requests.Session()
     for op in unicos.values():
-        if filtro.evaluar(op):
+        motivo = motivo_descarte(op)
+        if motivo:
+            descartes[motivo] += 1
+            continue
+        if not filtro.evaluar(op):
+            descartes["no_relevante_deep"] += 1
+            continue
+        confirmado, motivo = ficha_oficial_verificada(op, sesion)
+        if not confirmado:
+            descartes[motivo] += 1
+            continue
+        if confirmado:
             relevantes.append({
                 "numero": op.numero_proceso, "titulo": op.titulo,
                 "puntaje": op.puntaje, "terminos": op.terminos,
@@ -33,6 +49,8 @@ def main():
         "candidatos_extraidos": len(resultado.oportunidades),
         "procesos_unicos": len(unicos),
         "relevantes_deep": len(relevantes),
+        "descartes_por_motivo": dict(descartes),
+        "fichas_verificadas": len(relevantes),
         "relevantes": relevantes,
         "cobertura_exhaustiva_verificada": False,
         "advertencia": "No se consideran plazos verificados ni se publican licitaciones sin comprobar detalle oficial."
