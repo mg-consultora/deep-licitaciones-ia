@@ -23,8 +23,44 @@ def motivo_descarte(op, ahora=None):
         return "apertura_pasada_sin_vigencia_acreditada"
     return None
 
+def _vigencia_en_ficha(html, numero, ahora=None):
+    """Confirma cierre futuro etiquetado; una coincidencia de numero sola no basta."""
+    from bs4 import BeautifulSoup
+    from .texto import buscar_fechas
+    ahora = ahora or datetime.now()
+    soup = BeautifulSoup(html, "html.parser")
+    texto = normalizar(soup.get_text(" ", strip=True))
+    if normalizar(numero) not in texto:
+        return False, "numero_no_coincide_en_ficha"
+    # Buscar estado en celdas/campos, no en todo el documento: puede incluir historial.
+    for fila in soup.select("tr"):
+        celdas = fila.find_all(["td", "th"], recursive=False)
+        if len(celdas) < 2:
+            continue
+        etiqueta = normalizar(celdas[0].get_text(" ", strip=True))
+        valor = normalizar(celdas[1].get_text(" ", strip=True))
+        if ("estado" in etiqueta or "situacion" in etiqueta) and CERRADOS.search(valor):
+            return False, "estado_oficial_cerrado"
+    # Solo fecha de recepcion/presentacion de ofertas; apertura no equivale a cierre.
+    fechas = []
+    for fila in soup.select("tr"):
+        celdas = fila.find_all(["td", "th"], recursive=False)
+        if len(celdas) < 2:
+            continue
+        etiqueta = normalizar(celdas[0].get_text(" ", strip=True))
+        if any(x in etiqueta for x in ("fin de recepcion", "cierre de ofertas",
+                                       "fecha limite de presentacion", "fin de presentacion",
+                                       "fecha de presentacion de ofertas")):
+            fechas.extend(fecha for _, fecha in buscar_fechas(celdas[1].get_text(" ", strip=True)))
+    if not fechas:
+        return False, "sin_cierre_oficial_identificable"
+    if max(fechas) <= ahora:
+        return False, "cierre_oficial_vencido"
+    return True, "cierre_oficial_futuro_verificado"
+
+
 def ficha_oficial_verificada(op, sesion):
-    """Requiere URL individual HTTP(S) del portal y número coincidente en HTML."""
+    """Valida ficha individual y cierre futuro, nunca solo coincidencia de numero."""
     url = op.link
     u = urlparse(url)
     if u.scheme != "https" or u.hostname != "comprar.gob.ar":
@@ -37,11 +73,6 @@ def ficha_oficial_verificada(op, sesion):
             return False, "ficha_http_" + str(r.status_code)
         if urlparse(r.url).hostname != "comprar.gob.ar":
             return False, "redireccion_externa"
-        texto = normalizar(__import__("bs4").BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True))
-        if normalizar(op.numero_proceso) not in texto:
-            return False, "numero_no_coincide_en_ficha"
-        if CERRADOS.search(texto):
-            return False, "ficha_indica_cerrado"
-        return True, "numero_confirmado_en_ficha"
+        return _vigencia_en_ficha(r.text, op.numero_proceso)
     except Exception as exc:
         return False, "error_ficha_" + type(exc).__name__
