@@ -1,0 +1,30 @@
+name: Verificar Chromium diario COMPR.AR
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'extraer_comprar_chromium_diario.py'
+      - 'claude/licitaciones/fuentes/comprar_ficha_playwright.py'
+      - '.github/workflows/verificar-chromium-diario.yml'
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install playwright beautifulsoup4
+          python -m playwright install --with-deps chromium
+      - run: python -m compileall -q extraer_comprar_chromium_diario.py claude/licitaciones/fuentes
+      - run: python -u extraer_comprar_chromium_diario.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-chromium-diario
+          path: claude/salida/comprar_playwright_verificado.json
+          if-no-files-found: warn
