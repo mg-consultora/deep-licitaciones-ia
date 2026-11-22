@@ -1,6 +1,12 @@
 name: Validar COMPR.AR y filtro DEEP real
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'validar_comprar_deep.py'
+      - 'claude/licitaciones/verificacion_comprar.py'
+      - 'claude/licitaciones/fuentes/comprar_webforms.py'
+      - '.github/workflows/validar-comprar-deep.yml'
   schedule:
     - cron: '15 10 * * *'
 permissions:
