@@ -18,6 +18,7 @@ from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
 from .comprar_webforms import buscar_procesos_avanzado, abrir_detalle_postback, buscar_aperturas_proximas
+from .comprar_ficha_playwright import extraer_ficha
 from ..filtros import Filtro
 from ..verificacion_comprar import motivo_descarte, ficha_oficial_verificada
 
@@ -177,8 +178,14 @@ class PaginasWeb(Fuente):
                                     from ..verificacion_comprar import _vigencia_en_ficha
                                     confirmado, razon = _vigencia_en_ficha(detalle[1], op.numero_proceso)
                                     if confirmado:
-                                        op.link = detalle[0]
-                                        op.estado = "Vigente verificada"
+                                        ficha = extraer_ficha(detalle[1], op.numero_proceso)
+                                        if ficha["vigencia_certificada"] and ficha.get("fecha_cierre"):
+                                            op.link = detalle[0]
+                                            op.estado = "Vigente verificada"
+                                            op.fecha_presentacion = datetime.fromisoformat(ficha["fecha_cierre"])
+                                            if ficha.get("fecha_apertura"):
+                                                op.fecha_apertura = datetime.fromisoformat(ficha["fecha_apertura"])
+                                            op.texto += " | Circulares oficiales: " + str(ficha.get("circulares", []))
                         items.extend(nuevos)
                     paginas_leidas += len(paginas_js)
                 # Recorrer paginacion HTML en TODAS las fuentes configuradas.
