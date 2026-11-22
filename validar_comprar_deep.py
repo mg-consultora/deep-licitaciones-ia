@@ -35,7 +35,9 @@ def main():
         if not filtro.evaluar(op):
             descartes["no_relevante_deep"] += 1
             continue
-        confirmado, motivo = ficha_oficial_verificada(op, sesion)
+        confirmado, motivo = ((True, "detalle_postback_verificado")
+                              if getattr(op, "_ficha_verificada", False)
+                              else ficha_oficial_verificada(op, sesion))
         if not confirmado:
             descartes[motivo] += 1
             pendientes.append({"numero": op.numero_proceso, "titulo": op.titulo,
