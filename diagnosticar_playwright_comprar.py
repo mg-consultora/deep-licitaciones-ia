@@ -52,6 +52,8 @@ def main():
                                 informe["fichas"].append({"numero":numero.group(0),"url":page.url,
                                     "numero_coincide":numero.group(0) in texto,
                                     "lineas_cierre":[line.strip()[:240] for line in texto.splitlines() if CIERRE.search(line)][:12],
+                                    "contexto_apertura":[texto.splitlines()[max(0,k-2):k+5] for k,line in enumerate(texto.splitlines()) if "fecha y hora acto de apertura" in line.lower()][:4],
+                                    "contexto_circulares":[texto.splitlines()[max(0,k-2):k+5] for k,line in enumerate(texto.splitlines()) if re.search(r"circular|pr[oó]rroga",line,re.I)][:6],
                                     "lineas_estado":[line.strip()[:180] for line in texto.splitlines() if ESTADO.search(line)][:12],
                                     "vigencia_certificada":False})
                             except Exception as exc:
