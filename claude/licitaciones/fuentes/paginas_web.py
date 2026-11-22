@@ -168,7 +168,9 @@ class PaginasWeb(Fuente):
                         diagnostico_js += '; respaldo historico: ' + diagnostico_respaldo
                     for url_js, html_js in paginas_js:
                         nuevos = extraer_items(html_js, url_js, p["nombre"])
-                        if not self.config.get("auditoria_comprar_sin_publicar"):
+                        # La auditoría también debe abrir fichas: omitirlas producía
+                        # siempre cero verificaciones, incluso con candidatos válidos.
+                        if True:
                             filtro_comprar = Filtro(self.config)
                             for op in nuevos:
                                 if motivo_descarte(op) or not filtro_comprar.evaluar(op):
