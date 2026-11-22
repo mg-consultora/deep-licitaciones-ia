@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+from claude.licitaciones.fuentes.comprar_ficha_playwright import extraer_ficha
 
 PATRON = re.compile(r"\b\d{2,3}(?:/\d+)?-\d{4}-[A-Z]{3}\d{2}\b", re.I)
 CIERRE = re.compile(r"(fin de recepci[oó]n|cierre de ofertas|fecha l[ií]mite de presentaci[oó]n|fin de presentaci[oó]n|presentaci[oó]n de ofertas)", re.I)
@@ -49,7 +50,7 @@ def main():
                                 page.wait_for_load_state("domcontentloaded",timeout=20000)
                                 if not seguro(page.url): raise ValueError("Ficha fuera de COMPR.AR")
                                 texto=page.locator("body").inner_text()
-                                informe["fichas"].append({"numero":numero.group(0),"url":page.url,
+                                informe["fichas"].append({"extraccion":extraer_ficha(page.content(), numero.group(0)), "numero":numero.group(0),"url":page.url,
                                     "numero_coincide":numero.group(0) in texto,
                                     "lineas_cierre":[line.strip()[:240] for line in texto.splitlines() if CIERRE.search(line)][:12],
                                     "contexto_apertura":[texto.splitlines()[max(0,k-2):k+5] for k,line in enumerate(texto.splitlines()) if "fecha y hora acto de apertura" in line.lower()][:4],
