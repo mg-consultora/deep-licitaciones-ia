@@ -30,12 +30,15 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install -r claude/requirements.txt
-          python -m pip install requests beautifulsoup4 pyyaml
+          python -m pip install requests beautifulsoup4 pyyaml playwright
+          python -m playwright install --with-deps chromium
       - name: Validar extractor y sintaxis antes de publicar
         run: |
           python -m compileall -q claude actualizar_base_maestra.py
           cd claude
           python -m pytest -q tests/test_extractor_comprar.py tests/test_comprar_webforms.py tests/test_clasificador_deep.py
+      - name: Consultar fichas COMPR.AR con Chromium
+        run: python -u extraer_comprar_chromium_diario.py
       - name: Ejecutar agente real de Claude
         working-directory: claude
         run: python agente.py --dias 5 --sin-avisos
