@@ -12,14 +12,14 @@ def motivo_descarte(op, ahora=None):
     ahora = ahora or datetime.now()
     titulo = normalizar(op.titulo + " " + op.texto)
     estado = normalizar(op.estado)
-    if CERRADOS.search(estado) or CERRADOS.search(titulo):
+    if CERRADOS.search(estado):
         return "proceso_cerrado_o_adjudicado"
     if INFORMATICOS.search(titulo) and not INDUSTRIAL.search(titulo):
         return "ups_informatica"
     # Un plazo de presentación vencido descarta, pero una apertura NO sustituye el cierre.
     if op.fecha_presentacion and op.fecha_presentacion < ahora:
         return "presentacion_vencida"
-    if op.fecha_apertura and op.fecha_apertura < ahora:
+    if op.fecha_apertura and op.fecha_apertura < ahora and not op.fecha_presentacion:
         return "apertura_pasada_sin_vigencia_acreditada"
     return None
 
