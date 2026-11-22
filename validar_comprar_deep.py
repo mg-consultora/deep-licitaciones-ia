@@ -21,9 +21,12 @@ def main():
         unicos.setdefault(op.numero_proceso or op.clave, op)
     relevantes = []
     pendientes = []
+    muestra = []
     descartes = Counter()
     sesion = requests.Session()
     for op in sorted(unicos.values(), key=lambda o: (o.numero_proceso[-2:] == str(datetime.now().year)[-2:], o.numero_proceso), reverse=True):
+        if len(muestra) < 100:
+            muestra.append({"numero": op.numero_proceso, "titulo": op.titulo, "estado": op.estado, "enlace": op.link, "apertura": op.fecha_apertura.isoformat() if op.fecha_apertura else None})
         motivo = motivo_descarte(op)
         if motivo:
             descartes[motivo] += 1
@@ -56,6 +59,7 @@ def main():
         "relevantes_deep": len(relevantes),
         "candidatos_industriales_pendientes": len(pendientes),
         "pendientes_verificacion": pendientes[:200],
+        "muestra_diagnostica": muestra,
         "descartes_por_motivo": dict(descartes),
         "fichas_verificadas": len(relevantes),
         "relevantes": relevantes,
