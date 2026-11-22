@@ -31,6 +31,17 @@ jobs:
           DEEP_COMPRAR_MAX_PAGINAS: "5"
         run: |
           python validar_comprar_deep.py
+      - name: Exigir evidencia real antes de aprobar
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path("informe_comprar_deep.json").read_text(encoding="utf-8"))
+          print("Procesos:", p.get("procesos_unicos"), "Fichas verificadas:", p.get("fichas_verificadas"))
+          assert p.get("fichas_verificadas", 0) > 0, "SIN FICHAS OFICIALES VERIFICADAS: no se puede aprobar"
+          assert p.get("validacion_de_vigencia_completa") is True, "VIGENCIA SIN CERTIFICAR"
+          assert p.get("cobertura_exhaustiva_verificada") is True, "COBERTURA SIN CERTIFICAR"
+          PY
       - name: Guardar evidencia
         if: always()
         uses: actions/upload-artifact@v4
