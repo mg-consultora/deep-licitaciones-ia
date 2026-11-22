@@ -61,7 +61,7 @@ class Filtro:
     def semaforo(self, op: Oportunidad, ahora: datetime | None = None) -> str:
         """verde = en plazo; amarillo = vence pronto; rojo = vencida; gris = sin fecha (verificar)."""
         ahora = ahora or datetime.now()
-        limite = op.fecha_apertura or op.fecha_presentacion
+        limite = op.fecha_presentacion  # Apertura no acredita el plazo de recepcion de ofertas
         if op.estado in ("Adjudicación", "Preadjudicación", "Dictamen de evaluación"):
             return "rojo"
         if limite is None:
