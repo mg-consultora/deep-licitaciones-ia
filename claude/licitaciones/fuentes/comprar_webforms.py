@@ -253,3 +253,43 @@ def abrir_detalle_postback(sesion, url, html, numero):
                 return None, type(exc).__name__
         return None, "fila_sin_evento_detalle"
     return None, "proceso_no_encontrado"
+
+
+def buscar_aperturas_proximas(sesion, url, html, max_paginas=50):
+    """Consulta oficial de aperturas proximas, antes del historico avanzado."""
+    if urlparse(url).scheme != "https" or urlparse(url).hostname != "comprar.gob.ar":
+        return [], "origen_no_oficial"
+    soup = BeautifulSoup(html, "html.parser")
+    def sin_tildes(t):
+        import unicodedata
+        return "".join(c for c in unicodedata.normalize("NFKD", t.lower())
+                       if not unicodedata.combining(c))
+    enlace = next((a for a in soup.select("a[href],a[onclick]")
+                   if "procesos con apertura proxima" in sin_tildes(a.get_text(" ", strip=True))), None)
+    if enlace is None:
+        return [], "sin_acceso_aperturas_proximas"
+    m = POSTBACK.search((enlace.get("href") or "") + " " + (enlace.get("onclick") or ""))
+    datos = campos_formulario(html)
+    if m is None or not datos or "__VIEWSTATE" not in datos:
+        return [], "sin_evento_aperturas_proximas"
+    datos["__EVENTTARGET"], datos["__EVENTARGUMENT"] = m.groups()
+    form = soup.find("form")
+    destino = urljoin(url, form.get("action", "") if form else "")
+    if urlparse(destino).hostname != "comprar.gob.ar":
+        return [], "accion_externa"
+    try:
+        r = sesion.post(destino, data=datos, timeout=(8, 30),
+                        headers={"Referer":url}, allow_redirects=False)
+        if r.status_code in (301,302,303):
+            destino = urljoin(url, r.headers.get("Location", ""))
+            if urlparse(destino).hostname != "comprar.gob.ar":
+                return [], "redireccion_externa"
+            r = sesion.get(destino, timeout=(8,30), allow_redirects=False)
+        if r.status_code != 200 or urlparse(r.url).hostname != "comprar.gob.ar":
+            return [], "respuesta_no_oficial_" + str(r.status_code)
+        if es_pantalla_error(r.url, r.text):
+            return [], "error_funcional_aspnet"
+        adicionales, estado = paginas_postback(sesion, r.url, r.text, max_paginas=max_paginas)
+        return [(r.url,r.text)] + adicionales, "aperturas_proximas: " + estado
+    except Exception as exc:
+        return [], "error_aperturas_proximas_" + type(exc).__name__
