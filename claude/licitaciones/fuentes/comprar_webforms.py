@@ -11,7 +11,7 @@ from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 
 POSTBACK = re.compile(r"__doPostBack\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)", re.I)
-MAX_PAGINAS = 15
+MAX_PAGINAS = 200
 
 
 def es_pantalla_error(url, html):
@@ -82,7 +82,11 @@ def paginas_postback(sesion, url, html_inicial, max_paginas=MAX_PAGINAS):
     # La navegación WebForms es secuencial: usar Next desde el estado actual.
     actual = html_inicial
     errores = []
-    for _ in range(max(0, max_paginas - 1)):
+    # Tramos de 25: se conserva VIEWSTATE y sesion entre tramos.
+    # El limite es una cota de seguridad, nunca prueba de exhaustividad.
+    for indice in range(max(0, max_paginas - 1)):
+        if indice and indice % 25 == 0:
+            print(f"COMPR.AR: tramo completado, {indice + 1} paginas; continuando", flush=True)
         opciones = acciones_paginacion(actual)
         if not opciones:
             break
