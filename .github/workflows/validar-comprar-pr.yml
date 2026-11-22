@@ -1,0 +1,42 @@
+name: Validar COMPR.AR antes de publicar
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "claude/**"
+      - ".github/workflows/validar-comprar-pr.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencias
+        run: |
+          python -m pip install -r claude/requirements.txt
+          python -m pip install pytest requests beautifulsoup4 pyyaml
+      - name: Sintaxis y regresión
+        run: |
+          python -m compileall -q claude
+          cd claude
+          python -m pytest -q tests/test_comprar_paginacion_segura.py tests/test_comprar_webforms.py tests/test_extractor_comprar.py tests/test_clasificador_deep.py
+      - name: Diagnóstico real COMPR.AR (sin publicar)
+        env:
+          DEEP_COMPRAR_MAX_PAGINAS: "5"
+        run: |
+          python validar_comprar_deep.py
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validar-comprar-pr
+          path: |
+            informe_comprar_deep.json
+            diagnostico_comprar.json
+          if-no-files-found: ignore
