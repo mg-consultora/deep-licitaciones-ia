@@ -1,0 +1,33 @@
+name: Probar Playwright COMPR.AR
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'diagnosticar_playwright_comprar.py'
+      - '.github/workflows/probar-playwright-comprar.yml'
+permissions:
+  contents: read
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Playwright y Chromium
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Compilar script
+        run: python -m py_compile diagnosticar_playwright_comprar.py
+      - name: Navegar COMPR.AR con Chromium real
+        run: python -u diagnosticar_playwright_comprar.py
+      - name: Guardar evidencia sin cookies
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-playwright-comprar
+          path: informe_playwright_comprar.json
+          if-no-files-found: warn
