@@ -25,6 +25,8 @@ jobs:
       - name: Verificar sintaxis
         run: python -m compileall -q validar_comprar_deep.py claude/licitaciones/fuentes
       - name: Ejecutar extractor real y filtro DEEP
+        env:
+          DEEP_COMPRAR_MAX_PAGINAS: ${{ github.event_name == 'push' && '10' || '200' }}
         run: python -u validar_comprar_deep.py
       - name: Guardar evidencia aun si falla
         if: always()
