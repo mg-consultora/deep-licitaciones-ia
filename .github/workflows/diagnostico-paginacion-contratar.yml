@@ -6,6 +6,9 @@ name: Diagnóstico paginación CONTRAT.AR
 # paginación funcione: hay que leer el informe.
 
 on:
+  push:
+    paths:
+      - '.github/workflows/diagnostico-paginacion-contratar.yml'
   workflow_dispatch:
     inputs:
       pausa:
