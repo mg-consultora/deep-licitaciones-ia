@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
-from .comprar_webforms import buscar_procesos_avanzado
+from .comprar_webforms import buscar_procesos_avanzado, abrir_detalle_postback
 from ..filtros import Filtro
 from ..verificacion_comprar import motivo_descarte, ficha_oficial_verificada
 
@@ -154,7 +154,20 @@ class PaginasWeb(Fuente):
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
                     paginas_js, diagnostico_js = buscar_procesos_avanzado(s, r.url, r.text, max_paginas=max_paginas)
                     for url_js, html_js in paginas_js:
-                        items.extend(extraer_items(html_js, url_js, p["nombre"]))
+                        nuevos = extraer_items(html_js, url_js, p["nombre"])
+                        if not self.config.get("auditoria_comprar_sin_publicar"):
+                            filtro_comprar = Filtro(self.config)
+                            for op in nuevos:
+                                if motivo_descarte(op) or not filtro_comprar.evaluar(op):
+                                    continue
+                                detalle, razon = abrir_detalle_postback(s, url_js, html_js, op.numero_proceso)
+                                if detalle:
+                                    from ..verificacion_comprar import _vigencia_en_ficha
+                                    confirmado, razon = _vigencia_en_ficha(detalle[1], op.numero_proceso)
+                                    if confirmado:
+                                        op.link = detalle[0]
+                                        op.estado = "Vigente verificada"
+                        items.extend(nuevos)
                     paginas_leidas += len(paginas_js)
                 # Recorrer paginacion HTML en TODAS las fuentes configuradas.
                 # Limite de seguridad: no afirmar cobertura total al alcanzarlo.
