@@ -1,0 +1,30 @@
+name: Validar COMPR.AR y filtro DEEP real
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 10 * * *'
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: python -m pip install requests beautifulsoup4 pyyaml
+      - name: Verificar sintaxis
+        run: python -m compileall -q validar_comprar_deep.py claude/licitaciones/fuentes
+      - name: Ejecutar extractor real y filtro DEEP
+        run: python -u validar_comprar_deep.py
+      - name: Guardar evidencia aun si falla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-comprar-deep-real
+          path: informe_comprar_deep.json
+          if-no-files-found: warn
+          retention-days: 30
