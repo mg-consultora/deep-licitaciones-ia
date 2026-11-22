@@ -71,7 +71,8 @@ def main():
     Path("informe_comprar_deep.json").write_text(json.dumps(informe, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({k:v for k,v in informe.items() if k != "relevantes"}, ensure_ascii=False, indent=2), flush=True)
     if resultado.estado == "error" or not unicos:
-        raise SystemExit("COMPR.AR no produjo procesos: revisar informe_comprar_deep.json")
+        print("FUENTE_NO_DISPONIBLE: sin certificacion de cobertura", flush=True)
+        raise SystemExit(2)
     if resultado.estado == "parcial":
         print("AVISO: cobertura parcial; el flujo termina con diagnostico, no certifica exhaustividad.")
 if __name__ == "__main__":
