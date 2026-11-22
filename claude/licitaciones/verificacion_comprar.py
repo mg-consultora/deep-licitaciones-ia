@@ -52,6 +52,15 @@ def _vigencia_en_ficha(html, numero, ahora=None):
                                        "fecha limite de presentacion", "fin de presentacion",
                                        "fecha de presentacion de ofertas")):
             fechas.extend(fecha for _, fecha in buscar_fechas(celdas[1].get_text(" ", strip=True)))
+    for etiqueta in soup.select("label, dt, th, strong, b, span"):
+        nombre = normalizar(etiqueta.get_text(" ", strip=True))
+        if len(nombre) > 95 or not any(x in nombre for x in (
+                "fin de recepcion", "cierre de ofertas", "fecha limite de presentacion",
+                "fin de presentacion", "fecha de presentacion de ofertas")):
+            continue
+        siguiente = etiqueta.find_next_sibling()
+        if siguiente:
+            fechas.extend(fecha for _, fecha in buscar_fechas(siguiente.get_text(" ", strip=True)))
     if not fechas:
         return False, "sin_cierre_oficial_identificable"
     if max(fechas) <= ahora:
