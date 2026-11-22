@@ -7,6 +7,7 @@ oportunidad con el texto, las fechas que encuentre y el link. Si la página no t
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime
 from urllib.parse import urljoin, urlparse, urldefrag
 
@@ -140,8 +141,16 @@ class PaginasWeb(Fuente):
             try:
                 # Evitar que un portal inaccesible bloquee la actualización diaria.
                 # Tiempo de conexión corto y lectura acotada por fuente.
-                r = s.get(p["url"], timeout=(8, 20))
-                r.raise_for_status()
+                r = None
+                for intento in range(3):
+                    try:
+                        r = s.get(p["url"], timeout=(15, 35))
+                        r.raise_for_status()
+                        break
+                    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+                        if intento == 2:
+                            raise
+                        time.sleep(2 * (intento + 1))
                 items = [] if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower() else extraer_items(r.text, r.url, p["nombre"])
                 paginas_leidas = 1
                 diagnostico_js = ""
