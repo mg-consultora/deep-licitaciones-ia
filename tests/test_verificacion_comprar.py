@@ -9,7 +9,7 @@ class VerificacionComprarTest(unittest.TestCase):
         return Oportunidad(fuente="COMPR.AR", titulo=titulo, numero_proceso="84-1234-LPR26", **kwargs)
 
     def test_adjudicado(self):
-        self.assertEqual(motivo_descarte(self.op("UPS industrial adjudicada")), "proceso_cerrado_o_adjudicado")
+        self.assertEqual(motivo_descarte(self.op("UPS industrial", estado="Adjudicada")), "proceso_cerrado_o_adjudicado")
 
     def test_ups_informatica(self):
         self.assertEqual(motivo_descarte(self.op("UPS para computadoras")), "ups_informatica")
