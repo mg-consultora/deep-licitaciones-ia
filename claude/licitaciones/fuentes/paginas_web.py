@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from ..modelo import Oportunidad
 from ..texto import buscar_fechas, normalizar
 from .base import USER_AGENT, Fuente, ResultadoFuente
-from .comprar_webforms import buscar_procesos_avanzado, abrir_detalle_postback
+from .comprar_webforms import buscar_procesos_avanzado, abrir_detalle_postback, buscar_aperturas_proximas
 from ..filtros import Filtro
 from ..verificacion_comprar import motivo_descarte, ficha_oficial_verificada
 
@@ -152,7 +152,10 @@ class PaginasWeb(Fuente):
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
-                    paginas_js, diagnostico_js = buscar_procesos_avanzado(s, r.url, r.text, max_paginas=max_paginas)
+                    paginas_js, diagnostico_js = buscar_aperturas_proximas(s, r.url, r.text, max_paginas=max_paginas)
+                    if not paginas_js:
+                        paginas_js, diagnostico_respaldo = buscar_procesos_avanzado(s, r.url, r.text, max_paginas=max_paginas)
+                        diagnostico_js += '; respaldo historico: ' + diagnostico_respaldo
                     for url_js, html_js in paginas_js:
                         nuevos = extraer_items(html_js, url_js, p["nombre"])
                         if not self.config.get("auditoria_comprar_sin_publicar"):
