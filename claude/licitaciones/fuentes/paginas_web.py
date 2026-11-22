@@ -7,7 +7,9 @@ oportunidad con el texto, las fechas que encuentre y el link. Si la página no t
 from __future__ import annotations
 
 import re
+import json
 import time
+from pathlib import Path
 from datetime import datetime
 from urllib.parse import urljoin, urlparse, urldefrag
 
@@ -246,6 +248,29 @@ class PaginasWeb(Fuente):
                     "cobertura total y vigencia NO acreditadas" + (f"; {diagnostico_js}" if diagnostico_js else ""))
             except Exception as e:
                 errores.append(f"{p['nombre']}: {e.__class__.__name__}")
+        # Importar exclusivamente fichas Chromium acreditadas, nunca resultados de diagnóstico.
+        evidencia = Path(__file__).resolve().parents[2] / "salida" / "comprar_playwright_verificado.json"
+        if evidencia.is_file() and not self.config.get("auditoria_comprar_sin_publicar"):
+            try:
+                datos = json.loads(evidencia.read_text(encoding="utf-8"))
+                hoy = datetime.now()
+                if datos.get("estado") == "consultado" and datetime.fromisoformat(datos["fecha"]) >= hoy - __import__("datetime").timedelta(hours=12):
+                    filtro_chromium = Filtro(self.config)
+                    for item in datos.get("oportunidades", []):
+                        cierre = datetime.fromisoformat(item["fecha_presentacion"])
+                        if cierre <= hoy:
+                            continue
+                        op = Oportunidad(
+                            fuente=item["fuente"], titulo=item["titulo"], organismo=item["organismo"],
+                            numero_proceso=item["numero_proceso"], estado=item["estado"],
+                            fecha_presentacion=cierre,
+                            fecha_apertura=datetime.fromisoformat(item["fecha_apertura"]) if item.get("fecha_apertura") else None,
+                            link=item["link"], texto=item["texto"] + " | Circulares oficiales: " + str(item.get("circulares_oficiales", [])))
+                        if not motivo_descarte(op) and filtro_chromium.evaluar(op):
+                            ops.append(op)
+                    detalle_fuentes.append("Chromium: " + str(len(datos.get("oportunidades", []))) + " fichas con cierre verificado (cobertura parcial)")
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                detalle_fuentes.append("Chromium: evidencia no utilizable (" + type(exc).__name__ + ")")
         detalle = f"{len(paginas) - len(errores)}/{len(paginas)} páginas leídas"
         if detalle_fuentes:
             detalle += " — " + "; ".join(detalle_fuentes)
