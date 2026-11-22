@@ -156,8 +156,9 @@ class PaginasWeb(Fuente):
                 diagnostico_js = ""
                 errores_pagina = []
                 visitadas = {r.url}
-                cola = paginas_enlazadas(r.text, r.url)
-                if "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower():
+                es_comprar = "comprar.gob.ar" in (urlparse(r.url).hostname or "").lower()
+                cola = [] if es_comprar else paginas_enlazadas(r.text, r.url)
+                if es_comprar:
                     # Solo páginas realmente enlazadas y accesibles. No inventar
                     # cobertura total cuando el portal pagina mediante JavaScript.
                     # COMPR.AR WebForms: conservar estado del formulario entre POST.
@@ -179,6 +180,7 @@ class PaginasWeb(Fuente):
                                     if confirmado:
                                         op.link = detalle[0]
                                         op.estado = "Vigente verificada"
+                                        op._ficha_verificada = True
                         items.extend(nuevos)
                     paginas_leidas += len(paginas_js)
                 # Recorrer paginacion HTML en TODAS las fuentes configuradas.
@@ -221,7 +223,10 @@ class PaginasWeb(Fuente):
                         if not motivo and not filtro.evaluar(op):
                             motivo = "no_relevante_deep"
                         if not motivo:
-                            confirmado, motivo = ficha_oficial_verificada(op, s)
+                            if getattr(op, "_ficha_verificada", False):
+                                confirmado, motivo = True, "detalle_postback_verificado"
+                            else:
+                                confirmado, motivo = ficha_oficial_verificada(op, s)
                             if confirmado:
                                 aprobadas.append(op)
                         if motivo:
