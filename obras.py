@@ -153,6 +153,10 @@ def main() -> int:
         completar_equipos(manual, extractor)
         reg.guardar(manual)
 
+    if lector:
+        notas += lector.seguimiento_proyectos(reg.proyectos())
+        notas = list({n.link: n for n in notas if n.link}.values())
+
     nuevas = relevantes = con_ia = cartera_actualizada = ampliadas = descartadas = 0
     max_ia = config.get("ia", {}).get("max_notas_por_corrida", 40)
     for nota in notas:
