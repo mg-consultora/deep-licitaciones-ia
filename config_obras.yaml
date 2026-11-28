@@ -33,6 +33,16 @@ medios:
 
 # Búsquedas generales en Google Noticias (Argentina). Encuentran notas de cualquier medio.
 busquedas:
+  - "\"ENERFE\" \"San Lorenzo\" (ampliación OR RFI OR Sux)"
+  - "\"Tesla\" \"YPF\" (cargadores OR corredor) Argentina"
+  - "\"Meitner Energy\" (ACR-300 OR Atucha)"
+  - "\"Glencore\" (\"Terminal 6\" OR \"Puerto General San Martín\")"
+  - "\"Glencore\" (\"Agua Rica\" OR MARA) (obra OR adjudicación)"
+  - "\"Vicuña\" \"Piedras Pintadas\""
+  - "\"Vicuña\" (\"La Jarilla\" OR Lajarilla)"
+  - "\"Vicuña\" \"La Majadita\""
+  - "\"Rodeo\" \"Chaparro\" COINTEC"
+  - "\"Vicuña\" (Zlato OR Chediack) corredor"
   - licitación obra parque solar OR eólico OR subestación Argentina
   - licitación EPC gasoducto OR oleoducto OR planta compresora Argentina
   - RIGI aprobado proyecto
