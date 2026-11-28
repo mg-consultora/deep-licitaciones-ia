@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS proyectos (clave TEXT PRIMARY KEY, datos TEXT NOT NUL
 CREATE TABLE IF NOT EXISTS notas (link TEXT PRIMARY KEY, clave TEXT, vista TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS novedades (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, clave TEXT, tipo TEXT, mensaje TEXT, link TEXT);
 """
-RANGO = {PROYECTO: 0, LIC_CERRADA: 1, LIC_ANUNCIADA: 2, EN_EJECUCION: 3, LIC_ABIERTA: 4}
+RANGO = {PROYECTO: 0, LIC_ANUNCIADA: 1, LIC_ABIERTA: 2, LIC_CERRADA: 3, EN_EJECUCION: 4}
 _GENERICAS = r"\b(proyecto|obra|obras|mina|yacimiento|cobre|litio|oro|plata)\b"
 
 
@@ -85,7 +85,9 @@ class Registro:
         if nuevo.get("verificado_manual"):
             # El registro manual manda: reemplaza los campos, conserva las fuentes y fechas leídas en medios.
             fuentes_auto = [f for f in viejo.get("fuentes", []) if f.get("link") not in {x["link"] for x in nuevo["fuentes"]}]
-            r = dict(nuevo)
+            r = {**viejo, **nuevo}
+            if RANGO.get(viejo.get("tipo"), 0) > RANGO.get(nuevo.get("tipo"), 0):
+                r["tipo"], r["estado"] = viejo["tipo"], viejo["estado"]
             r["fuentes"] = nuevo["fuentes"] + fuentes_auto
             r["fechas"] = {**viejo.get("fechas", {}), **nuevo.get("fechas", {})}
             r["empresas"] = sorted(set(viejo.get("empresas", [])) | set(nuevo.get("empresas", [])))
@@ -109,9 +111,10 @@ class Registro:
                 fechas[campo] = f
                 self._novedad(clave, "Fecha modificada", f"{r['obra']}: {previa['texto']} → {f['texto']}", f["fuente"])
         r["fechas"], r["historial_fechas"] = fechas, historial
-        if not manual and RANGO.get(nuevo["tipo"], 0) > RANGO.get(r.get("tipo"), 0):
+        if RANGO.get(nuevo["tipo"], 0) > RANGO.get(r.get("tipo"), 0) and (nuevo["tipo"] != EN_EJECUCION or nuevo.get("adjudicacion_verificada")):
             if nuevo["tipo"] == LIC_ABIERTA:
                 self._novedad(clave, "Licitación abierta", r["obra"], link)
+            self._novedad(clave, "Cambio de etapa", f"{r['obra']}: {r.get('tipo')} → {nuevo['tipo']}", link)
             r["tipo"], r["estado"] = nuevo["tipo"], nuevo["estado"]
         elif not manual and nuevo.get("estado") and nuevo["estado"] not in (r.get("estado") or ""):
             partes = [p for p in (r.get("estado") or "").split(" · ") + nuevo["estado"].split(" · ") if p and p != "Anunciado en medios"]
