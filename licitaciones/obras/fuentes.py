@@ -143,6 +143,23 @@ class Lector:
             res.append(n)
         return res
 
+    def seguimiento_proyectos(self, proyectos: list[dict], limite: int = 30) -> list[Nota]:
+        """Rotación diaria de proyectos identificados; no sustituye la búsqueda general."""
+        pendientes = sorted({p["obra"] for p in proyectos if p.get("obra_identificada") and p.get("obra") and p.get("tipo") != "Adjudicado / en ejecución"})
+        if not pendientes:
+            return []
+        inicio = (self.ahora.date().toordinal() * limite) % len(pendientes)
+        lote = (pendientes + pendientes)[inicio:inicio + min(limite, len(pendientes))]
+        notas, errores = [], 0
+        for nombre in lote:
+            try:
+                consulta = '"' + nombre.replace('"', '') + '" (adjudicación OR contrato OR licitación OR contratista) Argentina'
+                notas.extend(self._rss(url_google_noticias(consulta), "Seguimiento de proyectos"))
+            except Exception:
+                errores += 1
+        self.estado.append({"nombre": "Seguimiento individual", "estado": "ok" if not errores else "error", "detalle": f"{len(lote)-errores}/{len(lote)} consultas exitosas; {len(pendientes)} proyectos pendientes"})
+        return [n for n in notas if n.link and (not n.fecha or n.fecha >= self.desde)]
+
     def completar_texto(self, nota: Nota) -> None:
         """Baja el texto completo de la nota (si el link es directo al medio)."""
         if nota.texto or "news.google.com" in nota.link:
