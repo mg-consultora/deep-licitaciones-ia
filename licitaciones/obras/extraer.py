@@ -174,10 +174,6 @@ class Extractor:
             dueñas = [e for _, e in prioritarias if e.sector != "Contratistas y EPC"]
             if dueñas:
                 roles["operadora"] = dueñas[0].nombre
-        if "epc" not in roles:
-            epcs = [e for _, e in prioritarias if e.sector == "Contratistas y EPC"]
-            if epcs and self.senales["adjudicacion"].search(norm):
-                roles["epc"] = epcs[0].nombre
 
         # Fechas: una por campo, en la misma oración que la palabra clave.
         fechas: dict[str, dict] = {}
@@ -242,8 +238,8 @@ class Extractor:
             estados.append("RIGI aprobado")
         elif "rigi" in norm and re.search(r"solicit|present|evaluaci|adhesion", norm):
             estados.append("RIGI en evaluación")
-        if re.search(r"\badjudic", norm):
-            estados.append("Adjudicada")
+        if re.search(r"\b(?:adjudico|adjudicaron|fue adjudicad[ao]|ha sido adjudicad[ao]|firmo el contrato de construccion)\b", norm) and not re.search(r"\b(?:no se adjudico|aun no|todavia no|no fue adjudicad[ao]|si se adjudico)\b", norm):
+            estados.append("Adjudicación informada; verificar fuente")
         if re.search(r"en construccion|avance de obra|% de avance|inicio la construccion|comenzo la construccion|obras en marcha", norm):
             estados.append("En construcción")
         lic = fechas.get("lic_obra") or fechas.get("lic_productos")
@@ -253,7 +249,7 @@ class Extractor:
                 return LIC_ABIERTA, " · ".join(["Convocatoria con fecha límite"] + estados)
             if f:
                 return LIC_CERRADA, " · ".join(["Plazo vencido según la nota"] + estados)
-        if "Adjudicada" in estados or "En construcción" in estados:
+        if "En construcción" in estados:
             return EN_EJECUCION, " · ".join(estados)
         if re.search(r"lanzar[aá]?\s+(?:la\s+|una\s+)?licitacion|licitara|convocara|llamara a licitacion|registro de proveedores|ronda de proveedores|encuentro de proveedores|abrira la licitacion", norm):
             return LIC_ANUNCIADA, " · ".join(["Licitación o compras anunciadas"] + estados)
