@@ -26,6 +26,7 @@ from licitaciones.obras.empresas import Catalogo
 from licitaciones.obras.extraer import NO_INFO, Extractor, completar_con_ia
 from licitaciones.obras.fuentes import Lector, Nota
 from licitaciones.obras.registro import Registro, clave_obra
+from licitaciones.obras.adjudicacion import verificar
 
 RAIZ = Path(__file__).resolve().parent
 SALIDA = RAIZ / "salida"
@@ -196,6 +197,8 @@ def main() -> int:
                     registro["tipo"], registro["estado"] = extractor._clasificar(normalizar(nota.contenido), registro["fechas"])
             except Exception as e:
                 print(f"   (IA no disponible para una nota: {e.__class__.__name__})")
+        if verificar(registro, nota, config.get('dominios_oficiales_adjudicacion', [])):
+            print(f"Adjudicación verificada: {registro['obra']}")
         reg.guardar(registro, nota.link)
 
     print(f"Diagnóstico: {ampliadas} noticias ampliadas · {descartadas} descartadas tras revisión completa")
